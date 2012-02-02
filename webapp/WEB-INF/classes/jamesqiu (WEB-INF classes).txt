@@ -1,0 +1,4 @@
+junction wr3 f:\dev3\classes\wr3 
+junction domain f:\dev3\classes\domain 
+
+本目录下.class文件的变动热部署由jrebel来实现。

@@ -1,0 +1,28 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=GBK">
+<title>Insert title here</title>
+</head>
+<body>
+	<pre>
+(1) test.Foo是临时进行功能和性能测试的class.
+	可重用的就放入 wr3.** 包中;
+	形成系统工具的带 main() 方法的类就放入 tool.* 中;
+
+(2) test.wr3.** 以XXXTest.java是 wr3 的 JUnit 4 单元测试类(含测试资源文件.html, .ftl等)
+
+(3) JUnit测试private方法：
+	Classx.invokeUnlimit(o, "m1", new Object[]{...});
+
+(4) JUnit测试异常：
+    try {
+    	sortList(null);
+    	fail("should thrown an exception");  // 发生异常就不会执行这一句
+    } catch (RuntimeException e) {
+    	assertTrue(true); // 发生异常就执行
+    }
+
+	</pre>
+</body>
+</html>

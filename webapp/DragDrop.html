@@ -1,0 +1,199 @@
+<HTML>
+<HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+<SCRIPT type="text/javascript" src="js/main.js"></SCRIPT>
+
+<SCRIPT type="text/javascript">
+/******************** scrip **********************/
+$(function() {
+	$("#sortable1, #sortable2, #sortable3, #sortable4")
+		.sortable({ // 不能拖动到定义了width和height的容器内
+			connectWith: 'ul.connectedSortable', // 移动范围
+			cursorAt: {left: -5},
+			dropOnEmpty: true,
+			stop: function(event, ui) { $('.corner').html(''); drawCorner(); }
+		 }).disableSelection();
+	
+	$(".corner").attr("title","corner");
+	$(".top").attr("title","top");
+	$(".left").attr("title","left");
+	$(".measures").attr("title","measures");
+
+	$('#toggle').click(toggle);
+	$('#view').click(view);
+});
+
+$(function() {
+	drawCorner();
+});
+
+function drawCorner() {
+
+	var cornerTD = $('.corner')[0];
+	var r = cornerTD.getBoundingClientRect(); // get absolute position
+	$('.corner').drawPolyline([r.left, r.right-2], [r.top, r.bottom-2], {color: '#999'});
+}
+
+// 维度指标布局定义器的show/hide
+function toggle() {
+	$('.layout').toggle();	
+}
+
+// 根据布局定义器组成uri设置iframe的src
+function view() {
+	var top = [];
+	var left = [];
+	var measures = [];
+	$("#sortable2 li").each(function(i, e) {
+		top.push($(e).attr('id'));
+	});
+	$("#sortable3 li").each(function(i, e) {
+		left.push($(e).attr('id'));
+	});
+	$("#sortable4 li").each(function(i, e) {
+		measures.push($(e).attr('id'));
+	});
+	var top1 = top.join(',');
+	var left1 = left.join(',');
+	var measures1 = measures.join(',');
+	var position = $(":radio:checked").val();
+	var uri;
+	if (position=="top") {
+		uri = left1+'\\'+top1+',['+measures1+']';
+	} else {
+		uri = left1+',['+measures1+']'+'\\'+top1;
+	}	
+//	alert(uri);
+	var iframe = $('#iframe')[0];
+	iframe.style.width = 100;
+	iframe.style.height = 100;
+	if ((top1+left1+measures1)=='') {
+		iframe.src = "";
+	} else {
+		iframe.src = "Cube?layout=" + uri;
+	}
+	//alert(iframe.document.body.scrollHeight);
+}
+</SCRIPT>
+
+<style>
+/********************** css ********************/
+body,td {
+	font-family: arial;
+	font-size: 14px;
+}
+
+button {
+	font-size: 12px;
+	padding: .2em 0.5em;
+	text-decoration: none;
+}
+
+table.layout {
+	border-collapse: collapse;
+	border: 1px solid gray;
+}
+
+table.layout td {
+	border: 1px solid gray;
+	text-align: left;
+	vertical-align: middle;
+}
+
+ul {
+	border: 1px dashed gray;
+	margin: 5px;
+	padding: 5px;
+	padding-left: 10px;
+}
+
+ul li {
+	margin-left: 0px;
+	text-decoration: underline;
+	color: blue;
+	line-height: 20px;
+}
+
+.fields {
+	background-color: white;
+	border-right: 20px solid black;
+}
+
+.corner {
+	background: #ccc;
+}
+
+.top {
+	background: #e0e0e0;
+}
+
+.left {
+	background: #e0e0e0;
+}
+
+.measures {
+	background: #f0f0f0;
+}
+
+.cell {
+	background: #f0f0f0;
+	min-width: 50px;
+}
+
+#iframe {
+	border: 1px dotted gray;
+	width: 100px;
+	height: 100px;
+}
+</style>
+</HEAD>
+<!-- ************************ html **************** -->
+<BODY>
+
+	<button id="toggle" class="ui-state-default ui-corner-all">维度指标布局</button>
+	<table border=1 class="layout">
+		<caption>
+			<button id="view" class="ui-state-default ui-corner-all">查看数据</button>
+		</caption>
+		<tr>
+			<td rowspan=4 class='fields'>所有字段：
+				<ul id="sortable1" class="connectedSortable">
+					<li id="name">姓名</li>
+					<li id="month">月份</li>
+					<li id="orgid">机构</li>
+					<li id="hq">活期额</li>
+					<li id="dq">定期额</li>
+				</ul></td>
+			<td class='corner'>&nbsp;</td>
+			<td colspan="3" class='top'>上维度:
+				<ul id="sortable2" class="connectedSortable"></ul></td>
+		</tr>
+		<tr>
+			<td rowspan="3" class='left'>左维度:
+				<ul id="sortable3" class="connectedSortable"></ul></td>
+			<td class="cell">&nbsp;</td>
+			<td class="cell">&nbsp;</td>
+			<td class="cell">&nbsp;</td>
+		</tr>
+		<tr>
+			<td class="cell">&nbsp;</td>
+			<td class='measures'>统计指标: <input type="radio" name="position"
+				value="left">左边 <input type="radio" name="position"
+				value="top" checked>上边
+				<ul id="sortable4" class="connectedSortable"></ul></td>
+			<td class="cell">&nbsp;</td>
+		</tr>
+		<tr>
+			<td class="cell">&nbsp;</td>
+			<td class="cell">&nbsp;</td>
+			<td class="cell">&nbsp;</td>
+		</tr>
+	</table>
+
+	<br />报表结果：
+	<br />
+	<iframe id='iframe' name='iframe' align=left src=""></iframe>
+
+</BODY>
+</HTML>

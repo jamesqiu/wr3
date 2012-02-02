@@ -1,0 +1,20 @@
+{identifier: 'id',
+ label: 'name',
+ items: [
+	{ id: 'beijing', name:'北京', n:1, children:[{_reference:'xi'}, {_reference:'dong'}, {_reference:'hd'}] },
+		{ id: 'xi', name:'西城区', n:2 },
+		{ id: 'dong', name:'东城区', n:2, children:[{_reference:'wfj'}, {_reference:'jgm'}] },
+			{ id: 'wfj', name:'王府井', n:3 },
+			{ id: 'jgm', name:'建国门', n:3},
+		{ id: 'hd', name:'海淀区', n:2, children:{_reference:'wdk'} },
+			{ id: 'wdk', name:'五道口', n:3},
+	{ id: 'yn', name:'云南', n:1, children:[{_reference:'km'}, {_reference:'hh'}] },
+		{ id: 'km', name:'昆明', n:2, children:[{_reference:'wh'}, {_reference:'pl'}] },
+			{ id: 'wh', name:'五华', n:3},
+			{ id: 'pl', name:'盘龙', n:3},
+		{ id: 'hh', name:'红河州', n:2, children:[{_reference:'sp'}, {_reference:'mz'}] },
+			{ id: 'sp', name:'石屏', n:3},
+			{ id: 'mz', name:'蒙自', n:3},
+		{ id: 'US', name:'United States of America', type:'country' },
+	]
+}

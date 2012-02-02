@@ -1,0 +1,36 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=GBK">
+<title>报表</title>
+</head>
+<body>
+	<pre>
+TODO: 使用.groovy做binding，.html做template来配置生成报表。 2010-11-12
+
+1、
+table 中包含生成各类报表的类；
+
+AbstractTable   各类报表共用的一些处理；
+FormTable       数据表单
+ListTable       数据列表
+RotateTable     旋转表
+AggregateTable  聚合表
+GroupTable      分组报表
+FrameTable      框架报表
+  -TopFrameTable
+  -LeftFrameTable
+CrossTable      交叉报表
+CubeTable       多维表
+
+CellFilter     接口，在process()中返回对Table/Row每一个Cell的处理。
+PageBar        分页条Html，适用于 ListTable, RotateTable
+
+各报表包含一个缺省的同名.ftl模板文件，可以用用户目录下的进行覆盖, common.ftl为公用部分。
+
+2、
+TableConfig    从.groovy读数据binding信息
+
+	</pre>
+</body>
+</html>

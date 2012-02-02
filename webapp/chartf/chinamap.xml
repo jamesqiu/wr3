@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="gbk"?>
+<map showCanvasBorder='1' canvasBorderColor='f1f1f1'
+	canvasBorderThickness='2' borderColor='00324A' fillColor='F0FA00'
+	hoverColor='C0D2F8' baseFontSize='13'>
+	<colorRange>
+		<color minValue='0' maxValue='80' displayValue='拥挤' color='CC0001' />
+		<color minValue='80' maxValue='90' displayValue='一般' color='FFCC33' />
+		<color minValue='90' maxValue='100' displayValue='绿色' color='069F06' />
+	</colorRange>
+
+	<data>
+		<entity id='CN.AH' value='81' displayValue='安徽' toolText='安徽省'
+			link='JavaScript:alert(10)' color='' />
+		<entity id='CN.BJ' value='80' displayValue='北京' toolText='首都北京'
+			link="" color='' />
+		<entity id='CN.CQ' value='60' displayValue='重庆' toolText='重庆市'
+			link='' color='' />
+		<entity id='CN.FJ' value='80' displayValue='福建' toolText='福建省'
+			link='' color='' />
+		<entity id='CN.GS' value='80' displayValue='甘肃' toolText='甘肃省'
+			link='' color='' />
+		<entity id='CN.GD' value='80' displayValue='广东' toolText='广东省'
+			link='' color='' />
+		<entity id='CN.GX' value='80' displayValue='广西' toolText='广西自治区'
+			link='' color='' />
+		<entity id='CN.GZ' value='80' displayValue='贵州' toolText='贵州省'
+			link='' color='' />
+		<entity id='CN.HA' value='80' displayValue='海南' toolText='海南省'
+			link='' color='' />
+		<entity id='CN.HB' value='80' displayValue='河北' toolText='河北省'
+			link='' color='' />
+		<entity id='CN.HE' value='70' displayValue='河南' toolText='河南省'
+			link='' color='' />
+		<entity id='CN.HU' value='80' displayValue='湖北' toolText='湖北省'
+			link='' color='' />
+		<entity id='CN.HL' value='90' displayValue='黑龙江' toolText='黑龙江省'
+			link='' color='' />
+		<entity id='CN.HN' value='80' displayValue='湖南' toolText='湖南省'
+			link='' color='' />
+		<entity id='CN.JS' value='80' displayValue='江苏' toolText='江苏省'
+			link='' color='' />
+		<entity id='CN.JX' value='80' displayValue='江西' toolText='江西省'
+			link='' color='' />
+		<entity id='CN.JL' value='80' displayValue='吉林' toolText='吉林省'
+			link='' color='' />
+		<entity id='CN.LN' value='80' displayValue='辽宁' toolText='辽宁省'
+			link='' color='' />
+		<entity id='CN.NM' value='80' displayValue='内蒙' toolText='内蒙自治区'
+			link='' color='' />
+		<entity id='CN.NX' value='80' displayValue='宁夏' toolText='宁夏自治区'
+			link='' color='' />
+		<entity id='CN.QH' value='80' displayValue='青海' toolText='青海省'
+			link='' color='' />
+		<entity id='CN.SA' value='80' displayValue='陕西' toolText='陕西省'
+			link='' color='' />
+		<entity id='CN.SD' value='80' displayValue='山东' toolText='山东省'
+			link='' color='' />
+		<entity id='CN.SH' value='80' displayValue='上海' toolText='上海市'
+			link='' color='' />
+		<entity id='CN.SX' value='80' displayValue='山西' toolText='山西省'
+			link='' color='' />
+		<entity id='CN.SC' value='80' displayValue='四川' toolText='四川省'
+			link='' color='' />
+		<entity id='CN.TJ' value='80' displayValue='天津' toolText='天津市'
+			link='' color='' />
+		<entity id='CN.XJ' value='80' displayValue='新疆' toolText='新疆自治区'
+			link='' color='' />
+		<entity id='CN.XZ' value='90' displayValue='西藏' toolText='西藏自治区'
+			link='' color='' />
+		<entity id='CN.YN' value='80' displayValue='云南' toolText='云南省'
+			link='' color='' />
+		<entity id='CN.ZJ' value='80' displayValue='浙江' toolText='浙江省'
+			link='' color='' />
+		<entity id='CN.MA' value='80' displayValue='澳门' toolText='澳门特区'
+			link='' color='' />
+		<entity id='CN.HK' value='50' displayValue='香港' toolText='香港特区'
+			link='' color='' />
+		<entity id='CN.TA' value='90' displayValue='台湾' toolText='台湾岛'
+			link='' color='' />
+		<!-- -->
+	</data>
+	<styles>
+		<definition>
+			<style type="animation" name="animX" param="_xscale" start="0"
+				duration="1" />
+			<style type="animation" name="animY" param="_yscale" start="0"
+				duration="1" />
+		</definition>
+		<application>
+			<apply toObject="PLOT" styles="animX,animY" />
+		</application>
+	</styles>
+</map>

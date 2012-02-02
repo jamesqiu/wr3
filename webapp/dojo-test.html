@@ -1,0 +1,42 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+    <head>
+        <title>注册案例</title>
+		<link href="/dojoroot/dojo/resources/dojo.css" rel="stylesheet" type="text/css"></link>
+		<link href="/dojoroot/dijit/themes/tundra/tundra.css" rel="stylesheet" type="text/css"></link>
+
+        <script type="text/javascript" djConfig="parseOnLoad: true" src="/dojoroot/dojo/dojo.js"></script> 
+		<script type="text/javascript" src="/dojoroot/dijit/dijit.js"></script> 
+
+        <style type="text/css">
+			/*
+			@import "/dojoroot/dojo/resources/dojo.css";
+			@import "/dojoroot/dijit/themes/tundra/tundra.css";
+			*/
+			.dijitInputFieldFocused {
+				border: solid 2px #FFDF00;
+			}
+        </style>
+
+		<!-- 
+		-->
+
+        <script type="text/javascript">
+			// jamesqiu
+			dojo.require("dijit.form.DateTextBox");
+			dojo.ready(function() {
+				alert(dojo.version);
+			})
+        </script>
+    </head>
+
+    <body class="tundra" style="padding: 10px">
+		日期：<br/>
+			<input id="birthday" value="1993-01-01" name="birthday"
+                        dojoType="dijit.form.DateTextBox"
+                        constraints="{formatLength:'long'}"
+                        required="true"
+						trim="true" />
+    </body>
+</html>
+

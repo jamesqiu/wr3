@@ -1,0 +1,49 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Chart2图形</title>
+
+<link href="${webapp}/css/main.css" rel="stylesheet" type="text/css">
+<link href="${webapp}/css/smoothness/jquery-ui.css" rel="stylesheet"
+	type="text/css">
+<script type="text/javascript" src="${webapp}/js/jquery.js"></script>
+<script>
+// 为button增加draw事件
+$(function() {
+	if (!/Chart2$/.test(window.location.href))
+		window.location.href='${webapp}/Chart2';
+	$("button").addClass("ui-state-default").addClass("ui-corner-all");
+	$("button").click(draw);
+});
+
+// 从Chart2.url() action 获取图形url
+function draw() {
+	var url = "Chart2/url/" + $(this).text();
+	if ($("input").attr('checked')) url += "?data=random";
+	//alert(url);
+	$.get(url, function(data) {
+		//alert(data);
+		$('img').attr('src', data);
+	});
+}
+</script>
+</head>
+<body>
+
+	<div class="ui-widget">
+		<button>line</button>
+		<button>bar</button>
+		<button>pie</button>
+		<button>barline</button>
+		<input type="checkbox">使用随机数据
+	</div>
+
+	<br />
+
+	<img src="${webapp}/${url}" />
+
+	<br /> 提示：url必须为
+	<a href="${webapp}/Chart2">${webapp}/Chart2</a>
+</body>
+</html>

@@ -1,0 +1,16 @@
+集团: group
+清华: tsinghua
+紫光: UNIS
+北美: north america
+系: dep.
+邱晖: jamesqiu
+清华大学: THU.
+号: no.
+特殊: special
+英文: English
+世界: world
+邮件: mail
+密码: password
+薪水: salary
+爱好: favorite
+其他: other

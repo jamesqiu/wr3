@@ -1,0 +1,57 @@
+<html>
+<head>
+<title>WebReport Login</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<script type="text/javascript" src="js/main.js"></script>
+<script type="text/javascript" src="js/index.js"></script>
+
+<style>
+body {
+	background-image: url("img/webreport_main.jpg");
+	background-repeat: no-repeat;
+	background-position: center;
+	background-attachment: fixed
+}
+
+form {
+	font-size: 14px;
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	background-color: #5599ff;
+	margin-left: -100px;
+	padding: 5px;
+}
+
+form input {
+	font-size: 14px;
+}
+
+form input[name='wr3user'] {
+	color: gray;
+}
+</style>
+
+</head>
+<body>
+
+	<form class="ui-corner-all" method="post" action="frames.html"
+		onsubmit="return check();">
+		用 户: <input name="wr3user" type="text" value="在此输入用户名"
+			class="ui-corner-all"></input> <br /> 密 码: <input name="wr3pass"
+			type="password" value="" class="ui-corner-all"></input> <br />
+		<p align="center" style="padding: 6px">
+			<input type="submit" class="ui-state-default ui-corner-all"
+				style="font-weight: bold; color: green;" value="登 录"></input> <input
+				type="reset" class="ui-state-default ui-corner-all"
+				style="font-weight: bold; color: green;" value="重 置"></input>
+		</p>
+		<br />
+		<center>
+			<img alt="nasoft" src="img/nasoft.png">
+		</center>
+	</form>
+
+</body>
+</html>
+

@@ -1,0 +1,40 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=GBK">
+<title>Clojure</title>
+</head>
+<body>
+	<a href="http://localhost/c/mdb/dict">快速链接：meta字典链接</a> @2011-2-26
+	<pre>
+本包封装Clojure的函数库及测试等:  
+编译可执行的：
+ CallClj.scala    从java用RT调用clj文件
+ Clj1.clj         测试1 （编译）
+ CljServlet.clj   解析http url转载controller运行结果的servlet （编译）
+                  缺省 reload 所有的.clj controller，如果在生产环境，可设置 -Dwr3.clj.reload=0 （见 util.clj/fget），即：
+                  开发环境：-Dwr3.clj.reload=1 (或者不设置)
+                  生产环境：-Dwr3.clj.reload=0 (如果需要动态reload某个wr3.clj.foo.clj，可使用/c/console/reload/foo)
+ Draw.clj         书法swing程序
+ 
+非编译的：
+ chart.clj        Chart.java的DSL形式
+ clj2.clj         测试2
+ db.clj           RDB操作的封装
+ dbconfig.clj     相当于Driver.groovy和Datasource.groovy
+ file.clj         文件读写util
+ meta.clj         mongodb中meta/dict的CRUD
+ n.clj            Numberx的Clojure重构
+ s.clj            Stringx的Clojure重构，以及Sequence的util
+ tb.clj           Table/Row/Cell的Clojure重构
+ u.clj            工具、core扩展、算法等
+ unitest.clj      所有本目录下.clj文件的UnitTest
+ web.clj          session html util
+
+ // todo：
+	自动分析可导入数据库的数据文本文件
+	自动分析数据库的列.
+
+	</pre>
+</body>
+</html>

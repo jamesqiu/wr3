@@ -1,0 +1,7 @@
+jamesqiu: 邱晖
+nasoft: 北美公司
+valid: 有效的
+sheet: 工作表
+mail: 邮件
+gender: 性别
+sex: 性别

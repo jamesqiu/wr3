@@ -1,0 +1,57 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=gb2312">
+<script type="text/javascript" src="js/frames.js"></script>
+<title>HEAD--(head.html)</title>
+<style>
+body {
+	border-top: 2px solid #cccccc;
+	border-left: 0px solid ThreeDShadow;
+	border-right: 0px ridge ThreeDHighlight;
+	border-bottom: 0px solid ThreeDShadow;
+	margin: 0px;
+}
+</style>
+<script>
+function doSearch () {
+	window.open ("./server/search/results.jsp?query="
+		+ document.getElementById ("search_text").value
+		+ "&maxresults=100",
+		"win_search_result");
+}
+</script>
+</head>
+
+<body ondblclick="toggle_top();">
+	<table width="100%" height="45" border="0" background="img/top_bg.jpg"
+		cellspacing="0" cellpadding="0">
+		<tr>
+			<td width="160"><img src="img/webreport_bg.jpg" width="602"
+				height="45">
+			</td>
+			<td valign="top">
+				<div align="right">
+					<img src="img/webreport_text.jpg" width="160" height="45">
+				</div></td>
+		</tr>
+	</table>
+
+	<div id="Layer1"
+		style="position: absolute; left: 400px; top: 16px; width: 100px; height: 20px; z-index: 1">
+		<table width="100" border="0" cellspacing="0" cellpadding="2">
+			<tr>
+				<td><img src="img/search.jpg" title="搜索WebReport帮助文档">
+				</td>
+				<td><input name="Input" type="text" id="search_text" size="18"
+					title="在此输入要搜索的字符串">
+				</td>
+				<td><input type="image" src="img/search_go.jpg" title="开始搜索"
+					onClick="doSearch ();">
+				</td>
+			</tr>
+		</table>
+	</div>
+
+</body>
+</html>

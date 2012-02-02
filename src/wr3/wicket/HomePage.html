@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Wicket Examples - home</title>
+<link rel="stylesheet" type="text/css" href="style.css" />
+<style type="text/css">
+#div1 {
+	border: 1px solid gray;
+}
+</style>
+</head>
+<body>
+
+	wizard:
+	<br />
+	<span wicket:id="wizard"></span>
+	<br />
+	<br />
+
+	<div wicket:id="div1" id="div1">
+		<a href="#" wicket:id="link2">hellwold</a> <br /> <a href="#"
+			wicket:id="link3">download</a> <br /> <a href="#" wicket:id="link4">popup</a>
+		<br /> <a href="#" wicket:id="link5">UserEditPage</a> &nbsp;&nbsp;
+		<wicket:link>
+			<a href="UserEditPage.html">use wicket:link</a>
+		</wicket:link>
+		<br /> <a href="#" wicket:id="link1">计数</a> <br /> <a href="#"
+			wicket:id="link1_ajax">计数(Ajax)</a> <br /> <span wicket:id="message"
+			id="message">Message goes here</span>
+	</div>
+
+	<table border=1>
+		<tr>
+			<th>name</th>
+			<th>description</th>
+		</tr>
+		<tr wicket:id="forums">
+			<td wicket:id="name"></td>
+			<td wicket:id="description"></td>
+		</tr>
+	</table>
+
+	<span wicket:id="include">include.html</span>
+
+	<form action="" wicket:id="form">
+		<input wicket:id="button1" type="submit" value="Button" /> <input
+			wicket:id="input1" type="text" value="input1" /> result: <input
+			wicket:id="result" type="text" readonly="readonly" value="form 提交结果" />
+	</form>
+
+	<img wicket:id="img" />
+	<br />
+
+	<input type="text" wicket:id="date1" />
+
+	<br /> My Component:
+	<br />
+	<div wicket:id="mycomp1" style="border: 1px solid gray">my
+		component</div>
+	<div wicket:id="mycomp2" style="border: 1px solid gray">my
+		component</div>
+
+	<br /> ListView:
+	<br />
+	<table border="1">
+		<tr>
+			<th>name</th>
+			<th>age</th>
+		</tr>
+		<tr wicket:id="rows">
+			<td wicket:id="name">james</td>
+			<td wicket:id="age">18</td>
+		</tr>
+	</table>
+	<br /> PageableListView:
+	<span wicket:id="navigator1">navigator1</span>
+	<table border="1">
+		<tr>
+			<th>name</th>
+			<th>age</th>
+		</tr>
+		<tr wicket:id="rows2">
+			<td wicket:id="name2">james</td>
+			<td wicket:id="age2">18</td>
+		</tr>
+	</table>
+	<br /> RepeatingView:
+	<table border="1">
+		<tr>
+			<th>选择</th>
+			<th>name</th>
+			<th>age</th>
+		</tr>
+		<tr wicket:id="persons">
+			<td><input type="checkbox" wicket:id="check" />
+			</td>
+			<td wicket:id="name">james</td>
+			<td wicket:id="age">18</td>
+		</tr>
+	</table>
+	<br /> GridView:
+	<table border="1">
+		<tr wicket:id="grid">
+			<td wicket:id="cols"><span wicket:id="cell">cell</span>
+			</td>
+		</tr>
+	</table>
+	<br /> DataView:
+	<span wicket:id="navigator2">navigator2</span>
+	<table border="1">
+		<tr>
+			<th>姓名</th>
+			<th>生日</th>
+		</tr>
+		<tr wicket:id="users">
+			<td wicket:id="name">user</td>
+			<td wicket:id="birthday">2009-10-15</td>
+		</tr>
+	</table>
+	<br /> GridDataView:
+	<span wicket:id="navigator3">navigator3</span>
+	<table border="1">
+		<tr wicket:id="datagridView">
+			<td wicket:id="cells"><span wicket:id="cell">DataGridView
+					Cell</span>
+			</td>
+		</tr>
+	</table>
+	<br /> DataTable:
+	<span wicket:id="navigator4">navigator4</span>
+	<table wicket:id="table" border="1">[table]
+	</table>
+	<br /> StringResourceModel:
+	<br />
+	<span wicket:id="res_name">name</span>
+	<br />
+	<span wicket:id="res_birthday">birthday</span>
+	<br />
+	<wicket:message key="message">wicket:message</wicket:message>
+	<br />
+	<br /> TabPanel:
+	<br />
+	<span wicket:id="tabpanel">tab panel</span>
+	<br />
+	<br /> Palette:
+	<br />
+	<form wicket:id="formPalette">
+		<span wicket:id="palette">palette</span>
+	</form>
+	<br />
+	<br /> Fragment:
+	<br />
+	<span wicket:id="useFragment"></span>
+	<br />
+	<br /> Tree:
+	<a href="#" wicket:id="expandTree">全展开 </a>，
+	<a href="#" wicket:id="collapseTree">全折叠(ajax)</a>
+	<br />
+	<span wicket:id="tree">tree...</span>
+	<br />
+	<br /> TreeTable:
+	<a href="#" wicket:id="expandTreeTable">全展开 </a>，
+	<a href="#" wicket:id="collapseTreeTable">全折叠(ajax)</a>
+	<br />
+	<span wicket:id="treeTable">treeTable...</span>
+	<br />
+	<br /> 联动下拉：
+	<br /> 第一位：
+	<select wicket:id="firstName">first name
+	</select> 第二位：
+	<select wicket:id="secondName">second name
+	</select>
+
+</body>
+</html>
+
+<wicket:fragment wicket:id="fragment1">
+	<span wicket:id="label1"></span>
+	<div style="color: gray" wicket:id="label2"></div>
+</wicket:fragment>

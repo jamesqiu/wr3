@@ -1,0 +1,2 @@
+Usage:
+	java -cp webfirst-core.jar com.nasoft.webfirst.webserver.core.Main [<addr>:]<port> -webapp "目录或war文件"

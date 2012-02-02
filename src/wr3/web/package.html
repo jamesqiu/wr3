@@ -1,0 +1,68 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=GBK">
+<title>Insert title here</title>
+</head>
+<body>
+
+	<pre>
+package概要说明:
+  AppFilter          友好URL的Filter, 传给Appservlet
+  AppServlet         根据controller,action,id等执行AppController
+  AppController      控制器, 传入参数, 执行action, 返回值
+  Params             表示所有request参数
+  Session            表示所有session参数
+  Render             返回json, html, text结果
+  UriParser          从友好URL得到controller, action, id
+  AclFilter          权限控制Filter		
+  Head.ftl           Render#body()所用的head部分	
+</pre>
+
+	<pre>
+web处理流程：
+request ------> AppFilter ------> UriParser | AppServlet ------> Render | AppController------> HotClass | Classx
+</pre>
+
+	WEB-INF/web.xml内容:
+	<br>
+	<pre style="font-family: Courier New; background-color: #eeeeee;">
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;ISO-8859-1&quot;?&gt;
+
+&lt;web-app xmlns=&quot;http://java.sun.com/xml/ns/javaee&quot;
+   xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;
+   xsi:schemaLocation=&quot;http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd&quot;
+   version=&quot;2.5&quot;&gt; 
+
+    &lt;description&gt;WebReport3&lt;/description&gt;
+    &lt;display-name&gt;WebReport3&lt;/display-name&gt;
+
+	&lt;!-- AppFilter --&gt;
+	&lt;filter&gt;
+		&lt;filter-name&gt;AppFilter&lt;/filter-name&gt;
+		&lt;filter-class&gt;wr3.web.AppFilter&lt;/filter-class&gt;
+		&lt;init-param&gt;
+			 &lt;param-name&gt;wr3.home&lt;/param-name&gt;
+			 &lt;param-value&gt;e:/tomcat/webapps/wr3&lt;/param-value&gt;
+		 &lt;/init-param&gt;
+	&lt;/filter&gt;
+	&lt;filter-mapping&gt;
+		&lt;filter-name&gt;AppFilter&lt;/filter-name&gt;
+		&lt;url-pattern&gt;/*&lt;/url-pattern&gt;
+	&lt;/filter-mapping&gt;
+
+	&lt;!-- AppServlet --&gt;
+	&lt;servlet&gt;
+		&lt;servlet-name&gt;wr3app&lt;/servlet-name&gt;
+		&lt;servlet-class&gt;wr3.web.AppServlet&lt;/servlet-class&gt;
+	&lt;/servlet&gt;
+	&lt;servlet-mapping&gt;
+		&lt;servlet-name&gt;wr3app&lt;/servlet-name&gt;
+		&lt;url-pattern&gt;/app/*&lt;/url-pattern&gt;
+	&lt;/servlet-mapping&gt;
+
+&lt;/web-app&gt;<br>
+</pre>
+
+</body>
+</html>

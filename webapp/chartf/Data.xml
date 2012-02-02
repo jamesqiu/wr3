@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="GBK"?>
+<chart caption="示例数据（销售额）" subCaption="2010" numberPrefix="￥"
+	sformatNumberScale="1" sNumberPrefix="￥" syncAxisLimits="1"
+	rotateValues="1" showLegend="1" showSum="0" baseFontSize="12">
+	<!-- Data for single series chart -->
+	<set label="1季度" value="232400" />
+	<set label="2季度" value="339800" />
+	<set label="3季度" value="411900" />
+	<set label="4季度" value="398400" />
+	<!-- Data for multi-series stacked and combination chart -->
+	<categories>
+		<category label="1季度" />
+		<category label="2季度" />
+		<category label="3季度" />
+		<category label="4季度" />
+	</categories>
+	<dataset seriesName="产品">
+		<set value="232400" />
+		<set value="232400" />
+		<set value="339800" />
+		<set value="411900" />
+		<set value="398400" />
+		<!-- Data for multi-series stacked chart - nested dataset -->
+		<dataset seriesName="产品A">
+			<set value="232400" />
+			<set value="232400" />
+			<set value="339800" />
+			<set value="411900" />
+			<set value="398400" />
+		</dataset>
+		<dataset seriesName="产品B">
+			<set value="232400" />
+			<set value="232400" />
+			<set value="339800" />
+			<set value="411900" />
+			<set value="398400" />
+		</dataset>
+	</dataset>
+	<dataset seriesName="服务" renderAs="line" parentYAxis="S"
+		showValues="1" valuePosition="BELOW">
+		<set value="147400" />
+		<set value="189100" />
+		<set value="219800" />
+		<set value="289100" />
+		<set value="209800" />
+		<!-- Data for multi-series stacked chart - nested dataset -->
+		<dataset seriesName="所有服务" renderAs="line" parentYAxis="S">
+			<set value="214400" />
+			<set value="214100" />
+			<set value="284800" />
+			<set value="323100" />
+			<set value="324800" />
+		</dataset>
+	</dataset>
+	<!-- Data for multi-series stacked chart line chart - line dataset -->
+	<lineset seriesName="目标盈利" valuePosition="BELOW">
+		<set value="104400" />
+		<set value="104100" />
+		<set value="144800" />
+		<set value="213100" />
+		<set value="214800" />
+	</lineset>
+</chart>

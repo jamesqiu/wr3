@@ -1,0 +1,34 @@
+.accordion1 {
+	background: #fff;
+	overflow: hidden;
+}
+
+.accordion1 .accordion1-header {
+	background: #E0ECFF;
+	border-top-width: 0;
+	cursor: pointer;
+}
+
+.accordion1 .accordion1-header .panel-title {
+	font-weight: normal;
+}
+
+.accordion1 .accordion1-header-selected .panel-title {
+	font-weight: bold;
+}
+
+.accordion1-noborder .accordion1-header {
+	border-width: 0 0 1px;
+}
+
+.accordion1-noborder .accordion1-body {
+	border-width: 0px;
+}
+
+.accordion1-collapse {
+	background: url('images/accordion1_collapse.png') no-repeat;
+}
+
+.accordion1-expand {
+	background: url('images/accordion1_expand.png') no-repeat;
+}

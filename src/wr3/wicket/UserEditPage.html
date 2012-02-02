@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="./css/main.css" type="text/css"
+	charset="utf-8">
+<title>注册新用户</title>
+</head>
+<body class="body">
+
+
+	<BR />
+	<span style="color: red" wicket:id="feedback"></span>
+
+	<form wicket:id="form" class="form">
+		<table border="1">
+			<tr>
+				<td>帐号</td>
+				<td><input type="text" wicket:id="account"></input>
+				</td>
+			</tr>
+			<tr>
+				<td>名称</td>
+				<td><input type="text" wicket:id="name"></input>
+				</td>
+			</tr>
+			<tr>
+				<td>性别</td>
+				<td><input type="checkbox" wicket:id="female"></input>
+				</td>
+			</tr>
+			<tr>
+				<td>密码</td>
+				<td><input type="password" wicket:id="password"></input>
+				</td>
+			</tr>
+			<tr>
+				<td>生日</td>
+				<td><input type="text" wicket:id="birthday"></input>
+				</td>
+			</tr>
+			<tr>
+				<td>薪水</td>
+				<td><input type="text" wicket:id="salary"></input>
+				</td>
+			</tr>
+			<tr>
+				<td>工作类型</td>
+				<td><select wicket:id="job" size="6"></select>
+				</td>
+			</tr>
+			<tr>
+				<td>工作年限</td>
+				<td><select wicket:id="workYear"></select>
+				</td>
+			</tr>
+			<tr>
+				<td>婚姻状态</td>
+				<td><span valign="top" wicket:id="married" id="married">
+				</span>
+				</td>
+			</tr>
+			<tr>
+				<td>爱好</td>
+				<td><span valign="top" wicket:id="favorites" id="favorites">
+				</span>
+				</td>
+			</tr>
+			<tr>
+				<td>头像</td>
+				<td><input wicket:id="image" type="file"></input>
+				</td>
+			</tr>
+			<tr>
+				<td align="center"><input type="submit"></input>
+				</td>
+				<td align="center"><input type="reset"></input>
+				</td>
+			</tr>
+		</table>
+	</form>
+
+</body>
+</html>
+

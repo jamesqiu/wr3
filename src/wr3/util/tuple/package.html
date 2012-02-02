@@ -1,0 +1,32 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=GBK">
+<title>Java Tuple类型</title>
+</head>
+<body>
+	<pre>
+用于方法多个返回值，免得自己定义类。
+This Java Tuple library implements type-safe tuples of any size using generics. 
+from <a href="http://javatuple.com/index.shtml">http://javatuple.com/index.shtml</a>
+usage:
+	//------------------------------------
+	Pair<Integer , String> tuple() {
+	
+		Triple<Long , Long, Long> t = Tuple.from(10L,20L,30L);
+		System.out.printf("(%d,%d,%d)\n", 
+				Tuple.get1(t), Tuple.get2(t), Tuple.get3(t));
+		
+		return Tuple.from(10, "aaa");
+	}
+	
+	Pair<Integer , String> t = o.tuple();
+	int i = Tuple.get1(t);
+	String s = Tuple.get2(t);
+	System.out.printf("t.i=%d, t.s=%s\n", i, s);
+	//------------------------------------
+		
+	
+	</pre>
+</body>
+</html>

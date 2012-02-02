@@ -1,0 +1,46 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=GBK">
+<title>Insert title here</title>
+</head>
+<body>
+	<pre>
+	2010-6-17
+todo：目前的action都没有参数，可以把queryString里面的东西直接转为参数（参考Play!），如
+      http://server/wr3/Controll/action1?name=james&age=10&birth=2001/3/5
+      public String action1(String name, int age, Calendar birth) {
+      	return name + ", age=" + (age+10);
+      }
+      而不是原来的：
+      public String action1() {
+      	return Params.value("name") + ", age=" + (Params.intValue("age")+10);
+      }
+
+本目录包含web应用中所有由AppFilter/AppServlet/AppController动态装载的Controller.
+注意：
+0、
+	在conf/base.properties中设置动态app的路径和包名；
+1、
+	因为controller的名字和action的名字用于查找类名和方法名，必须严格区分大小写，
+	否则将报异常；
+2、
+	app下一级的类才能被识别为controller，子目录下的类只能用于非controller；
+	但子目录下的类不能动态转载（但可通过改动controller类来重载使子目录类改动生效）；
+3、
+	在 Controllers 中获取request和session变量：
+	public Params params;	// 变量名必须为"params"
+	public Session session;	// 变量名必须为"session"
+
+
+类明细：
+	- Controllers：列出所有的Controllers及其action
+	- Cube：CubeTable例子，访问 <url>http://localhost:8080/wr3/Cube</url>
+	  - Cube.groovy 配置文件，使用：
+	  		GroovyConfig.create(Appx.filepath(getClass(), ".groovy");
+	  - Cube.view.html #view() action的Template，使用：
+	    	Appx.view(getClass(), params).set("msg", "cn中文");
+
+	</pre>
+</body>
+</html>

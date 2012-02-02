@@ -1,0 +1,30 @@
+junction .\lib f:\dev3\lib\
+junction .\classes\wr3 f:\dev3\classes\wr3\
+
+Total Commander和cmd下可以看出是junction;
+explorer里面分辨不出来
+*** 不能随便删除wr3或者wr3下的WEB-INF, 否者会删除 f:\dev3下的内容
+
+--------------------------------------
+j2ee6中,web.xml里filter的写法可以移植到.java文件中:
+
+(web.xml:)
+	<filter>
+		<filter-name>AppFilter</filter-name>
+		<filter-class>wr3.web.AppFilter</filter-class>
+		<init-param>
+			 <param-name>wr3.home</param-name>
+			 <param-value>e:/tomcat/webapps/wr3</param-value>
+		 </init-param>
+	</filter>
+	<filter-mapping>
+		<filter-name>AppFilter</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+	
+(MyFilter.java:)	
+	import javax.servlet.annotation.WebFilter;
+	import javax.servlet.annotation.WebInitParam; 
+	@WebFilter(value="/*", initParams={@WebInitParam(name="AppFilter", value="wr3.web.AppFilter")})
+	public final  class MyFilter extends WicketFilter {...}
+

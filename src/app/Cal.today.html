@@ -1,0 +1,61 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>月历</title>
+<style>
+body,td {
+	font-family: Arial;
+	font-size: 32px;
+}
+
+table,th,td {
+	border: 1px solid gray;
+	text-align: center;
+	padding: 10px;
+	background-color: white;
+}
+
+caption,th {
+	font-family: Arial, 黑体;
+	background-color: #f0f0f0;
+	font-weight: normal;
+	font-size: 18px;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+.wknd {
+	color: #ee5555;
+}
+</style>
+</head>
+<body>
+
+	<#-- 判断是否周末（6、7） --> <#macro css i e> <#if i==0 ||
+	i==6>class="wknd"</#if> <#if
+	"${y}-${m}-${e}"==today>style="background-color: yellow"</#if>
+	</#macro> <#-- 判断是否今天 -->
+
+	<table border=1>
+		<caption>${y} 年 ${m} 月 值班表</caption>
+		<thead>
+			<tr>
+				<#list table.head as cell>
+				<th<@css cell_index cell /> >${cell}</th></#list>
+			</tr>
+		</thead>
+		<tbody>
+			<#list table.rows as row>
+			<tr>
+				<#list row as cell>
+				<td<@css cell_index cell /> >${cell}</td></#list>
+			</tr>
+			</#list>
+		</tbody>
+	</table>
+
+</body>
+</html>

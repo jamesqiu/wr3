@@ -1,0 +1,21 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=GBK">
+<title>Insert title here</title>
+</head>
+<body>
+	<pre>
+本包封装对关系数据库的操作:  
+ DbConfig.java     读取Driver.groovy, DataSource.groovy配置文件入ResourceCache
+ DbSource.java     创建Connection, 从DbConfig或者通过jdbc(), jndi()
+ DbServer.java     对数据库的sql操作
+ DbMeta.java       获取数据库Meta信息：DDL、表和字段属性
+ ResultsetFilter.java   对ResultSet每行进行自定义操作, 和DbServer的process()配合
+ RowFilter.java    把表头和每一行作为Row进行处理。
+ Jpa.java          JPA implements wrapper (use hibernate-entitymanager).
+ JpaConfig.java    config JPA EntityManager, used by {@link wr3.db.Jpa}
+ 
+	</pre>
+</body>
+</html>
