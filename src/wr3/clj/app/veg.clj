@@ -128,8 +128,8 @@
   (let [id0 (or (m (left id "-count")) "TB_TR_REGISTER_RECORD")
         rt (dbm/rows ["mssql" id0])
         n2 (split rt " ")]
-    (html [:h1 {:style "padding: 20px"} (format "\"%s\" 记录条数：%s （约 %s）" 
-                                                (meta-name id0) (first n2) (second n2))])
+    (html [:h1 {:style "padding: 20px"} (format "\"%s\"（%s） 记录条数：<br/>%s （约 %s）" 
+                                                (meta-name id0) id0 (first n2) (second n2))])
     ))
 
 
