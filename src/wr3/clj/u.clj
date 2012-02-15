@@ -52,6 +52,14 @@
   [coll]
   (doseq [e coll] (println e)))
 
+(defn get-key
+  "从hashmap中根据key取出value，key满足指定的函数f。
+  @arg f 处理key的函数，返回true|false
+  @arg m hashmap
+  用法：(get-key #(.equalsIgnoreCase 'b' %) {'a' 'aa' 'B' 'bb'}) ; 'bb' "
+  [f m]
+  (some (fn [[k v]] (when (f k) v)) m))
+
 ;;;---------------------------- ns 和 函数动态调用
 
 (defn ns-exist?

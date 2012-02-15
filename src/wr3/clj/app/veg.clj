@@ -128,8 +128,9 @@
   (let [id0 (or (m (left id "-count")) "TB_TR_REGISTER_RECORD")
         rt (dbm/rows ["mssql" id0])
         n2 (split rt " ")]
-    (html [:h1 {:style "padding: 20px"} (format "\"%s\"（%s） 记录条数：<br/>%s （约 %s）" 
-                                                (meta-name id0) id0 (first n2) (second n2))])
+    (html [:h1 {:style "padding: 20px"} (format "\"%s\" （%s） 记录条数：" (meta-name id0) id0)]
+          [:div {:style "font-family:微软雅黑,黑体; font-size: 30px; font-weight: bold; padding: 20px"} 
+           (format "%s （约 %s）"  (first n2) (second n2))])
     ))
 
 
@@ -140,10 +141,109 @@
 (defn data [id]
   (dbm/data ["mssql" (m (left id "-data"))] nil)
   )
-   
 
+(defn- format-date
+  "把形如2011/12/20 ——> 2011年12月20日"
+  [date]
+  (format "%s年%s月%s日" (subs date 0 4) (subs date 5 7) (subs date 8 10)))
+  
+(defn- trade-dates 
+  "得到交易明细流水表时间跨度"
+  []
+  (let [dbname "mssql"
+        sql "select distinct convert(char(10), TradeDate, 111) from TB_TR_TRADE_DETAIL_RECORD order by convert(char(10), TradeDate, 111)"]
+    (select-col dbname sql)))
+
+(defn- trade-sum 
+  "得到报表数据"
+  []
+  (let [dbname "mssql"
+        sql "select a.VegeNo, b.VegeName, SUM(a.Num) sum from TB_TR_TRADE_DETAIL_RECORD a join TB_BASIC_VARIETY_DETAIL b on a.VegeNo=b.VegeNo group by a.VegeNo, b.VegeName order by a.VegeNo"
+        rt (select-all dbname sql)
+        r1 (partition 3 3 (repeat 3 {:vegename "-" :sum 0})rt) ; 每3行结果分成一组
+        f (fn [e3] ; 把一组3条记录处理成一个tr
+            (html [:tr 
+                   (map #(html [:td (trim (:vegename %))] [:td {:align "right"} (:sum %)]) e3) 
+                   [:td {:align "right" :style "font-weight:bold"} (apply + (map :sum e3))]])) 
+        r2 (map f r1) ; 所有行（每行3个蔬菜种类）
+        g (fn [e3] ; 把一组3条记录处理成只有数值 
+            (map :sum e3)) ; 
+        r3 (map g r1)
+        r4 (apply map + r3)  ; 最后一行合计
+        r5 (html [:tr {:style "font-weight:bold"} 
+                  [:td "合计"] 
+                  [:td {:align "right"} (first r4)] 
+                  [:td "&nbsp;"]
+                  [:td {:align "right"} (second r4)] 
+                  [:td "&nbsp;"]
+                  [:td {:align "right"} (last r4)] 
+                  [:td {:align "right"} (apply + r4)]
+                  ])
+        ]
+    (html r2 r5)
+    ))
+
+(defn app1 
+  "app: 带标题，小计，总计的品种汇总报表"
+  []
+  (html
+    [:table.wr3table {:border 1}
+     [:caption "江桥市场蔬菜品种汇总"]
+     [:thead 
+      [:tr [:td {:colspan 7 :align "center"} (let [ds (map format-date (trade-dates))] (format "%s-%s" (first ds) (last ds)))]]
+      [:tr (repeat 3 (html [:th "品名"] [:th "数量<br/>(百公斤)"])) [:th "总数量<br/>合计"]]]
+     [:tbody 
+      (trade-sum)]
+     ] ))
+
+
+(defn- trade-price 
+  "得到报表数据"
+  [date]
+  (let [dbname "mssql"
+        sql (str "select b.vegename, max(a.price) max,MIN(a.price) min" 
+                 " from TB_TR_TRADE_DETAIL_RECORD a join TB_BASIC_VARIETY_DETAIL b on a.vegeno=b.vegeno" 
+                 " where a.num>1 and convert(char(10), TradeDate, 111)='" date "'"
+                 " group by a.VegeNo,b.vegename order by a.VegeNo")
+        rt (select-all dbname sql)
+        r1 (partition 3 3 (repeat 3 {:vegename "-" :max " " :min " "})rt) ; 每3行结果分成一组
+        f (fn [e3] ; 把一组3条记录处理成一个<tr/>
+            (html [:tr 
+                   (map #(html 
+                           [:td (trim (:vegename %))] 
+                           [:td {:align "center"} (between (:vegename %) "(" ")")]
+                           [:td {:align "right"} (format "%s-%s" (:min %)  (:max %))]) 
+                        e3) ]))
+        r2 (map f r1) ; 所有行（每行3个蔬菜种类） 
+        ]
+    (html r2)
+    ))
+
+(defn app2
+  "app: 蔬菜成交价格表"
+  [date]
+  (let [ds (trade-dates)
+        d (or date (first ds))]
+    (html
+      (map #(html (eui-button {:onclick (format "veg_price('%s')" %)} (format-date %)) " ") ds)
+      [:table.wr3table {:border 1}
+       [:caption "江 桥 市 场 蔬 菜 成 交 价"]
+       [:thead 
+        [:tr [:td {:colspan 9 :align "center"} (format-date d)]]
+        [:tr (repeat 3 (html [:th "品名"] [:th "产地"] [:th "幅度价"]))]]
+       [:tbody 
+        (trade-price d)]
+       ] 
+      [:br])))
+  
+;;---------------- 临时测试，记着注释掉调用语句
 (defn test2 []
-  (println (rows "11-reg-count"))
+;  (println (rows "11-reg-count"))
+  (trade-dates)
 )
 
-;(test2)
+;(def e3 '({:vegeno "10110", :vegename "蘑菇 ", :sum 92687.20M} {:vegeno "10111", :vegename "平菇 ", :sum 655.00M} {:vegeno "10113", :vegename "草菇 ", :sum 30.00M}))
+;(trade-sum)
+
+
+

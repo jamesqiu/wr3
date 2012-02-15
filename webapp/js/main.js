@@ -2468,6 +2468,7 @@ function veg_onload() {
 		var id = $(this).attr("id")
 		$('div [region="west"]').load("/c/veg/menu3list/"+id, function(data) {
 			$.parser.parse()
+			// 一级菜单“基础数据查看”点击内容 --- 开始
 			var m = ['11-reg', '12-reg2', '13-trade', '14-variety']
 			for (var i = 0; i < m.length; i++) {
 				$('a#'+m[i]+'-count').click(function() {
@@ -2476,7 +2477,6 @@ function veg_onload() {
 						.load('/c/veg/rows/'+$(this).attr('id'))
 				})
 			}
-			
 			for (var i = 0; i < m.length; i++) {
 				$('a#'+m[i]+'-cols').click(function() {
 					$('div [region="center"]')
@@ -2485,7 +2485,6 @@ function veg_onload() {
 					.css('padding', '10px')
 				})
 			}
-						
 			for (var i = 0; i < m.length; i++) {
 				$('a#'+m[i]+'-data').click(function() {
 					$('div [region="center"]')
@@ -2494,6 +2493,23 @@ function veg_onload() {
 					.css('padding', '10px')
 				})
 			}
+			// 一级菜单“基础数据查看”点击内容 --- 结束
+			
+			$('a#22-scb-vars').click(function() {
+				$('div [region="center"]')
+				.html('<img src="/img/loading3.gif" />')
+				.load('/c/veg/app1/')
+				.css('padding', '20px')				
+			})
+			
+			$('a#22-scb-price').click(function() {
+				$('div [region="center"]')
+				.html('<img src="/img/loading3.gif" />')
+				.load('/c/veg/app2/', function() {
+					$.parser.parse()
+				})
+				.css('padding', '20px')				
+			})
 			
 //			
 //			$('a#11-reg-count').click(function() {
@@ -2516,6 +2532,10 @@ function veg_onload() {
 		})
 	})	
 	
+}
+
+function veg_price(date) {
+	alert(date)
 }
 
 

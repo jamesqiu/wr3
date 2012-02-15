@@ -8,6 +8,7 @@
 ;;; :etc 详细描述字符串
 
 (use 'somnium.congomongo)
+(use 'wr3.clj.u)
 
 ; 数据字段字典，表名-字段名-字段字典
 (def dds 
@@ -47,15 +48,18 @@
 (defn- find-key-i
   "从哈希表m中取出第一个key为s（不区分大小写）的value"
   [m s]
-  (some (fn [[k v]] (when (.equalsIgnoreCase (name k) s) v)) m))
+  (get-key #(.equalsIgnoreCase (name %) s) m))
+;  (some (fn [[k v]] (when (.equalsIgnoreCase (name k) s) v)) m))
   
 (defn dd-map 
-  "给出表名和字段名，从维度字典表（dds）中取出字典，不区分大小写"
+  "给出表名和字段名，从维度字典表（dds）中取出字典，不区分大小写。
+  例如：(dd-map \"TB_TR_TRADE_DETAIL_RECORD\" \"Status\") ; 返回 {0 未结算, 1 已结算, 2 上家卡无效} "
   [tb fd]
   (reduce find-key-i dds [tb fd]) )
 
 (defn meta-name
-  "给出code，从meta映射表中取出第一个:name，不区分大小写"
+  "给出code，从mongodb的meta集合的dict表中取出第一个:name，不区分大小写。
+  例如：(meta-name \"TB_TR_REGISTER_reCORd\") ; 返回 \"进场登记表\" "
   [code]
   (with-mongo (make-connection "meta")
     (let [rs (fetch :dict :where {:code (re-pattern (str "(?i)^" code "$"))})
@@ -89,4 +93,5 @@
   )) 
 ;(test-meta)
 
-;(dd-map "TB_TR_TRADE_DETAIL_RECORD" "Status")
+;(meta-name "TB_TR_REGISTER_reCORd")
+;(dd-map "tb_TR_TRADE_DETAIL_RECORD" "Status")
