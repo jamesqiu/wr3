@@ -339,4 +339,9 @@ public class TestTable {
 		return Render.body(cubeTable());
 	}
 
+	public static void main(String[] args) {
+		TestTable t = new TestTable();
+		// бнбн
+		System.out.println(t);
+	}
 }

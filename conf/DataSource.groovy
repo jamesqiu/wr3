@@ -20,6 +20,13 @@ abs_grails {
 	password = "pass"
 }
 
+mssql {
+	driver = jdbc.mssql
+	url = "${jdbc.url.mssql}localhost:1433;DatabaseName=vmarket"
+	username = "sa"
+	password = "passdb"
+}
+
 gbms {
 	driver = jdbc.oracle
 	url = "${jdbc.url.oracle}10.60.108.58:1521:gbms"

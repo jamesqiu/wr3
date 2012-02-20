@@ -12,6 +12,10 @@ import wr3.db.DbServer;
 import wr3.text.Template;
 import wr3.util.Rowx;
 
+/**
+ * 注意：作为维度（top，left）的数据不能是特殊字符串'\', 否则出错，可通过sql或者函数先处理data中的维度列。
+ * @author user 2012-2-17
+ */
 public class CrossTable extends BaseTable {
 
 	public static CrossTable create() {
@@ -182,13 +186,12 @@ public class CrossTable extends BaseTable {
 		// head
 		frame.head(Row.head(cols));		
 		// row_0
-		frame.add(topSet.copy().add(0, new Cell()));
+		frame.add(topSet.copy().add(0, new Cell("\\")));
 		// row_1,...row_i,...row_n
 		for (int i = 0; i < rows-1; i++) {
 			Row row = Row.create(cols, null).cell(0, leftSet.cell(i));
 			frame.add(row);
 		}
-//		System.out.printf("frame=%s", frame);
 	}
 	
 	private void fillFrame(final Table data) {

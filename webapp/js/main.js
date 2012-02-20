@@ -2434,6 +2434,19 @@ function ems_layout2() {
 }
 
 /**
+ * 用于 wr3.clj.app.veg
+ * @param url
+ */
+function load_center(url) {
+	$('div [region="center"]')
+	.html('<img src="/img/loading3.gif" />')
+	.load(url, function() {
+		$.parser.parse()
+	})
+	.css('padding', '20px')				
+}
+
+/**
  * 用于 wr3.clj.app.veg/index
  */
 function veg_onload() {
@@ -2449,16 +2462,6 @@ function veg_onload() {
 //			var province_name = $(this).attr('province')
 //			$('#ifrm1').attr('src', '/c/ems/gmap/gorgs2/'+province_name)
 //		})
-//		$('a#chartf').click(function(e) {
-//			$('#ifrm1').attr('src', '/c/chartf/tailings')			
-//		})
-//		$('a#gtail').click(function(e) {
-//			$('#ifrm1').attr('src', '/c/ems/gmap/gtail')			
-//		})
-//		$('a.org').click(function(e) {
-//			var orgid = $(this).attr('id')
-//			$('#ifrm1').attr('src', '/c/ems/gmap/gone/'+orgid)
-//		})
 	})	
 	
 	var menu2 = $('a.easyui-linkbutton')
@@ -2472,70 +2475,55 @@ function veg_onload() {
 			var m = ['11-reg', '12-reg2', '13-trade', '14-variety']
 			for (var i = 0; i < m.length; i++) {
 				$('a#'+m[i]+'-count').click(function() {
-					$('div [region="center"]')
-						.html('<img src="/img/loading3.gif" />')
-						.load('/c/veg/rows/'+$(this).attr('id'))
+					load_center('/c/veg/rows/'+$(this).attr('id'))
 				})
 			}
 			for (var i = 0; i < m.length; i++) {
 				$('a#'+m[i]+'-cols').click(function() {
-					$('div [region="center"]')
-					.html('<img src="/img/loading3.gif" />')
-					.load('/c/veg/cols/'+$(this).attr('id'))
-					.css('padding', '10px')
+					load_center('/c/veg/cols/'+$(this).attr('id'))
 				})
 			}
 			for (var i = 0; i < m.length; i++) {
 				$('a#'+m[i]+'-data').click(function() {
-					$('div [region="center"]')
-					.html('<img src="/img/loading3.gif" />')
-					.load('/c/veg/data/'+$(this).attr('id'))
-					.css('padding', '10px')
+					load_center('/c/veg/data/'+$(this).attr('id'))
 				})
 			}
 			// 一级菜单“基础数据查看”点击内容 --- 结束
 			
 			$('a#22-scb-vars').click(function() {
-				$('div [region="center"]')
-				.html('<img src="/img/loading3.gif" />')
-				.load('/c/veg/app1/')
-				.css('padding', '20px')				
+				load_center('/c/veg/app1/')
 			})
 			
 			$('a#22-scb-price').click(function() {
-				$('div [region="center"]')
-				.html('<img src="/img/loading3.gif" />')
-				.load('/c/veg/app2/', function() {
-					$.parser.parse()
-				})
-				.css('padding', '20px')				
+				load_center('/c/veg/app2/')
+			})
+						
+			$('a#22-scb-quot').click(function() {
+				load_center('/c/veg/app3/')				
 			})
 			
-//			
-//			$('a#11-reg-count').click(function() {
-//				$.get("/c/veg/rows/11-reg-count", function(data){
-//					  $('div [region="center"]').html('<h1>'+data+'</h1>')
-//				});
-//			})
-//			$('a#12-reg2-count').click(function() {
-//				$.get("/c/veg/rows/12-reg2-count", function(data){
-//					$('div [region="center"]').html('<h1>'+data+'</h1>')
-//				});
-//			})
-//			$('a#11-reg-cols').click(function() {
-//				alert("11-reg-cols")
-//			})
-//			$('a#11-reg-data').click(function() {
-//				alert("11-reg-data")
-//			})
+			$('a#31-enter-from').click(function() {
+				load_center('/c/veg/app4')				
+			})
 			
+			$('a#31-enter-dict').click(function() {
+				load_center('/c/veg/app5')
+			})
 		})
 	})	
 	
 }
 
 function veg_price(date) {
-	alert(date)
+	load_center('/c/veg/app2?date='+date)
+}
+
+function veg_quot(date) {
+	load_center('/c/veg/app3?date='+date)
+}
+
+function veg_enter_dict(dim) {
+	load_center('/c/veg/app5?dim='+dim)
 }
 
 

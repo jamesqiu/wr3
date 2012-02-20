@@ -15,22 +15,22 @@
   {
    :TB_TR_REGISTER_RECORD 
    {
-    :SignMode '{001 地磅收费 002 卡机登记 003 郊菜收费 004 剩菜收费 005 卡机剩菜 006 二批登记}
-    :Area '{0 客菜 1 郊菜 2 无卡} 
-    :Method '{0 卡付费 1 现金付费 2 银行卡交费}
-    :Model '{0 比例收费、1 定额收费、2 计件收费}
-    :Status '{0 客菜进场   1 客菜回皮|郊菜未付款 2 郊菜已付款}
-    :CleanSign '{0 未退 1 已退}
-    :FieldSign '{0 未退 1 已退}
-    :Symbol '{0 待检测 1 检测合格 2 不合格}
+    :SignMode '{"001" 地磅收费 "002" 卡机登记 "003" 郊菜收费 "004" 剩菜收费 "005" 卡机剩菜 "006" 二批登记}
+    :Area '{"0" 客菜 "1" 郊菜 "2" 无卡} 
+    :Method '{"0" 卡付费 "1" 现金付费 "2" 银行卡交费}
+    :Model '{"0" 比例收费 "1" 定额收费 "2" 计件收费}
+    :Status '{"0" 客菜进场   "1" 客菜回皮|郊菜未付款 "2" 郊菜已付款}
+    :CleanSign '{"0" 未退 "1" 已退}
+    :FieldSign '{"0" 未退 "1" 已退}
+    :Symbol '{"0" 待检测 "1" 检测合格 "2" 不合格}
     }
    :TB_TR_REGISTER_DETAIL_INFO
    {
-    :IsPackage '{0 无包装 1 带包装}
-    :Symbol '{0 非 1 是}
-    :IsBrand '{0 非品牌 1 品牌}
-    :CheckFlag '{0 检测通过免检 1 待检  2 复检  3 终检  4 销毁}    
-    :CheckSymbol '{0 总菜品 1 明细菜品}    
+    :IsPackage '{"0" 无包装 "1" 带包装}
+    :Symbol '{"0" 非 "1" 是}
+    :IsBrand '{"0" 非品牌 "1" 品牌}
+    :CheckFlag '{"0" 检测通过免检 "1" 待检  "2" 复检  "3" 终检  "4" 销毁}    
+    :CheckSymbol '{"0" 总菜品 "1" 明细菜品}    
     }
    :TB_BASIC_VARIETY_DETAIL
    {
@@ -95,3 +95,4 @@
 
 ;(meta-name "TB_TR_REGISTER_reCORd")
 ;(dd-map "tb_TR_TRADE_DETAIL_RECORD" "Status")
+(keys (dds (keyword "TB_TR_REGISTER_RECORD")))

@@ -6,7 +6,6 @@
 (use 'hiccup.core)
 (use 'wr3.clj.s 'wr3.clj.n 'wr3.clj.u 'wr3.clj.file 'wr3.clj.tb)
 (use 'wr3.clj.web 'wr3.clj.gmap 'wr3.clj.db 'wr3.clj.meta)
-(use '[wr3.clj.app.chartf :only (pie)])
 (use 'wr3.clj.app.vegconf :reload) ; reload 才能使配置更改生效
 
 (require '[wr3.clj.app.dbm :as dbm])
@@ -158,7 +157,9 @@
   "得到报表数据"
   []
   (let [dbname "mssql"
-        sql "select a.VegeNo, b.VegeName, SUM(a.Num) sum from TB_TR_TRADE_DETAIL_RECORD a join TB_BASIC_VARIETY_DETAIL b on a.VegeNo=b.VegeNo group by a.VegeNo, b.VegeName order by a.VegeNo"
+        sql (str "select a.VegeNo, b.VegeName, SUM(a.Num) sum "
+                 " from TB_TR_TRADE_DETAIL_RECORD a join TB_BASIC_VARIETY_DETAIL b on a.VegeNo=b.VegeNo"
+                 " group by a.VegeNo, b.VegeName order by a.VegeNo")
         rt (select-all dbname sql)
         r1 (partition 3 3 (repeat 3 {:vegename "-" :sum 0})rt) ; 每3行结果分成一组
         f (fn [e3] ; 把一组3条记录处理成一个tr
@@ -236,6 +237,107 @@
        ] 
       [:br])))
   
+
+(defn- trade-quot 
+  "得到行情价报表数据"
+  [date]
+  (let [dbname "mssql"
+        sql (str "select b.vegename, sum(a.num) sum,max(a.price) max,MIN(a.price) min" 
+                 " from TB_TR_TRADE_DETAIL_RECORD a join TB_BASIC_VARIETY_DETAIL b on a.vegeno=b.vegeno" 
+                 " where a.num>1 and convert(char(10), TradeDate, 111)='" date "'"
+                 " group by a.VegeNo,b.vegename order by a.VegeNo")
+        rt (select-all dbname sql)
+        r1 (partition 3 3 (repeat 3 {:vegename "-" :sum " " :max " " :min " "})rt) ; 每3行结果分成一组
+        f (fn [e3] ; 把一组3条记录处理成一个<tr/>
+            (html [:tr 
+                   (map #(html 
+                           [:td (trim (:vegename %))] 
+                           [:td {:align "center"} (between (:vegename %) "(" ")")]
+                           [:td {:align "right"} (:sum %)]
+                           [:td {:align "right"} (format "%s-%s" (:min %)  (:max %))]) 
+                        e3) ]))
+        r2 (map f r1) ; 所有行（每行3个蔬菜种类） 
+        ]
+    (html r2)
+    ))
+
+(defn app3
+  "app: 蔬菜行情表"
+  [date]
+  (let [ds (trade-dates)
+        d (or date (first ds))]
+    (html
+      (map #(html (eui-button {:onclick (format "veg_quot('%s')" %)} (format-date %)) " ") ds)
+      [:table.wr3table {:border 1}
+       [:caption "江桥市场蔬菜行情价"]
+       [:thead 
+        [:tr [:td {:colspan 12 :align "center"} (format-date d)]]
+        [:tr (repeat 3 (html [:th "品名"] [:th "产地"] [:th "数量(百公斤)"] [:th "成交价(元)"]))]]
+       [:tbody 
+        (trade-quot d)]
+       ] 
+      [:br])))
+
+(import wr3.table.CrossTable)
+
+(defn app4 
+  "app: 进场登记表日期-属地分析"
+  []
+  (let [dbname "mssql"
+        sql (str "select convert(char(10), EnterDate, 111) date, substring(TruckNo,1,1) no, SUM(SayWeight) sum from TB_TR_REGISTER_RECORD"
+                 " where substring(TruckNo,1,1)<>''"
+                 " group by convert(char(10), EnterDate, 111), substring(TruckNo,1,1)" 
+                 " order by convert(char(10), EnterDate, 111), sum(SayWeight) desc")
+        wr3tb (query dbname sql)
+        rt (doto (CrossTable/create) 
+             (.top "date") 
+             (.left "no") 
+             (.measure "sum") 
+             (.sum true) 
+             (.meta ["日期" "属地" "重量"])
+             (.data wr3tb)) 
+        ]
+    (replace-all (.html rt) "null" "-") ))
+
+(defn- table-dims [tb] (map name (keys (dds (keyword tb)))))
+  
+(require 'wr3.clj.app.chartf)
+
+(defn app5
+  "app: 进场登记表字典维度分析"
+  [dim]
+  (let [dim (or dim "SignMode")
+        dim-key (keyword (.toLowerCase dim))
+        dbname "mssql"
+        tb "TB_TR_REGISTER_RECORD"
+        dd (dd-map tb dim)
+        sql (str "select " dim ", count(*) count, SUM(SayWeight) weight from " tb  
+                    " group by " dim
+                    " order by COUNT(*) desc")
+        rt (select-all dbname sql)
+        fratio (fn [r k] (format "%.2f%%" (* 100 (/ (double (k r)) (apply + (map k rt))))))
+        ]
+    (html 
+      (map #(html (eui-button {:onclick (format "veg_enter_dict('%s')" %)} (meta-name %)) " ") (table-dims tb))
+      [:h1 "进场登记表数据维度分析"]
+      [:table.wr3table {:border 1}
+       [:caption (meta-name dim)]
+       [:thead 
+        [:tr [:th (meta-name dim)] [:th "计数"] [:th "数量占比"] [:th "过磅称重"] [:th "重量占比"]]]
+       [:tbody 
+        (map #(html [:tr 
+                     [:td (dd (dim-key %))] 
+                     [:td (:count %)] 
+                     [:td (fratio % :count)] 
+                     [:td (:weight %)]
+                     [:td (fratio % :weight)] 
+                     ]) rt)]
+       ]
+      (wr3.clj.app.chartf/pie 
+        (into {} (map #(vector (dd (dim-key %)) (:weight %)) rt)) 
+        {:title "简单图形" :x "序号" :y "数值"}) 
+      ) ))
+
 ;;---------------- 临时测试，记着注释掉调用语句
 (defn test2 []
 ;  (println (rows "11-reg-count"))
@@ -244,6 +346,7 @@
 
 ;(def e3 '({:vegeno "10110", :vegename "蘑菇 ", :sum 92687.20M} {:vegeno "10111", :vegename "平菇 ", :sum 655.00M} {:vegeno "10113", :vegename "草菇 ", :sum 30.00M}))
 ;(trade-sum)
+;(app5 "SignMode")
 
 
 
