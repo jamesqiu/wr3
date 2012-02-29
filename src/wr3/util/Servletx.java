@@ -1,5 +1,8 @@
 package wr3.util;
 
+import java.io.UnsupportedEncodingException;
+
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
@@ -97,4 +100,27 @@ public class Servletx {
 		
 		return req.getSession(true);
 	}
+	
+	/**
+	 * 得到指定name的cookie值
+	 * @param req
+	 * @return 
+	 */
+	public static String cookie(HttpServletRequest req, String name) {
+		
+		Cookie[] cookies = req.getCookies();
+		for (Cookie cookie : cookies) {
+			if (cookie.getName().equals(name)) {
+				String v = cookie.getValue();
+				try {
+					return java.net.URLDecoder.decode(v, "UTF-8");
+				} catch (UnsupportedEncodingException e) {
+					e.printStackTrace();
+					return v;
+				}
+			}
+		}
+		return null;
+	}
+	
 }

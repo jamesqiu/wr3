@@ -1,9 +1,17 @@
 (ns wr3.clj.app.test)
 ;;;;------------------------ 进行最简单功能的测试 /localhost/c/test
 
-(use 'wr3.clj.web 'wr3.clj.n) ; 加不加 :reload 对速度有较大影响
+(use 'wr3.clj.web 'wr3.clj.n 'wr3.clj.u) ; 加不加 :reload 对速度有较大影响
 (use 'hiccup.core)
 
+(defn auth
+  "该函数被 CljServlet 调用，也可手工调用：/c/test/auth?fname=m1 "
+  [fname url & args]
+  (case fname
+    "m1" nil
+    "index" true
+    true))
+  
 (defn index
   "service: 给出金额，得到大写读数及简读"
   [id]
@@ -20,3 +28,10 @@
     (let [n (to-int (or id "7") 7)]
       (html (for [i (range 1 n)] [:div "序号：" i])))))
              
+(defn coki
+  "app: 测试jquery.cookie是否可用"
+  [request]
+  (html-body
+    {:onload "test_cookie()"}
+    [:h1 "测试cookie"]
+    [:div (cookie request "wr3user")]))

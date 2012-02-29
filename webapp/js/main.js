@@ -22,6 +22,7 @@ document.write('<script type="text/javascript" src="' + wr3path + 'jquery-1.5.2.
 document.write('<script type="text/javascript" src="' + wr3path + 'jquery.draw.js"></script>');
 document.write('<script type="text/javascript" src="' + wr3path + 'jquery.tablesorter.min.js"></script>');
 document.write('<script type="text/javascript" src="' + wr3path + 'jquery.uniform.min.js"></script>');
+document.write('<script type="text/javascript" src="' + wr3path + 'jquery.cookie.js"></script>');
 // ---------------- easyui js
 document.write('<script type="text/javascript" src="' + wr3path + 'jquery.easyui.min.js"></script>');
 document.write('<script type="text/javascript" src="' + wr3path + 'jquery.easyui-lang-zh_CN.js"></script>');
@@ -2437,7 +2438,7 @@ function ems_layout2() {
  * 用于 wr3.clj.app.veg
  * @param url
  */
-function load_center(url) {
+function veg_load_center(url) {
 	$('div [region="center"]')
 	.html('<img src="/img/loading3.gif" />')
 	.load(url, function() {
@@ -2455,13 +2456,6 @@ function veg_onload() {
 	var right_region = $('div [region="west"]')
 	right_region.load('/c/veg/app-left-main', function() {		
 		$.parser.parse()
-//		$('a#map0').click(function(e) {
-//			$('#ifrm1').attr('src', '/c/ems/gmap/gorgs')
-//		})
-//		$('img.province').click(function(e) {
-//			var province_name = $(this).attr('province')
-//			$('#ifrm1').attr('src', '/c/ems/gmap/gorgs2/'+province_name)
-//		})
 	})	
 	
 	var menu2 = $('a.easyui-linkbutton')
@@ -2473,59 +2467,47 @@ function veg_onload() {
 			$.parser.parse()
 			// 一级菜单“基础数据查看”点击内容 --- 开始
 			var m = ['11-reg', '12-reg2', '13-trade', '14-variety']
-			for (var i = 0; i < m.length; i++) {
-				$('a#'+m[i]+'-count').click(function() {
-					load_center('/c/veg/rows/'+$(this).attr('id'))
+			$.each(m, function(i,v) {
+				$('a#'+v+'-count').click(function() {
+					veg_load_center('/c/veg/rows/'+$(this).attr('id'))
 				})
-			}
-			for (var i = 0; i < m.length; i++) {
-				$('a#'+m[i]+'-cols').click(function() {
-					load_center('/c/veg/cols/'+$(this).attr('id'))
+				$('a#'+v+'-cols').click(function() {
+					veg_load_center('/c/veg/cols/'+$(this).attr('id'))
 				})
-			}
-			for (var i = 0; i < m.length; i++) {
-				$('a#'+m[i]+'-data').click(function() {
-					load_center('/c/veg/data/'+$(this).attr('id'))
+				$('a#'+v+'-data').click(function() {
+					veg_load_center('/c/veg/data/'+$(this).attr('id'))
 				})
-			}
-			// 一级菜单“基础数据查看”点击内容 --- 结束
-			
-			$('a#22-scb-vars').click(function() {
-				load_center('/c/veg/app1/')
 			})
 			
-			$('a#22-scb-price').click(function() {
-				load_center('/c/veg/app2/')
-			})
-						
-			$('a#22-scb-quot').click(function() {
-				load_center('/c/veg/app3/')				
-			})
-			
-			$('a#31-enter-from').click(function() {
-				load_center('/c/veg/app4')				
-			})
-			
-			$('a#31-enter-dict').click(function() {
-				load_center('/c/veg/app5')
-			})
+			var m2 = {'22-scb-vars':'app1' , '22-scb-price':'app2', '22-scb-quot':'app3', 
+			          '31-enter-from':'app4', '31-enter-dict':'app5', '31-enter-time':'app6',
+			          '32-enter-dict':'app7'};
+			$.each(m2, function(k, v) {
+				$('a#'+k).click(function() {
+					veg_load_center('/c/veg/'+v)
+				})
+			})			
 		})
-	})	
-	
+	})		
 }
 
-function veg_price(date) {
-	load_center('/c/veg/app2?date='+date)
+function veg_price(date) { veg_load_center('/c/veg/app2?date='+date) }
+function veg_quot(date) { veg_load_center('/c/veg/app3?date='+date) }
+function veg_enter_dict(dim) { veg_load_center('/c/veg/app5?dim='+dim) }
+
+function veg_app7() {
+	$.get('/app7.js', function() {
+		alert('load app7.js ok')
+	})
 }
 
-function veg_quot(date) {
-	load_center('/c/veg/app3?date='+date)
+/**
+ * wr3.clj.app.test.clj
+ */
+function test_cookie() {
+//	$.cookie('wr3user', 'user用户1'); // 设置cookie
+	alert($.cookie('wr3user'))
 }
-
-function veg_enter_dict(dim) {
-	load_center('/c/veg/app5?dim='+dim)
-}
-
 
 
 

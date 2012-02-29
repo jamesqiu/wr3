@@ -7,24 +7,29 @@
 
 <style>
 body {
-	background-image: url("img/webreport_main.jpg");
+	background-image: url("img/idp-main.png");
 	background-repeat: no-repeat;
 	background-position: center;
-	background-attachment: fixed
+	background-attachment: fixed;
 }
 
 form {
+	border: 1px solid #1861ae;
+	font-family: 宋体,Consolas;
 	font-size: 14px;
 	position: absolute;
 	left: 50%;
 	top: 50%;
-	background-color: #5599ff;
-	margin-left: -100px;
+	background-color: #1861ae;
+	color: lightgray;
+	margin-left: -110px;
+	margin-top: -20px;
 	padding: 5px;
 }
 
 form input {
 	font-size: 14px;
+	margin: 3px;
 }
 
 form input[name='wr3user'] {
@@ -34,21 +39,17 @@ form input[name='wr3user'] {
 
 </head>
 <body>
-
-	<form class="ui-corner-all" method="post" action="frames.html"
-		onsubmit="return check();">
-		用 户: <input name="wr3user" type="text" value="在此输入用户名"
-			class="ui-corner-all"></input> <br /> 密 码: <input name="wr3pass"
-			type="password" value="" class="ui-corner-all"></input> <br />
+	<img src="img/idp-webfirst.png" style="position: absolute; top: 50%; left: 50%; margin-top: -80px; margin-left: -110px;" />
+	<form class="ui-corner-all" method="post" action="frames.html" onsubmit="return check();" style="vertical-align: middle">
+		用 户 : <input name="wr3user" type="text" value="在此输入用户名" class="ui-corner-all"></input> <br /> 
+		密 码 : <input name="wr3pass" type="password" value="" class="ui-corner-all"></input> <br />
 		<p align="center" style="padding: 6px">
-			<input type="submit" class="ui-state-default ui-corner-all"
-				style="font-weight: bold; color: green;" value="登 录"></input> <input
-				type="reset" class="ui-state-default ui-corner-all"
-				style="font-weight: bold; color: green;" value="重 置"></input>
+			<input type="submit" class="ui-state-default ui-corner-all" style="font-weight: bold; color: green;" value="登 录"></input>&nbsp;&nbsp;&nbsp; 
+			<input type="reset" class="ui-state-default ui-corner-all" style="font-weight: bold; color: green;" value="重 置"></input>
 		</p>
-		<br />
+		<br/>
 		<center>
-			<img alt="nasoft" src="img/nasoft.png">
+			<img alt="nasoft" src="img/nasoft-rnd.png">
 		</center>
 	</form>
 

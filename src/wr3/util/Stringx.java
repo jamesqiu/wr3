@@ -1089,10 +1089,7 @@ public class Stringx {
 	 */
 	public static String md5 (String str) {
 
-		if (str == null) {
-			System.err.println ("Stringx.md5 (String) : null string.");
-			return "";
-		}
+		if (str == null) return "";
 
 		String rt = "";
 		try {

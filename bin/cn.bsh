@@ -1,0 +1,15 @@
+import wr3.util.*;
+
+usage = "把指定字符串进行常见转码测试\n"+
+    "\tbsh cn.bsh <中文字符串>";
+
+if (bsh.args.length==0) {
+	print (usage);
+	exit();
+}
+
+if (bsh.args.length==1) { // 转换字符串
+	s = bsh.args[0];
+	rt = Charsetx.convertTest (s);
+	print (rt);
+}

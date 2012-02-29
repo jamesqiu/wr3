@@ -16,7 +16,7 @@
       msg)))
 
 (defn gc 
-  "对app server进行gc建议"
+  "app: 对app server进行gc建议"
   []
   (let [msg "wr3.clj.app.console: System.gc()"]
     (System/gc)

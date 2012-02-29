@@ -1,0 +1,15 @@
+import wr3.util.*;
+
+usage = "Ö¸¶¨×Ö·û´®µÄmd5\n"+
+    "\tmd5.bsh <×Ö·û´®>";
+
+if (bsh.args.length==0) {
+	print (usage);
+	exit();
+}
+
+if (bsh.args.length==1) { // ×ª»»×Ö·û´®
+	s = bsh.args[0];
+	rt = Stringx.md5(s);
+	print (rt);
+}

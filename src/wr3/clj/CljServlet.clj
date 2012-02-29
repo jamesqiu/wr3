@@ -1,11 +1,16 @@
-;;;;--------------------------------------------------
-;;;; 可执行其他.clj文件函数的servlet，在web.xml中配置
-;;;; TODO:
-;;;;   支持xml、json、bin, 可以通过init-parameter在web.xml中进行分别配置：
-;;;;   已临时解决xml: queryString只带 ?xml=utf-8 即可
-
-;;;;--------------------------------------------------
-(ns wr3.clj.CljServlet
+(ns ^{:doc "
+  可执行其他.clj文件函数的servlet，在web.xml中配置:
+   1.支持xml、json、bin, 可以参考web.xml中mimi-type的配置，queryString格式如下：
+     ?mime-type=text/xml&charset=gbk （不指定则缺省为text/html, utf-8）
+   2.使用命名空间中的auth函数来进行权限控制，返回true表示通过，继续输出页面；
+     返回 /c/veg/login  /c/veg/login?js 等则表示验证没有通过，跳转到相应的 url;
+   3.类似Play!，自动绑定querystring中的值和app/*.clj函数中的同名参数，例如 clj1/foo/01/012?name=james&age=30 对应函数为
+     (defn foo [name age] ...) 
+       -- foo函数自动获取到name=james, age=30这两个值；也可以有3个自动绑定的名称：
+     (defn foo [id ids request name age] ...) 
+       -- foo函数自动获取到 id=01, ids='(01 012), request=request, name=james, age=30
+      "}
+  wr3.clj.CljServlet
   (:gen-class 
     :extends javax.servlet.http.HttpServlet))
 
@@ -54,7 +59,11 @@
       (zipmap (keys m) (map #(apply str (interpose "&" %)) (vals m)))))) ; ?k1=a&k1=b 变为{"k1" "a&b"}
 
 (defn- make-binding-params
-  "让app可以自行binding如下变量：id：第一个id值，ids：所有id值的map，request中各值：todo"
+  "让app可以自行binding如下变量：
+  id：第一个id值；
+  ids：所有id值的list；
+  request：request对象；
+  querystring中各值：在app/*.clj中函数定义的其他参数名字都可以自动绑定"
   [request ids]
   (merge {"id" (first ids) "ids" ids "request" request} (request-to-map request)))
   
@@ -69,6 +78,7 @@
 ;;;---------------- 以下为 HttpServlet 方法
 
 (defn -init 
+  "一次初始化"
   [this super]
   (let [context (.getServletContext super)
         wr3home (.getRealPath context "")
@@ -80,30 +90,40 @@
       (BaseConfig/set BaseConfig/CONTEXT_PATH webapp)) 
     (println (format "--- CljServlet init: [%s/c/] ---" webapp))))
 
+(import wr3.util.Stringx)
+
 ;; 处理形如 http://server:8080/wr3/clj/wr3.clj.controller1/action2?k1=v1 的url
 (defn -doGet
   [this request response]
-  ; jamesqiu (2011-7-16): 增加对输出xml的支持，即形如 http://server/c/chartf/chinamap2?$xml=gbk 的返回编码为gbk的xml
-  (let [query-string (.getQueryString request) ; 可能为 nil "k1=v1&k2=v2" 等
-        xml? (and query-string (.startsWith query-string "$xml="))
-        xml-encoding (when xml? (.substring query-string 5))] ; 5 == (count "$xml=")
-    (.setContentType response (if xml? (str "text/xml; charset=" xml-encoding)
-                                "text/html; charset=utf-8"))
-    
-    (let [path-info (.getPathInfo request) ; 可能为 nil "/" "/wr3.clj.c1/a2/" 等
-          ns-fn-id  (get-ns-fn-id path-info) 
-          ns        (:ns ns-fn-id)
-          fn        (:fn ns-fn-id)
-          ids       (:id ns-fn-id)
-          out       (.getWriter response)
-          rt        (if (zero? (fargc ns fn)) 
-                      (fcall ns fn)
-                      (fcall-binding-params ns fn (make-binding-params request ids))
-                      ; (fcall ns fn {:request request :id id})
-                      )
-          ]  ; todo：根据(meta (var foo))得到的参数名，绑定id，ids，request，request参数, 接下：
+  (let [; 获取content-type和charset
+        params (.getParameterMap request)
+        content-type (Stringx/s (Stringx/join (get params "content-type") "&") "text/html")
+        charset (Stringx/s (Stringx/join (get params "charset") "&") "utf-8")
+        ; 执行函数
+        path-info (.getPathInfo request) ; 可能为 nil "/" "/wr3.clj.c1/a2/" 等
+        ns-fn-id  (get-ns-fn-id path-info) 
+        ns (:ns ns-fn-id)
+        fn (:fn ns-fn-id)
+        ids (:id ns-fn-id)
+        ; 判断能否有权限执行本函数fn，无auth函数视为有权限
+        auth (if-let [f (and (not= fn "auth") (fget ns "auth"))] 
+               (f fn path-info) 
+               true) 
+        rt (when (true? auth)
+             (if (zero? (fargc ns fn)) 
+               (fcall ns fn)
+               ; (fcall ns fn {:request request :id id})
+               (fcall-binding-params ns fn (make-binding-params request ids))))
+        ]
+    (println "-- debug: auth =" auth " fn =" fn)
+    ; jamesqiu (2012-2-25) 支持输出多客户：http://server/c/chartf/chinamap2?content-type=text/xml&charset=gbk
+    (.setContentType response (format "%s; charset=%s" content-type charset))    
+    (if (true? auth) 
       ; 如：app写 (defn app1 [id k1 request] ...) 直接 (fcall ns fn id k1 request), 没有找到同名的直接赋值为nil
-      (.println out (? rt "fcall return nil")) )))
+      (-> response .getWriter
+        (.println (? rt "fcall return nil")))
+      (.sendRedirect response (or auth "/login.html"))
+      )))
 
 ;; 下面的方法写不写皆可
 (defn -doPost 

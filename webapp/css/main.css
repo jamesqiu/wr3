@@ -520,7 +520,7 @@ form.app input[type=text] {
 
 /*--------------- layout north ------------*/
 #layout_north {
-	background-image: url(/img/common_bg.png);
+	background-image: url(/img/common-bg1.jpg); 
 	background-repeat: no-repeat;
 	background-color: white;
 }

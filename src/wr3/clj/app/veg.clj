@@ -22,10 +22,11 @@
             (html
               (eui-button 
                 (merge v {:plain "true" :iconCls "icon-search" :title (format "%s (%s)" (name k) id0) :group id0}) 
-                (format "%d. %s" (++ i) (name k)))
+                (format "%s. %s" (++ i) (name k)))
               [:br]))
           menu3)
       [:h3 (str id0 " 没有子菜单了")])
+      (str " ")
       ))) 
       
 (defn- app-top
@@ -62,7 +63,7 @@
   []
   (eui-region 
     "west" 
-    {:title "快捷导航 (<a href=\"#\">回主页</a>)" :style "width: 300px"} 
+    {:title "快捷导航 (<a href=\"/c/veg/\">回主页</a>)" :style "width: 300px"} 
     ))
 
 (defn app-left-main
@@ -71,14 +72,14 @@
   (eui-accord
     {:id "accord1" :style "" }
     (eui-accord-
-      {:iconCls "icon-search"} "集团概况一览"
-      "...")
+      {:iconCls "icon-search"} "基础数据查看"
+      "说明：4个基础数据表的原始数据查看。")
     (eui-accord-
-      {:iconCls "icon-search"} "集团企业情况"
-      "...")
+      {:iconCls "icon-search"} "统计报表管理"
+      "说明：蔬菜部3个报表示例。")
     (eui-accord-
-      {:iconCls "icon-search"} "重点风险监测"
-      "...")
+      {:iconCls "icon-search"} "数据分析"
+      "说明：进程登记表维度指标分析。")
     ))
 
 (defn- app-foot
@@ -123,7 +124,9 @@
    "13-trade" "TB_TR_TRADE_DETAIL_RECORD"
    "14-variety" "TB_BASIC_VARIETY_DETAIL"})
 
-(defn rows [id]
+(defn rows 
+  "service: 给出表对应id如14-variety-count，得到表记录条数"
+  [id]
   (let [id0 (or (m (left id "-count")) "TB_TR_REGISTER_RECORD")
         rt (dbm/rows ["mssql" id0])
         n2 (split rt " ")]
@@ -132,14 +135,15 @@
            (format "%s （约 %s）"  (first n2) (second n2))])
     ))
 
+(defn cols 
+  "service: 调用dbm.clj中的函数显示表的列信息"
+  [id]
+  (dbm/cols ["mssql" (m (left id "-cols"))]) )
 
-(defn cols [id]
-  (dbm/cols ["mssql" (m (left id "-cols"))]) 
-  )  
-
-(defn data [id]
-  (dbm/data ["mssql" (m (left id "-data"))] nil)
-  )
+(defn data 
+  "service: 调用dbm.clj中的函数显示表的数据"
+  [id]
+  (dbm/data ["mssql" (m (left id "-data"))] nil) )
 
 (defn- format-date
   "把形如2011/12/20 ——> 2011年12月20日"
@@ -150,7 +154,9 @@
   "得到交易明细流水表时间跨度"
   []
   (let [dbname "mssql"
-        sql "select distinct convert(char(10), TradeDate, 111) from TB_TR_TRADE_DETAIL_RECORD order by convert(char(10), TradeDate, 111)"]
+        sql (str "select distinct convert(char(10), TradeDate, 111) "
+                 " from TB_TR_TRADE_DETAIL_RECORD"
+                 " order by convert(char(10), TradeDate, 111)")]
     (select-col dbname sql)))
 
 (defn- trade-sum 
@@ -217,8 +223,7 @@
                         e3) ]))
         r2 (map f r1) ; 所有行（每行3个蔬菜种类） 
         ]
-    (html r2)
-    ))
+    (html r2) ))
 
 (defn app2
   "app: 蔬菜成交价格表"
@@ -258,8 +263,7 @@
                         e3) ]))
         r2 (map f r1) ; 所有行（每行3个蔬菜种类） 
         ]
-    (html r2)
-    ))
+    (html r2) ))
 
 (defn app3
   "app: 蔬菜行情表"
@@ -274,8 +278,7 @@
         [:tr [:td {:colspan 12 :align "center"} (format-date d)]]
         [:tr (repeat 3 (html [:th "品名"] [:th "产地"] [:th "数量(百公斤)"] [:th "成交价(元)"]))]]
        [:tbody 
-        (trade-quot d)]
-       ] 
+        (trade-quot d)] ]
       [:br])))
 
 (import wr3.table.CrossTable)
@@ -284,7 +287,8 @@
   "app: 进场登记表日期-属地分析"
   []
   (let [dbname "mssql"
-        sql (str "select convert(char(10), EnterDate, 111) date, substring(TruckNo,1,1) no, SUM(SayWeight) sum from TB_TR_REGISTER_RECORD"
+        tb "TB_TR_REGISTER_RECORD"
+        sql (str "select convert(char(10), EnterDate, 111) date, substring(TruckNo,1,1) no, SUM(SayWeight) sum from " tb
                  " where substring(TruckNo,1,1)<>''"
                  " group by convert(char(10), EnterDate, 111), substring(TruckNo,1,1)" 
                  " order by convert(char(10), EnterDate, 111), sum(SayWeight) desc")
@@ -295,16 +299,19 @@
              (.measure "sum") 
              (.sum true) 
              (.meta ["日期" "属地" "重量"])
-             (.data wr3tb)) 
-        ]
-    (replace-all (.html rt) "null" "-") ))
+             (.data wr3tb)) ]
+    (html 
+      [:h1 (str (meta-name tb) " 日期/属地维度-重量分析")]
+      (replace-all (.html rt) "null" "-") )))
 
+;; 从meta.clj的dds定义中得到一个表的所有维度字段名称，如：("SignMode" "Area" ...)
 (defn- table-dims [tb] (map name (keys (dds (keyword tb)))))
   
 (require 'wr3.clj.app.chartf)
 
 (defn app5
-  "app: 进场登记表字典维度分析"
+  "app: 进场登记表字典维度分析。
+  dim：维度名称，如'SignMode','Status'等"
   [dim]
   (let [dim (or dim "SignMode")
         dim-key (keyword (.toLowerCase dim))
@@ -319,7 +326,7 @@
         ]
     (html 
       (map #(html (eui-button {:onclick (format "veg_enter_dict('%s')" %)} (meta-name %)) " ") (table-dims tb))
-      [:h1 "进场登记表数据维度分析"]
+      [:h1 "进场登记表数据 字典维度-重量指标分析"]
       [:table.wr3table {:border 1}
        [:caption (meta-name dim)]
        [:thead 
@@ -337,6 +344,43 @@
         (into {} (map #(vector (dd (dim-key %)) (:weight %)) rt)) 
         {:title "简单图形" :x "序号" :y "数值"}) 
       ) ))
+
+(defn app6
+  "app: 进场登记表日期维度分析"
+  []
+  (let [dbname "mssql"
+        tb "TB_TR_REGISTER_RECORD"
+        sql (str "select convert(char(10), EnterDate, 111) date, count(*) count, SUM(SayWeight) weight from " tb
+                 " group by convert(char(10), EnterDate, 111)" 
+                 " order by convert(char(10), EnterDate, 111) ")
+        rt (select-all dbname sql)
+        fratio (fn [r k] (format "%.2f%%" (* 100 (/ (double (k r)) (apply + (map k rt))))))
+        ]
+    (html
+      [:h1 "进场登记表 日期维度-重量指标分析"]
+      [:table.wr3table {:border 1}
+       [:thead 
+        [:tr [:th "日期"] [:th "计数"] [:th "数量占比"] [:th "过磅称重"] [:th "重量占比"]]]
+       [:tbody 
+        (map #(html [:tr 
+                     [:td (:date %)] 
+                     [:td (:count %)] 
+                     [:td (fratio % :count)] 
+                     [:td (:weight %)]
+                     [:td (fratio % :weight)] 
+                     ]) rt)]]
+      (wr3.clj.app.chartf/bar 
+        (into {} (map #(vector (:date %) (:weight %)) rt)) 
+        {:title "示意图" :x "日期" :y "称重"}) 
+      )))
+
+(defn app7 
+  ""
+  []
+  (html-body 
+    [:div#div1 "app7"]
+    [:br]
+    [:a#bt-app7 {:href "#" :onclick "veg_app7()"} "test"]))
 
 ;;---------------- 临时测试，记着注释掉调用语句
 (defn test2 []

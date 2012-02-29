@@ -32,6 +32,11 @@
       (when (not (nil? s))
         (.invalidate s)))))
 
+(defn cookie
+  "从request中取出指定名称的cookie值字符串，找不到返回nil"
+  [request cname]
+  (wr3.util.Servletx/cookie request cname))
+
 ;;; ------------ query var map 处理
 (defn query-vars
   "获得request的queryString中的key-value，以Map形式返回"
@@ -43,8 +48,8 @@
 ;;; ------------ html wrapper
 (defmacro html-body
   "常用的html body模板，使用jquery ui和easyui，参数：
-  m：属性
-  body：内容"
+  m：属性，body：内容
+  usage：(html-body {:onload 'my_function()'} '...') "
   [m & body]
   `(html [:html head-set [:body ~m ~@body]]))
 

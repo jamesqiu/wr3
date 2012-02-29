@@ -294,7 +294,7 @@
                 webapp)
               (format
                 ;"map.setDataURL(\"%s/chartf/chinamap.xml\");"		   
-                "map.setDataURL(\"%s/c/chartf/chinamap2?$xml=gbk\");"		   
+                "map.setDataURL(\"%s/c/chartf/chinamap2?charset=gbk\");"		   
                 webapp)
               "map.render(\"mapdiv\");"
               ]

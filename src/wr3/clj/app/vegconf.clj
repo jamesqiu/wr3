@@ -18,7 +18,7 @@
           )
     :数据分析* (array-map
           :进场登记分析* {:id "31-enter"} 
-          :交易流水分析* {:id "32-trade"} 
+          :交易流水分析 {:id "32-trade"} 
           )
     :其他 (array-map
           :系统管理 {:id "41-admin"} 
@@ -86,10 +86,10 @@
     :31-enter (array-map
                 :来车属地分析* {:id "31-enter-from"}
                 :字典维度分析* {:id "31-enter-dict"}
-                :时间维度分析 {:id "31-enter-time"}
+                :时间维度分析* {:id "31-enter-time"}
                 )
     :32-trade (array-map
-                :字典维度分析 {:id ""}
+                :字典维度分析 {:id "32-trade-dict"}
                 :时间维度分析 {:id ""}
                 :来车属地分析 {:id ""}
                 )
