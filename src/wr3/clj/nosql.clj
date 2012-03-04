@@ -1,26 +1,32 @@
-; mongodb µÈ NoSQL Êı¾İ¿âµÄ utility º¯Êı
+; mongodb ç­‰ NoSQL æ•°æ®åº“çš„ utility å‡½æ•°
 
 (ns wr3.clj.nosql)
 
 (use 'somnium.congomongo)
 
 (defmacro with-mdb
-  "Á¬½Óµ½±¾µØ dbname ¿â½øĞĞ²Ù×÷"
+  "è¿æ¥åˆ°æœ¬åœ° dbname åº“è¿›è¡Œæ“ä½œ"
   [db & body]
   `(with-mongo (make-connection (name ~db))
      ~@body))
 
-;------- µÃµ½ mongodb µÄ:_id
+;------- å¾—åˆ° mongodb çš„:_id
 (defn mdb-id
-  "µÃµ½ÎÄµµ¼ÇÂ¼oµÄ:_id×Ö¶ÎµÄ24Î»×Ö·û´®ĞÎÊ½, »òÕß°Ñ24Î»×Ö·û´®×ª»»³Éobject-id"
+  "å¾—åˆ°æ–‡æ¡£è®°å½•oçš„:_idå­—æ®µçš„24ä½å­—ç¬¦ä¸²å½¢å¼, æˆ–è€…æŠŠ24ä½å­—ç¬¦ä¸²è½¬æ¢æˆobject-id.
+  @o ä¸€è¡Œå«mongodbç³»ç»Ÿ_idçš„æ–‡æ¡£è®°å½•ï¼Œæˆ–è€…24ä½å­—ç¬¦ä¸²
+  @return å¦‚æœæ˜¯24ä½å­—ç¬¦ä¸²ï¼Œè¿”å›object-id; å¦‚æœæ˜¯mongodbè®°å½•å¯¹è±¡ï¼Œè¿”å›24ä½å­—ç¬¦ä¸²ã€‚
+  @author jamesqiu 2012-3-3"
   [o]
-  (if (string? o) (object-id o) (-> o :_id str)))
+  (cond 
+    (and (string? o) (= 24 (count o))) (object-id o) 
+    (o :_id) (-> o :_id str)
+    :else o))
 
-;------- mongodb CRUD ²Ù×÷
+;------- mongodb CRUD æ“ä½œ
 
 (defn mdb-add
-  "Îªtb¼¯ºÏÔö¼Ó1Ìõ»òÕßnÌõ¼ÇÂ¼£¨Ã¿¸ö¼ÇÂ¼ÊÇÒ»¸ömap£©£¬
-  (with-mdb 
+  "ä¸ºtbé›†åˆå¢åŠ 1æ¡æˆ–è€…næ¡è®°å½•ï¼ˆæ¯ä¸ªè®°å½•æ˜¯ä¸€ä¸ªmapï¼‰ï¼Œ
+  (with-mdb 'db'
     (mdb-add :tb1 {:name 'qh' :age 30}) 
     (mdb-add :tb1 {:name 'qh' :age 30} {:name 'james' :age 40} {:name 'qiu}) 
   )"
@@ -28,7 +34,7 @@
   (mass-insert! tb (vec m)))
 
 (defn mdb-del
-  "´Ótb¼¯ºÏÉ¾³ıÌØ¶¨Ìõ¼şm£¨Ò»°ãÓĞ:_id£©µÄ¼ÇÂ¼£¬
+  "ä»tbé›†åˆåˆ é™¤ç‰¹å®šæ¡ä»¶mï¼ˆä¸€èˆ¬æœ‰:_idï¼‰çš„è®°å½•ï¼Œ
   (with-mdb
     (mdb-del :tb1 p1)
     (mdb-del :tb1 {:name 'QH' :age 30}) 
@@ -37,47 +43,45 @@
   (destroy! tb m))
 
 (defn mdb-upd
-  "Îªtb¼¯ºÏ¸üĞÂÌØ¶¨Ìõ¼şm£¨Ò»°ãÓĞ:_id£©µÄ¼ÇÂ¼Îªm2£¬
+  "ä¸ºtbé›†åˆæ›´æ–°ç‰¹å®šæ¡ä»¶mï¼ˆä¸€èˆ¬æœ‰:_idï¼‰çš„è®°å½•ä¸ºm2ï¼Œ
   (with-mdb
     (mdb-upd :tb1 p1 {:name 'qh'})
     (mdb-upd :tb1 {:_id '01'} (merge p1 {:age 30})) 
-    (mdb-upd :etc {:_id (mdb-id '4e4a85bcc13e8f83039edb2b')} {'$set' {:age 37}})  ; Ö»¸üĞÂÒ»¸ö×Ö¶Î
-    ; ´æÔÚÔò¸üĞÂ£¬²»´æÔÚÔòÔö¼Ó£º
+    (mdb-upd :etc {:_id (mdb-id '4e4a85bcc13e8f83039edb2b')} {'$set' {:age 37}})  ; åªæ›´æ–°ä¸€ä¸ªå­—æ®µ
+    ; å­˜åœ¨åˆ™æ›´æ–°ï¼Œä¸å­˜åœ¨åˆ™å¢åŠ ï¼š
     (mdb-upd :foo 
       {:_id '007'}
-      {:_id '007' :name 'Çñ' :age 37})
+      {:_id '007' :name 'é‚±' :age 37})
   )"
   [tb m m2]
   (update! tb m m2))
   
 (defn mdb-get
-  "Ñ¡Ôñtb¼¯ºÏµÄÔªËØ, Ã»ÓĞlimit²ÎÊıÔòÑ¡ÔñÈ«²¿¡£
+  "é€‰æ‹©tbé›†åˆçš„å…ƒç´ , æ²¡æœ‰limitå‚æ•°åˆ™é€‰æ‹©å…¨éƒ¨ã€‚
   (with-mdb
     (mdb-select :task :person :limit 1)
     (mdb-select :task :person :where {:jp \"qh\"})
   )"
-  [tb & limit]
-  (apply fetch tb limit))
+  [tb & options]
+  (apply fetch tb options))
 
 (defn mdb-get-one
-  "µÃµ½tb¼¯ºÏµÄ1ĞĞÔªËØ£¬"
-  [tb & limit]
-  (apply fetch-one tb limit))
+  "å¾—åˆ°tbé›†åˆçš„1è¡Œå…ƒç´ ï¼Œ"
+  [tb & options]
+  (apply fetch-one tb options))
 
-;------ ÆäËû²Ù×÷
+;------ å…¶ä»–æ“ä½œ
 
 (defn mdb-del-coll
   [tb]
   (drop-coll! tb))
 
-(defn mdb-get-id
-  [tb id]
-  (mdb-get tb :where {:_id (mdb-id id)}))
+(def mdb-get-id fetch-by-id)
 
-;------ ²ÉÓÃ mongodb Êı¾İµÄÓ¦ÓÃ
+;------ é‡‡ç”¨ mongodb æ•°æ®çš„åº”ç”¨
 
 (defn pinyin
-  "´Ó±¾µØ mongodb µÄwr3¿âpinyin±íÖĞ»ñµÃ×Ö·û´®µÄÆ´Òô£ºÈ«Æ´ºÍ¼òÆ´"
+  "ä»æœ¬åœ° mongodb çš„wr3åº“pinyinè¡¨ä¸­è·å¾—å­—ç¬¦ä¸²çš„æ‹¼éŸ³ï¼šå…¨æ‹¼å’Œç®€æ‹¼"
   [s]
   (let [db "wr3"
         tb :pinyin
@@ -89,7 +93,7 @@
        :jp (apply str (map #(first (f %)) s))} )))
 
 (defn dict
-  "¸ø³öÖĞÎÄ»òÕßÓ¢ÎÄ£¬´Ó mongodb µÃµ½¶ÔÓ¦ÊÍÒå£¨Ä£ºı²éÑ¯£©"
+  "ç»™å‡ºä¸­æ–‡æˆ–è€…è‹±æ–‡ï¼Œä» mongodb å¾—åˆ°å¯¹åº”é‡Šä¹‰ï¼ˆæ¨¡ç³ŠæŸ¥è¯¢ï¼‰"
   [s]
   (let [w (.toLowerCase s)
         isword? (fn [word] (re-matches #"[a-zA-Z]+" word))
@@ -106,7 +110,7 @@
 ;(with-mdb :test
 ;  (mdb-upd :foo 
 ;    {:_id "007"}
-;    {:_id "007" :name "ÇñêÍ2" :age 37}))
+;    {:_id "007" :name "é‚±æ™–2" :age 37}))
 ;(use 'wr3.clj.u)
 ;(print-seq (dict "Hello"))
 

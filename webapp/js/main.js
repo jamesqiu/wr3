@@ -2438,7 +2438,7 @@ function ems_layout2() {
  * 用于 wr3.clj.app.veg
  * @param url
  */
-function veg_load_center(url) {
+function layout_load_center(url) {
 	$('div [region="center"]')
 	.html('<img src="/img/loading3.gif" />')
 	.load(url, function() {
@@ -2469,13 +2469,13 @@ function veg_onload() {
 			var m = ['11-reg', '12-reg2', '13-trade', '14-variety']
 			$.each(m, function(i,v) {
 				$('a#'+v+'-count').click(function() {
-					veg_load_center('/c/veg/rows/'+$(this).attr('id'))
+					layout_load_center('/c/veg/rows/'+$(this).attr('id'))
 				})
 				$('a#'+v+'-cols').click(function() {
-					veg_load_center('/c/veg/cols/'+$(this).attr('id'))
+					layout_load_center('/c/veg/cols/'+$(this).attr('id'))
 				})
 				$('a#'+v+'-data').click(function() {
-					veg_load_center('/c/veg/data/'+$(this).attr('id'))
+					layout_load_center('/c/veg/data/'+$(this).attr('id'))
 				})
 			})
 			
@@ -2484,16 +2484,16 @@ function veg_onload() {
 			          '32-enter-dict':'app7'};
 			$.each(m2, function(k, v) {
 				$('a#'+k).click(function() {
-					veg_load_center('/c/veg/'+v)
+					layout_load_center('/c/veg/'+v)
 				})
 			})			
 		})
 	})		
 }
 
-function veg_price(date) { veg_load_center('/c/veg/app2?date='+date) }
-function veg_quot(date) { veg_load_center('/c/veg/app3?date='+date) }
-function veg_enter_dict(dim) { veg_load_center('/c/veg/app5?dim='+dim) }
+function veg_price(date) { layout_load_center('/c/veg/app2?date='+date) }
+function veg_quot(date) { layout_load_center('/c/veg/app3?date='+date) }
+function veg_enter_dict(dim) { layout_load_center('/c/veg/app5?dim='+dim) }
 
 function veg_app7() {
 	$.get('/app7.js', function() {
@@ -2502,13 +2502,46 @@ function veg_app7() {
 }
 
 /**
- * wr3.clj.app.test.clj
+ * wr3.clj.app.test/coki
  */
 function test_cookie() {
 //	$.cookie('wr3user', 'user用户1'); // 设置cookie
 	alert($.cookie('wr3user'))
 }
 
+/**
+ * wr3.clj.app.grade/index
+ */
+function grade_onload() {
 
+	layout_load_center('/c/grade/hs300')
+	
+	$('#hs300_bt').click(function() {
+		layout_load_center('/c/grade/hs300/')
+	})
+	$('#corp_bt').click(function() {
+		layout_load_center('/c/grade/corp')
+	})	
+	
+	$('#indic0_bt').click(function() {
+		var corp_code = $('#corp').attr('code')
+		layout_load_center('/c/grade/indic/'+corp_code)
+	})
+	$('a[group="indic1_bt"]').click(function() {
+		var code = $(this).attr('code') // 指标代码：11/12/13/13/15
+		var corp_code = $('#corp').attr('code') // 上市公司代码
+		layout_load_center('/c/grade/indic2/'+code+'/'+corp_code)
+	})
+}
 
+// 选择某个上市公司后的响应
+function grade_corp(code,name) {
+	var link = '<a target="_blank" href="http://stockchart.finance.cn.yahoo.com/b?s='+code+'.sz">yahoo 财经</a>';
+	$.messager.confirm('请确认', '选择上市公司：'+name+'？<br/>'+link, function(r){
+		if (r) {
+			$('#corp').attr('code', code)
+			$('#corp2').text(name)
+		}
+	});
+}
 

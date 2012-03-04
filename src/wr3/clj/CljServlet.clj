@@ -2,8 +2,8 @@
   可执行其他.clj文件函数的servlet，在web.xml中配置:
    1.支持xml、json、bin, 可以参考web.xml中mimi-type的配置，queryString格式如下：
      ?mime-type=text/xml&charset=gbk （不指定则缺省为text/html, utf-8）
-   2.使用命名空间中的auth函数来进行权限控制，返回true表示通过，继续输出页面；
-     返回 /c/veg/login  /c/veg/login?js 等则表示验证没有通过，跳转到相应的 url;
+   2.使用命名空间中的auth函数来进行权限控制，auth函数第一个参数为request，第二个参数为fname（可选），最后带一个& args，
+     返回true表示通过，继续输出页面；返回 false 等则表示验证没有通过，跳转到/login.html;
    3.类似Play!，自动绑定querystring中的值和app/*.clj函数中的同名参数，例如 clj1/foo/01/012?name=james&age=30 对应函数为
      (defn foo [name age] ...) 
        -- foo函数自动获取到name=james, age=30这两个值；也可以有3个自动绑定的名称：
@@ -107,7 +107,7 @@
         ids (:id ns-fn-id)
         ; 判断能否有权限执行本函数fn，无auth函数视为有权限
         auth (if-let [f (and (not= fn "auth") (fget ns "auth"))] 
-               (f fn path-info) 
+               (f request fn) 
                true) 
         rt (when (true? auth)
              (if (zero? (fargc ns fn)) 
@@ -122,7 +122,11 @@
       ; 如：app写 (defn app1 [id k1 request] ...) 直接 (fcall ns fn id k1 request), 没有找到同名的直接赋值为nil
       (-> response .getWriter
         (.println (? rt "fcall return nil")))
-      (.sendRedirect response (or auth "/login.html"))
+      (do
+        (println "-- debug: path-info =" (format "%s/c%s" (BaseConfig/webapp) path-info))
+        (-> request .getSession
+          (.setAttribute "wr3url" (format "%s/c%s" (BaseConfig/webapp) path-info)))
+        (.sendRedirect response "/login.html"))
       )))
 
 ;; 下面的方法写不写皆可

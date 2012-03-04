@@ -365,7 +365,7 @@
 (defn- d
   [h1 h2 f data]
   (html
-    [:div {:align "center" :style "border: 1px solid gray"}
+    [:div {:align "center" :style "border: 1px solid gray; float: left; margin: 20px"}
      [:h1 h1] [:h2 h2 " （单位：万吨）"]
      (f data {}) ]))
 
@@ -373,7 +373,8 @@
   "app: cup杯图"
   []
   (html-body
-    ""
+    {}
+    [:style (str "div { float:left; margin:20px }")]
     [:div {:align "center"}
      [:h1 "装置负荷率——常减压"] 
      [:h2 {:style "color: #aa5500"} "小时能力: 16000"] 
@@ -406,6 +407,7 @@
   []
   (html-body
     ""
+    [:style (str "div { float:left; margin:20px }")]
     [:div {:align "center"}
      [:h1 "经济技术指标——柴汽比"] 
      [:h2 {:style "color: #aa5500"} "计划: 2.07"] 
@@ -423,6 +425,7 @@
      (panel {:value 60.66 :range [50 61.44 70]} {:lowerLimit 50 :upperLimit 70})]
     [:div {:align "center"}
      [:h1 "经济技术指标——乙烯收率比"] 
+     [:h2 {:style "color: #aa5500"} "计划: --.--%"] 
      [:h2 {:style "color: green"} "实际: 33.8%"] 
      (panel {:value 33.8 :range [10 26 38 50]} {:lowerLimit 10 :upperLimit 50})]
     ))
@@ -456,11 +459,11 @@
                 "库存量" (vec (map #(+ 600 %) (random-n 12 300)))
                 "库存成本" (vec (map #(+ 400 %) (random-n 12 600))) } )
     (html 
-      [:div {:align "center"}
+      [:div {:align "center" :style "float: left; margin: 20px"}
        [:h1 "销售量同比分析"] [:h2 "全国地区销售量：900万吨"]
        (panel {:value 23 :range [-100 -50 0 50 100]} {:lowerLimit -100 :upperLimit 100})])
     (html 
-      [:div {:align "center"}
+      [:div {:align "center" :style "float: left; margin: 20px"}
        [:h1 "销售量环比分析"] [:h2 "全国地区销售量：900万吨"]
        (panel {:value -3 :range [-100 -50 0 50 100]} {:lowerLimit -100 :upperLimit 100})])
     ))

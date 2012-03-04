@@ -32,6 +32,26 @@
       (when (not (nil? s))
         (.invalidate s)))))
 
+(defn wr3user
+  "得到session中wr3user变量的值，即用户uid"
+  [request]
+  (session request "wr3user"))
+  
+(defn wr3user? 
+  "判断session中wr3user变量是否为指定用户"
+  [request uid]
+  (= uid (wr3user request)))
+
+(defn wr3role
+  "得到session中wr3role变量的值，即用户roles以逗号分隔的值"
+  [request]
+  (session request "wr3role"))
+  
+(defn wr3role? 
+  "判断session中wr3role变量是否含指定角色role"
+  [request role]
+  (has? (split (wr3role request) ",") role))
+
 (defn cookie
   "从request中取出指定名称的cookie值字符串，找不到返回nil"
   [request cname]
@@ -89,6 +109,10 @@
   [css]
   (html [:link {:type "text/css" :rel "stylesheet" :href (format "%s/css/%s" webapp css)}]))
 
+(defn html-css
+  "生成含css代码的html片段"
+  [& s]
+  (html [:style (apply str s)]))
 
 (defn html-main
   "把多个字符串参数放在定义了main.css, main.js的html body内，参加html-body"
