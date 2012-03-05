@@ -251,7 +251,9 @@
                                 (tower {"工作人口" 500000000 "成人人口" 700000000 "中国人口" 1500000000 "世界人口" 5000000000} {}) " "
                                 (funnel {"所有账户" 5000 "活动账户" 3000 "价值客户" 1500 "VIP客户" 300} {}) " "
                                 (cup 65 {:lowerLimit 0 :upperLimit 100} 200) " "
-                                (panel {:value 135 :range [90 100 120 150]} {:lowerLimit 90 :upperLimit 150}) )}
+                                (panel {:value 135 :range [90 100 120 150]} {:lowerLimit 90 :upperLimit 150}) 
+                                (panel {:value 87 :range [30 50 55 60 65 70 75 80 85 90 100]} {:lowerLimit 30 :upperLimit 100}) 
+                                )}
          {:title "地图图形" :html (html 
                                 [:a {:href (format "%s/c/chartf/chinamap" webapp) :target "_blank"} 
                                  "中国地图 (另页打开)"] )} 

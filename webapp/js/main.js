@@ -2545,3 +2545,16 @@ function grade_corp(code,name) {
 	});
 }
 
+// 返回综合评价指标表。
+function grade_indic(corp_code, year_month) {
+	layout_load_center('/c/grade/indic/'+corp_code+'/'+year_month)	
+}
+
+// 点击综合评价指标表中的评价一级指标动作。
+function grade_indic2(code, corp_code, year_month) {
+	layout_load_center('/c/grade/indic2/'+code+'/'+corp_code+'/'+year_month)
+}
+
+function grade_rank_detail() {
+	$('#panel1').panel('open')
+}
