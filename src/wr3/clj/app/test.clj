@@ -1,7 +1,7 @@
 (ns wr3.clj.app.test)
 ;;;;------------------------ 进行最简单功能的测试 /localhost/c/test
 
-(use 'wr3.clj.web 'wr3.clj.n 'wr3.clj.u :reload) ; 加不加 :reload 对速度有较大影响
+(use 'wr3.clj.web 'wr3.clj.n 'wr3.clj.u); :reload) ; 加不加 :reload 对速度有较大影响
 (use 'hiccup.core)
 
 (defn auth

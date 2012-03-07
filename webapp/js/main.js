@@ -2438,11 +2438,12 @@ function ems_layout2() {
  * 用于 wr3.clj.app.veg
  * @param url
  */
-function layout_load_center(url) {
+function layout_load_center(url, func) {
 	$('div [region="center"]')
 	.html('<img src="/img/loading3.gif" />')
 	.load(url, function() {
 		$.parser.parse()
+		if (func) { func() }
 	})
 	.css('padding', '20px')				
 }
@@ -2525,12 +2526,14 @@ function grade_onload() {
 	
 	$('#indic0_bt').click(function() {
 		var corp_code = $('#corp').attr('code')
-		layout_load_center('/c/grade/indic/'+corp_code)
+		var year_month =$('span#year').text() + '-' + $('span#month').text() 
+		grade_indic(corp_code, year_month)
 	})
 	$('a[group="indic1_bt"]').click(function() {
 		var code = $(this).attr('code') // 指标代码：11/12/13/13/15
 		var corp_code = $('#corp').attr('code') // 上市公司代码
-		layout_load_center('/c/grade/indic2/'+code+'/'+corp_code)
+		var year_month =$('span#year').text() + '-' + $('span#month').text() 
+		grade_indic2(code, corp_code, year_month)
 	})
 }
 
@@ -2547,7 +2550,11 @@ function grade_corp(code,name) {
 
 // 返回综合评价指标表。
 function grade_indic(corp_code, year_month) {
-	layout_load_center('/c/grade/indic/'+corp_code+'/'+year_month)	
+	layout_load_center('/c/grade/indic/'+corp_code+'/'+year_month, function() {
+		$('td[group="score"]').click(function() {
+			alert($(this).text())
+		})
+	})	
 }
 
 // 点击综合评价指标表中的评价一级指标动作。

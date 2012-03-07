@@ -25,6 +25,22 @@
   (with-mdb "grade"
     (:v (mdb-get-id :indic (name id)))))  
 
+(defn- get-indic-weight
+  "返回：{11 {201 0.04, 202 0.04, ..} 12 {..} ..}"
+  []
+  (into 
+    {} (for [e (get-indic "indic")]
+         [(:code e) 
+          (into {} (for [e2 (:child e)] [(:code e2) (* 0.0001 (:weight e) (:weight e2) )]))])))
+
+(defn- get-indic2-weight
+  "得到所有2级评价指标的最终加权如：{201 0.04, 202 0.04, .. , 229 0.0075} "
+  []
+  (let [indic (get-indic "indic")
+        rt (for [e indic e1 (:child e)]
+             [(:code e1) (* 0.0001 (:weight e) (:weight e1))])]
+    (into {} rt) ))
+  
 (defn- get-corp-name
   "得到指定的上市公司信息
   @id 上市公司代码"
@@ -161,6 +177,38 @@
   [d]
   (* 0.0001M (Math/round (* d 10000))))
 
+(defn- corp-score-sum
+  "综合评分及等级，驾驶仪表板示意图"
+  [corp-code year month rt-indic]
+  (let [score (sum (map #(* (:weight %) (sum-indic2 (:child %) corp-code year month) 0.01) rt-indic))]
+    (html
+      [:a {:name "rank_result"}]
+      [:h2 (format "修正指标分值：<span style='color:red'>%.4f</span>（评级参考：<span style='color:red'>%s</span>）" 
+                   score (rank score))]
+      (panel {:value (to-point4 score) 
+              :range [30 50 55 60 65 70 75 80 85 90 100]} 
+             {:lowerLimit 30 :upperLimit 100} 500 250) )))
+
+(defn- corp-score-detail 
+  "各一级评价指标分值cup图显示"
+  [rt-indic data]
+  (eui-panel 
+    {:id "panel1" :closed "true" :title "各一级评价指标得分 : " :style "color: blue; width: 900px; padding: 5px" }
+    (for [e rt-indic]
+      (let [name1 (:name e) ; 一级指标名称
+            w1 (:weight e) ; 一级指标权重
+            indic2 (:child e) ; 二级指标
+            ; 二级指标修正值列表
+            all-v2 (for [e2 indic2] 
+                     (let [w2 (:weight e2)
+                           v (get data (-> e2 :code str keyword)) ]
+                       (* v w1 w2 0.0001)))
+            ; 一级指标修正分值
+            score2 (to-point4 (sum all-v2))]
+        [:div {:style "float:left; margin: 10px"}
+         [:h2 name1] "满分值 : " w1 [:br] "得分值 : " score2 [:br]
+         (cup (double score2) {:lowerLimit 0 :upperLimit w1} 150 250)] )) ))
+
 (use '[wr3.clj.app.chartf :only (panel cup)])
 
 (defn indic
@@ -170,7 +218,7 @@
   (let [corp-code (or (first ids) "000001")
         year-month (or (second ids) "2012-1")
         [year month] (split year-month "-")
-        data (get-data corp-code year month)
+        data (get-data corp-code year month) ; {:201 82 :202 98 ..}
         rt-caption (get-indic "caption")
         rt-title (get-indic "title")
         rt-head (get-indic "head")
@@ -184,6 +232,7 @@
        " &nbsp; " (format "（评价期：%s年%s月）" year month)]
       (eui-button {:href "#rank_result"} "评级结果参考") " &nbsp; "
       (eui-button {:href "#rank_detail" :onclick "grade_rank_detail()"} "评级结果细项图示") " &nbsp; "      
+      ; 指标体系大表
       [:table {:class "wr3table" :border 1 :style "border:1px solid black"}
        [:caption rt-caption]
        [:tbody
@@ -192,73 +241,34 @@
          (map #(html [:th %]) rt-head)]
         (map-indexed 
           (fn [i e] ; e  [{:code 11, :name "上..", :weight 20, :child [{:code 201, :name "所..", :weight 20} ..]}, ..] 
-            (html [:tr 
-                   [:td {:rowspan (nth rowspan i) :style css2 :title "点击查看细该项" :onclick 
-                         (format "grade_indic2('%s','%s','%s-%s')" (:code e) corp-code year month)} 
-                    (fmt e)] ; 一级指标 eg. 上市公司治理评价
-                   [:td (let [e1 (-> e :child first)] (fmt e1))] ; first 二级指标 eg. 所有权结构及其影响
-                   (let [code (-> e :child first :code str keyword)
-                         v (get data code)
-                         w1 (:weight e)
-                         w2 (-> e :child first :weight)
-                         v2 (* v w1 w2 0.01 0.01)]
-                     (html
-                       [:td {:align "right"} v]; 评价指标值 eg. 85
-                       [:td {:align "right" :title (format "%.2f (=%s*%s%%*%s%%)" v2 v w1 w2)} ; 修正指标值 eg. 85*20%*20%=3.4 
-                        (format "%.2f" v2)] )) ]
-                  (map #(html ; % 是二级指标（不含第一个）如：'({:code 202, :name "..", :weight 25} ..)
-                          [:tr
-                           [:td (fmt %)] ; rest 二级指标 eg. 金融相关者关系
-                           (let [code (-> % :code str keyword)
-                                 v (get data code)
-                                 w1 (:weight e)
-                                 w2 (:weight %)
-                                 v2 (* v w1 w2 0.01 0.01)]
-                             (html
-                               [:td {:align "right"} v] ; 评价指标值 eg. 85 
-                               [:td {:align "right" :title (format "%.2f (=%s*%s%%*%s%%)" v2 v w1 w2)} ; 修正指标值 eg. 85*20%*20%=3.4 todo 
-                                (format "%.2f" v2)] )) ])
-                       (-> e :child rest)) ))
+            (let [w1 (:weight e) ; 一级指标权重，如：20
+                  f-td-score2 (fn [e2] ; “评价基本指标”和“修正指标”的html片段
+                                (let [code (:code e2)
+                                      v (get data (-> code str keyword))
+                                      w2 (:weight e2)
+                                      v2 (* v w1 w2 0.01 0.01)]
+                                  (html
+                                    [:td {:align "right" :group "score" :title "点击更改"} v]; 评价指标值 eg. 85
+                                    [:td {:align "right" :title (format "%.2f (=%s*%s%%*%s%%)" v2 v w1 w2)} ; 修正指标值 eg. 85*20%*20%=3.4 
+                                     (format "%.2f" v2)] ))) ]
+              (html [:tr 
+                     [:td {:rowspan (nth rowspan i) :style css2 :title "点击查看细该项" 
+                           :onclick (format "grade_indic2('%s','%s','%s-%s')" (:code e) corp-code year month)} 
+                      (fmt e)] ; 一级指标 eg. "上市公司治理评价 : 20%"
+                     (let [e2 (-> e :child first)] ; e2是第1个二级指标eg. {:code 201, :name "所有权结构及其影响", :weight 20}
+                       (html [:td (fmt e2)]
+                             (f-td-score2 e2))) ]
+                    (for [e2 (-> e :child rest)] ; e2是其他二级指标（不含第一个）如：'{:code 202, :name "金融相关者关系", :weight 25}
+                      [:tr
+                       [:td (fmt e2)] ; rest 二级指标 eg. 金融相关者关系
+                       (f-td-score2 e2) ]) )))
           rt-indic) ]]
-      (let [score (sum (map #(* (:weight %) (sum-indic2 (:child %) corp-code year month) 0.01) rt-indic))]
-        (html
-          [:a {:name "rank_result"}]
-          [:h2 (format "修正指标分值：<span style='color:red'>%.4f</span>（评级参考：<span style='color:red'>%s</span>）" 
-                       score (rank score))]
-          (panel {:value (to-point4 score) 
-                  :range [30 50 55 60 65 70 75 80 85 90 100]} 
-                 {:lowerLimit 30 :upperLimit 100} 500 250)
-          )) 
-      [:br]
-      (eui-button {:href "#top" :style "margin: 3px" :iconCls "icon-redo"} "回到上面") 
-      [:br]
+      ; 综合评分及等级，驾驶仪表板示意图
+      (corp-score-sum corp-code year month rt-indic) [:br]
+      (eui-button {:href "#top" :style "margin: 3px" :iconCls "icon-redo"} "回到上面") [:br]
+      ; 各一级评价指标分值cup图显示
       [:a {:name "rank_detail"}]
-      (eui-panel 
-        {:id "panel1" :closed "true" :title "评级结果细项 : "
-         :style "color: blue; width: 900px; padding: 5px" }
-        (map 
-          #(let [name1 (:name %) ; 一级指标名称
-                 w1 (:weight %) ; 一级指标权重
-                 indic2 (:child %)
-                 ; 该一级指标修正分值
-                 score2 (sum (map
-                               (fn [e]
-                                 (let [w2 (:weight e) ; 二级指标权重
-                                       v (get data (-> e :code str keyword)) ; 二级指标分值 
-                                       v1 (* w1 w2 0.01) ; 二级指标最高分值
-                                       v2 (* v1 v 0.01)] ; 二级指标修正值 
-                                   v2))
-                               indic2)) 
-                 score2 (to-point4 score2)]
-             (html
-               [:div {:style "float:left; margin: 10px"}
-                [:h2 name1]
-                "满分值 : " w1 [:br]
-                "得分值 : " score2 [:br]
-               (cup (double score2) {:lowerLimit 0 :upperLimit w1} 150 250)]
-               ))
-          rt-indic))
-      )))
+      (corp-score-detail rt-indic data) )))
 
 (defn indic2
   "app: 显示1级指标下面的二级指标
@@ -422,8 +432,8 @@
           ]
       (doseq [r rt-corp]
         (if (in? r ls300) 
-           (insert! :data (merge {:code r :year "2012" :month "2"} (frand 80)))
-           (insert! :data (merge {:code r :year "2012" :month "2"} (frand 30))))
+           (insert! :data (merge {:code r :year "2011" :month "12"} (frand 80)))
+           (insert! :data (merge {:code r :year "2011" :month "12"} (frand 30))))
         )
     )))
 
