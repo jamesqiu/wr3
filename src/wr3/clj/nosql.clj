@@ -4,12 +4,26 @@
 
 (use 'somnium.congomongo)
 
+(defn mdb-conn [db] (make-connection (name db)))
+  
 (defmacro with-mdb
-  "连接到本地 dbname 库进行操作"
+  "连接到本地 dbname 库进行操作。
+  注意：不关闭连接，适用于简单测试，可使用返回的lazy结果；见 with-mdb2 "
   [db & body]
   `(with-mongo (make-connection (name ~db))
      ~@body))
 
+(defmacro with-mdb2
+  "连接到本地 dbname 库进行操作。
+  注意：如果body执行的结果是lazy的，必须先持久化，否则报错：this Mongo has been closed "
+  [db & body]
+  `(let [~'mdb-conn (make-connection (name ~db))]
+     (try
+       (with-mongo ~'mdb-conn ~@body)
+       (finally (close-connection ~'mdb-conn)) )))
+
+(defn mdb-close [conn] (close-connection conn))
+  
 ;------- 得到 mongodb 的:_id
 (defn mdb-id
   "得到文档记录o的:_id字段的24位字符串形式, 或者把24位字符串转换成object-id.
@@ -80,7 +94,7 @@
 
 ;------ 采用 mongodb 数据的应用
 
-(defn pinyin
+(defn test-pinyin
   "从本地 mongodb 的wr3库pinyin表中获得字符串的拼音：全拼和简拼"
   [s]
   (let [db "wr3"
@@ -88,20 +102,20 @@
         f (fn [c] (let [kv (mdb-get-one tb :where {:k (str c)})
                         v (get kv :v)]
                     (if v (apply str (butlast v)) (str c))))]
-    (with-mdb db
+    (with-mdb2 db
       {:py (apply str (map f s)) 
        :jp (apply str (map #(first (f %)) s))} )))
 
-(defn dict
+(defn test-dict
   "给出中文或者英文，从 mongodb 得到对应释义（模糊查询）"
   [s]
   (let [w (.toLowerCase s)
         isword? (fn [word] (re-matches #"[a-zA-Z]+" word))
         db "wr3"
         tb (if (isword? w) "dict_ec" "dict_ce") ]
-    (with-mdb db
+    (with-mdb2 db
       (let [rt (mdb-get tb :where {:k (re-pattern (format "%s" w))})]
-        (map #(dissoc % :_id) rt)))))
+        (vec (map #(dissoc % :_id) rt))))))
 
 
 ; ------ test
@@ -112,6 +126,7 @@
 ;    {:_id "007"}
 ;    {:_id "007" :name "邱晖2" :age 37}))
 ;(use 'wr3.clj.u)
-;(print-seq (dict "Hello"))
+;(println (dict "Hello"))
+;(pinyin "中文")
 
 

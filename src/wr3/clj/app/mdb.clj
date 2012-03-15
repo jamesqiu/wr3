@@ -3,49 +3,43 @@
 (ns wr3.clj.app.mdb)
 
 (use 'wr3.clj.s 'wr3.clj.n 'wr3.clj.web 'wr3.clj.chart 'wr3.clj.db)
+(use 'wr3.clj.nosql)
 (use 'hiccup.core)
 (use 'somnium.congomongo)
 
 (defn index
   "app: 本地mongodb的管理界面"
   []
-  (mongo! :db nil)
-  (let [dbs (databases)
-        f (fn [dbname]
-            (format "<b>%s</b> (%s)"
-                    (html [:a.db {:href "#"} dbname])
-                    (do (set-database! dbname) (count (collections)))))]
-    (html
-      [:html head-set
-       [:body {:onload "mdb_onload();"}
+  (with-mdb2 "test"
+    (let [dbs (databases)
+          f (fn [dbname] (format "<b>%s</b> (%s)"
+                                 (html [:a.db {:href "#"} dbname])
+                                 (with-db dbname (count (collections)))))]
+      (html-body
+        {:onload "mdb_onload()"}
         [:img {:src (format "%s/img/database/mongodb.png" webapp)}]
         [:div {:style "float: right"}
          [:h2 "对meta库的dict表进行管理（增、删、改）"]
          [:a {:href (format "%s/c/mdb/dict" webapp)} "点击进入"]]
         [:h2 "数据库: "]
         [:div (join (map f dbs) " | ")]
-				[:div#collections "..."]
-				[:div#data "..."]
-    ]])))
+        [:div#collections "..."]
+        [:div#data "..."] ))))
 
 (defn db
   "service: 给定db，给出collections及记录数，并按名称及记录数排序"
   [id]
-  (mongo! :db nil) ; 得到所有database，限制id给出的db名在此之内（否则自动创建）
-  (let [dbs (databases)
-        db0 (or id "local")
-        db (if (in? db0 dbs) db0 "local")]
-    (set-database! db)
-    (let [dbc (into {} (for [c (collections)] [c (fetch-count (keyword c))]))
+  (with-mdb2 (or id "local")
+    (let [dbs (databases)
+          db0 (or id "locale")
+          db (if (in? db0 dbs) db0 "local")
+          dbc (into {} (for [c (collections)] [c (fetch-count (keyword c))]))
           dbc2 (sort-by (comp - val) dbc)
-          f (fn [c]
-              (for [[k v] c]
-                (format "<b>%s</b> (%s)"
-                        (html [:a.coll {:href "#" :onclick (format "mdb_data('%s','%s');" db k)} k])
-                        v)))]
+          f (fn [c] (for [[k v] c] (format "<b>%s</b> (%s)"
+                                           (html [:a.coll {:href "#" :onclick (format "mdb_data('%s','%s');" db k)} k]) v)))]
       (html
         [:h2 (format "[%s]的集合表: " db)]
-        [:div (join (f dbc2) " &nbsp;|&nbsp; ")]))))
+        [:div (join (f dbc2) " &nbsp;|&nbsp; ")]) )))
 
 (defn data
   "service：给定db和collection，得到前20条数据"
@@ -53,12 +47,11 @@
   (let [dbname (first ids)
         collection (second ids)
         limit 100]
-    (mongo! :db dbname)
-    (html
-      [:h2 (format "[%s.%s]的数据(前%s条)：" dbname collection limit)]
-      (for [r (fetch (keyword collection) :limit limit)] 
-        (html [:div (str (update-in r [:_id] #(str %)))])) )))
-
+    (with-mdb2 dbname
+      (html
+        [:h2 (format "[%s.%s]的数据(前%s条)：" dbname collection limit)]
+        (for [r (fetch (keyword collection) :limit limit)] 
+          (html [:div (str (update-in r [:_id] #(str %)))]))))))
 
 ;;;--------------------- meta/dict管理
 (defmacro with-dict
@@ -67,8 +60,9 @@
 	`(let [~'dbname "meta"
         ~'tbname :dict
         ~'conn (make-connection ~'dbname)]
-    (with-mongo ~'conn
-      ~@body)))
+    (try
+      (with-mongo ~'conn ~@body)
+      (finally (close-connection ~'conn)))))
 
 (defn dict
   "app: 对meta库的dict表进行管理（增、删、改）"

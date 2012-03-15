@@ -70,6 +70,87 @@
 	background: url('icons/tip.png') no-repeat;
 }
 
+/* add by jamesqiu */
 .icon-arrow {
 	background: url('icons/arrow.jpg') no-repeat;
+}
+
+.icon-bar {
+	background: url('icons/bar.png') no-repeat;
+}
+
+.icon-line {
+	background: url('icons/line.png') no-repeat;
+}
+
+.icon-pie {
+	background: url('icons/pie.png') no-repeat;
+}
+
+.icon-user {
+	background: url('icons/user.png') no-repeat;
+}
+
+.icon-cal {
+	background: url('icons/cal.png') no-repeat;
+}
+
+.icon-download {
+	background: url('icons/download.png') no-repeat;
+}
+
+.icon-star {
+	background: url('icons/star.png') no-repeat;
+}
+
+.icon-earth {
+	background: url('icons/earth.png') no-repeat;
+}
+
+.icon-info {
+	background: url('icons/info.png') no-repeat;
+}
+
+.icon-mail {
+	background: url('icons/mail.png') no-repeat;
+}
+
+.icon-file {
+	background: url('icons/file.png') no-repeat;
+}
+
+.icon-play {
+	background: url('icons/play.png') no-repeat;
+}
+
+.icon-find {
+	background: url('icons/find.png') no-repeat;
+}
+
+.icon-setting {
+	background: url('icons/setting.png') no-repeat;
+}
+
+.icon-stop {
+	background: url('icons/stop.png') no-repeat;
+}
+
+.icon-text {
+	background: url('icons/text.png') no-repeat;
+}
+
+.icon-upload {
+	background: url('icons/upload.png') no-repeat;
+}
+
+.icon-db {
+	background: url('icons/db.gif') no-repeat;
+}
+
+.icon-list {
+	background: url('icons/list.gif') no-repeat;
+}
+
+.icon-pen {
+	background: url('icons/pen.png') no-repeat;
 }

@@ -78,7 +78,7 @@
       (do
         (if not-reload?
           (require n)
-          (require n :reload)) ; 使用 :reload 就可以动态转载，但可能对性能有所影响。
+          (require n :reload)) ; 使用 :reload 就可以动态转载，但对性能有较大影响。
         (ns-resolve (the-ns n) f)))))
 
 (defn fcall

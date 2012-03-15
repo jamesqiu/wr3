@@ -1,61 +1,142 @@
 (ns ^{:doc "
   评分系统。
   上市公司综合评价系统，对应数据库为mongodo的grade"
+      :todo "修改评级，修改专家意见；通过代码查找上市公司"
       :author "jamesqiu"}
      wr3.clj.app.grade)
 
 (use 'wr3.clj.web 'wr3.clj.u 'wr3.clj.n 'wr3.clj.s 'wr3.clj.db 'wr3.clj.nosql)
 (use 'hiccup.core)
 (use 'somnium.congomongo)
+(use '[wr3.clj.app.chartf :only (panel cup bar line pie)])
+
+
+(def periods ["2011-10" "2011-11" "2011-12" "2012-1" "2012-2"]) ; 评价期数
+
+(defn- to-point4
+  "四舍五入到小数点后4位
+  @d 浮点数如3.14159
+  @return 3.1416M "
+  [d]
+  (* 0.0001M (Math/round (* d 10000))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 从mongodb读取配置、数据
 (defn- dd
   "得到dict表中字典内容，usage：(dd :industry) ; 返回 {:A '农、林、牧、渔业', :B '采掘业', ..} "
   [code]
-  (with-mdb "grade"
+  (with-mdb2 "grade"
     (:v (mdb-get-one :dict :where {:code (name code)}))))
   
 (defn- get-indic
   "得到indic表的内容：title或者indic配置。
   @id 'title' | 'head' | 'indic' 
   @return (indic 'title') 返回名称字符串，
-  (indic 'head') 返回['..' '..' ..]
-  (indic 'indic') 返回配置[{..} {..} ..] "
+  (get-indic 'head') 返回['..' '..' ..]
+  (get-indic 'indic') 返回配置[{..} {..} ..] 
+  (get-indic 'rank') 返回配置array-map {:AAA '>= 90', :AA '>= 85', ..} 
+  "
   [id]
-  (with-mdb "grade"
+  (with-mdb2 "grade"
     (:v (mdb-get-id :indic (name id)))))  
 
-(defn- get-indic-weight
-  "返回：{11 {201 0.04, 202 0.04, ..} 12 {..} ..}"
-  []
-  (into 
-    {} (for [e (get-indic "indic")]
-         [(:code e) 
-          (into {} (for [e2 (:child e)] [(:code e2) (* 0.0001 (:weight e) (:weight e2) )]))])))
-
-(defn- get-indic2-weight
-  "得到所有2级评价指标的最终加权如：{201 0.04, 202 0.04, .. , 229 0.0075} "
-  []
-  (let [indic (get-indic "indic")
-        rt (for [e indic e1 (:child e)]
-             [(:code e1) (* 0.0001 (:weight e) (:weight e1))])]
-    (into {} rt) ))
+(defn- get-advice
+  "指定上市公司和年月，得到专家委员会意见的各项修正因子.
+  @param corp-code 如 '000001' 
+  @param year 年 eg.'2012' 
+  @param month 月 eg. '1' 
+  @return [{:_id #<ObjectId ..> :code '000001' :year '2012' :month '1' :201 0.95 :225 1.2 } {..} ..] "
+  [corp-code year month]
+  (with-mdb2 "grade"
+    (mdb-get-one :advice :where {:code corp-code :year year :month month})))
+  
+(defn- get-advice-reason
+  "指定上市公司和年月，得到专家委员会意见的解释原因.
+  @param corp-code 如 '000001' 
+  @param year 年 eg.'2012' 
+  @param month 月 eg. '1' 
+  @return [{:_id #<ObjectId ..> :code '000001' :year '2012' :month '1' :202 '原因..' } {..} ..] "
+  [corp-code year month]
+  (with-mdb2 "grade"
+    (mdb-get-one :advice-reason :where {:code corp-code :year year :month month})))
   
 (defn- get-corp-name
   "得到指定的上市公司信息
   @id 上市公司代码"
   [corp-code]
-  (with-mdb "grade"
-    (:name (mdb-get-one :corp :where {:code (or corp-code "000001")})))) 
+  (with-mdb2 "grade"
+    (:name (mdb-get-one :corp :where {:code corp-code})))) 
   
 (defn- get-data
   "得到一条指定评估数据
   @usage: (get-data '000001' '2012' '2') 
   @return {:year '2012' :month '2' :code '000001', :222 88, :229 83, ..} "
   [corp-code year month]
-  (with-mdb "grade"
+  (with-mdb2 "grade"
     (mdb-get-one :data :where {:code corp-code :year year :month month})))
 
+(defn- rank
+  "根据分值算出评级"
+  ([score ranks]
+    (let [ranks (or ranks (get-indic "rank"))
+          rt (find-first 
+               (fn [[k v]] (let [[v1 v2] (split v " ")] (eval (read-string (format "(%s %s %s)" v1 score v2)))))
+               ranks)]
+      (if rt (name (key rt)) "末级")))
+  ([score] (rank score nil)))
+
+(defn- get-score2
+  "得到一个二级指标的最终评分
+  @param e2 二级指标eg. {:code 201, :name '所有权结构及其影响', :weight 20, :factor 1.1}
+  @param data {:code '000001' :year '2012' :month '1' :201 85 :202 75 ..}
+  @param advice {:code '000001', :year '2012', :month '1', :201 0.95, :202 1.2} 
+  @return 7.1280 "
+  [e2 w1 data advice]
+  (let [code (-> e2 :code str keyword)
+        w2 (:weight e2)
+        f2 (:factor e2)
+        v (get data code)
+        a (or (get advice code) 1.0) ]
+    (to-point4 (* v 0.01 w1 0.01 w2 f2 a))))
+
+(defn- get-score1
+  "得到一个一级指标的最终评分
+  @param e 一级级指标eg. {:code 11, :name '上市公司治理评价', :weight 20, :child [{:code 201 ..} ..] }
+  @param data {:code '000001' :year '2012' :month '1' :201 85 :202 75 ..}
+  @param advice {:code '000001', :year '2012', :month '1', :201 0.95, :202 1.2} 
+  @return eg. 19.2615 "
+  [e data advice]
+  (let [w1 (:weight e)]
+    (sum (for [e2 (:child e)] (get-score2 e2 w1 data advice)))))
+
+(defn- get-score0
+  "得到一个上市公司指定月份的修正指标分值
+  @usage: (get-score0 '000001' '2012' '2')
+  @return 如：91.0225M "
+  ([corp-code year month indic data advice]
+    (let [indic (or indic (get-indic "indic"))
+          data (or data (get-data corp-code year month))
+          advice (or advice (get-advice corp-code year month))]
+      (sum (for [e indic] (get-score1 e data advice))) ))
+  ([corp-code year month] (get-score0 corp-code year month nil nil nil)))
+  
+(defn- set-scores
+  "为mongodb的data中所有数据设置分数及评级"
+  []
+  (with-mdb2 "grade"
+    (let [indic (get-indic "indic")
+          ranks (get-indic "rank")]
+      (vec 
+        (doseq [data (fetch :data)]
+          (let [corp-code (:code data)
+                year (:year data)
+                month (:month data)
+                advice (get-advice corp-code year month)
+                score0 (get-score0 corp-code year month indic data advice)
+                ]
+            (when (.endsWith corp-code "0") (println corp-code year month score0))
+            (mdb-upd :data data (merge data {:score (double score0) :rank (rank score0 ranks)})) 
+            ))))))
+  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; layout
 (defn- app-top
   "layout.north"
@@ -64,12 +145,12 @@
     "north" 
     {:id "layout_north" :style "height: 80px; padding: 10px;" }
     [:span {:class "layout_title"} "上市公司综合评价——演示版"]
-    [:div {:style "float: right"} "当前用户: " [:span ".."]]
+    [:div {:style "float: right"} "当前用户: " [:span#wr3user {:style "color:red; font-weight:bold"} ".."]]
     ; 搜索条
     [:div {:style "position: absolute; right: 10px; top: 35px"}
      (eui-searchbox 
-       {:searcher "eui_search1" :style "width: 250px;"} 
-       [:div {:name "范围A" :iconCls "icon-ok" :style "margin: 0px"} "公司搜索"]
+       {:searcher "grade_search1" :style "width: 250px;" :value "000001" :title "上市公司代码模糊查询"} 
+       [:div {:name "范围A" :iconCls "icon-ok" :style "margin: 0px"} "上市公司代码"]
        [:div {:name "范围B" :iconCls "icon-tip" :style "margin: 0px"} "局部搜索"])]          
     ))
 
@@ -81,31 +162,33 @@
     {:title "快捷导航" :style "width: 210px"}
     [:div#corp {:code "000001" :style "margin: 10px"} "当前被评估的是：" 
      [:span#corp2 {:style "font-family:微软雅黑; font-weight:bold" :title "在下面的“评价工作”中更改"} "深发展Ａ"] [:br]
-     "评价期 : " [:b [:span#year "2012"] "年" [:span#month "1"] "月"] "&nbsp;"
+     "评价期 : " [:b [:span#year "2012"] "年" [:span#month "2"] "月"] "&nbsp;"
      (eui-button {:id "year_month_bt" :plain "true" :iconCls "icon-arrow" :title "更改评价期"} "") ]
+    (eui-context-menu 
+      "year_month_cm" {} 
+      (html (for [ym (reverse periods)]
+              (let [[y m] (split ym "-")]
+                [:div {:iconCls "icon-save" :onclick (format "grade_year_month('%s','%s')" y m)} (format "%s年%s月" y m)] ))))
+
     (eui-accord 
       {:id "accord1" :style "" }
       (eui-accord- 
-        {:iconCls "icon-search"} "评价工作"
-        (eui-button {:id "hs300_bt" :plain "true" :iconCls "icon-search"} "沪深300公司") [:br]
-        (eui-button {:id "corp_bt" :plain "true" :iconCls "icon-search"} "所有上市公司") [:br]
+        {:iconCls "icon-pen"} "评价工作"
+        (eui-button {:id "hs300_bt" :plain "true" :iconCls "icon-list"} "沪深300公司") [:br]
+        (eui-button {:id "corp_bt" :plain "true" :iconCls "icon-list"} "所有上市公司") [:br]
         (eui-button {:id "indic0_bt" :plain "true" :iconCls "icon-sum"} "上市公司综合评价") [:br]
-        (map-indexed 
-          (fn [i e] 
-            (html 
-              (eui-button {:group "indic1_bt" :code (:code e) :plain "true" :iconCls "icon-arrow" } 
-                          (format "%d、%s" (inc i) (:name e))) 
-              [:br]))
-          (get-indic "indic"))
-        (eui-button {:id "grade_bt" :plain "true" :iconCls "icon-search" } "统计报表") [:br]
+        (eui-button {:id "report1_bt" :plain "true" :iconCls "icon-bar" } "各评价期得分") [:br]
+        (eui-button {:id "report2_bt" :plain "true" :iconCls "icon-bar" } "各级别公司数目") [:br]
+        (eui-button {:id "report3_bt" :plain "true" :iconCls "icon-pie" } "分行业统计") [:br]
+        (eui-button {:id "report4_bt" :plain "true" :iconCls "icon-bar" } "分地域统计") [:br]
+        (eui-button {:id "report5_bt" :plain "true" :iconCls "icon-pie" } "分板块统计") [:br]
         )    
       (eui-accord- 
         {:iconCls "icon-search"} "管理维护"
         (eui-button {:id "grade_bt" :plain "true" :iconCls "icon-search" } "评估指标体系") [:br]
         (eui-button {:id "grade_bt" :plain "true" :iconCls "icon-search" } "上市公司") [:br]
         (eui-button {:id "grade_bt" :plain "true" :iconCls "icon-help" } "使用帮助") [:br]
-        ))    
-    ))
+        )) ))
 
 (defn- app-main
   "layout.center"
@@ -130,210 +213,397 @@
   (eui-layout
     {:id "layout1" :onload "grade_onload()"}
     ;----------------------- north
-    (app-top)
+    (app-top)   
     ;----------------------- west
-    (app-left)
+    (app-left)  
     ;----------------------- center
-    (app-main)
+    (app-main)  
     ;----------------------- east
 ;    (app-right)
     ;----------------------- south
-    (app-foot)
-    ))
-
-(defn- fmt 
-  ""
-  [e] 
-  (format "%s : %s%%" (:name e) (:weight e)))
-
-(defn- sum-indic2
-  "@rt-indic2: 某个2级指标体系的所有指标 [{:code 201, :name '所..', :weight 20} {:code 202, ..} ..] "
-  [rt-indic2 corp-code year month]
-  (sum (map #(let [v (get (get-data corp-code year month) (-> % :code str keyword))
-                   w2 (:weight %) 
-                   v2 (* v w2 0.01)] v2)
-            rt-indic2)))
-
-(defn- rank
-  "根据分值算出评级"
-  [score]
-  (let [grade {:AAA ">= 90" :AA ">= 85" :A ">= 80" :BBB ">= 75" :BB ">= 70" :B ">= 65" :CCC ">= 60" :CC ">= 55" :C "< 55"} ]
-    (cond
-      (>= score 90) "AAA"
-      (>= score 85) "AA"
-      (>= score 80) "A"
-      (>= score 75) "BBB"
-      (>= score 70) "BB"
-      (>= score 65) "B"
-      (>= score 60) "CCC"
-      (>= score 55) "CC"
-      (>= score 50) "C"
-      :else "末级"
-    )))
-
-(defn- to-point4
-  "四舍五入到小数点后4位
-  @d 浮点数如3.14159"
-  [d]
-  (* 0.0001M (Math/round (* d 10000))))
+    (app-foot) ))
 
 (defn- corp-score-sum
   "综合评分及等级，驾驶仪表板示意图"
-  [corp-code year month rt-indic]
-  (let [score (sum (map #(* (:weight %) (sum-indic2 (:child %) corp-code year month) 0.01) rt-indic))]
-    (html
-      [:a {:name "rank_result"}]
-      [:h2 (format "修正指标分值：<span style='color:red'>%.4f</span>（评级参考：<span style='color:red'>%s</span>）" 
-                   score (rank score))]
-      (panel {:value (to-point4 score) 
-              :range [30 50 55 60 65 70 75 80 85 90 100]} 
-             {:lowerLimit 30 :upperLimit 100} 500 250) )))
+  [score]
+  (html
+    [:a {:name "rank_result"}]
+    [:h2 (format "修正指标分值：<span style='color:red'>%.4f</span>（评级参考：<span style='color:red'>%s</span>）" 
+                 score (rank score))]
+    (panel {:value score 
+            ; range = [30, 50 55 60 65 70 75 80 85 90, 100]
+            :range (reduce into [[30] (reverse (map #(-> % val (right " ") to-int) (get-indic "rank"))) [100]]) }
+           {:lowerLimit 30 :upperLimit 100} 500 250) ))
 
 (defn- corp-score-detail 
   "各一级评价指标分值cup图显示"
-  [rt-indic data]
+  [indic data advice]
   (eui-panel 
     {:id "panel1" :closed "true" :title "各一级评价指标得分 : " :style "color: blue; width: 900px; padding: 5px" }
-    (for [e rt-indic]
+    (for [e indic]
       (let [name1 (:name e) ; 一级指标名称
             w1 (:weight e) ; 一级指标权重
-            indic2 (:child e) ; 二级指标
-            ; 二级指标修正值列表
-            all-v2 (for [e2 indic2] 
-                     (let [w2 (:weight e2)
-                           v (get data (-> e2 :code str keyword)) ]
-                       (* v w1 w2 0.0001)))
-            ; 一级指标修正分值
-            score2 (to-point4 (sum all-v2))]
+            score1 (get-score1 e data advice)]
         [:div {:style "float:left; margin: 10px"}
-         [:h2 name1] "满分值 : " w1 [:br] "得分值 : " score2 [:br]
-         (cup (double score2) {:lowerLimit 0 :upperLimit w1} 150 250)] )) ))
-
-(use '[wr3.clj.app.chartf :only (panel cup)])
+         [:h2 name1] "满分值 : " w1 [:br] "得分值 : " score1 [:br]
+         (cup (double score1) {:lowerLimit 0 :upperLimit w1} 150 250)] )) ))
 
 (defn indic
   "app: 显示整个指标体系
   @ids 第一个参数为上市公司代码如'000001'，第二个参数为年月如'2012-1' "
   [ids]
   (let [corp-code (or (first ids) "000001")
+        corp-name (get-corp-name corp-code)
         year-month (or (second ids) "2012-1")
         [year month] (split year-month "-")
         data (get-data corp-code year month) ; {:201 82 :202 98 ..}
-        rt-caption (get-indic "caption")
-        rt-title (get-indic "title")
-        rt-head (get-indic "head")
-        rt-indic (get-indic "indic")
-        rowspan (map #(count (:child %)) rt-indic)
+        advice (get-advice corp-code year month) ; {:201 1.1 :229 0.95} 
+        reason (get-advice-reason corp-code year month) ; {:201 1.1 :229 0.95} 
+        caption (get-indic "caption")
+        title (get-indic "title")
+        head (get-indic "head")
+        indic (get-indic "indic")
+        rowspan (sum (map #(count (:child %)) indic)) ; 25 = (+ 4 5 5 5 6)
         css1 "vertical-align:middle; text-align:center; width:110px"
-        css2 "vertical-align:middle; text-align:left; cursor: hand" ]
+        css2 "vertical-align:middle; text-align:left" 
+        fmt (fn [e] (format "%s : %s%%" (:name e) (:weight e)))]
     (html
       [:a {:name "top"}]
-      [:h1 corp-code " : " (get-corp-name corp-code)
-       " &nbsp; " (format "（评价期：%s年%s月）" year month)]
-      (eui-button {:href "#rank_result"} "评级结果参考") " &nbsp; "
-      (eui-button {:href "#rank_detail" :onclick "grade_rank_detail()"} "评级结果细项图示") " &nbsp; "      
+      [:h1 (format "%s : %s &nbsp; （评价期：%s年%s月）" corp-code corp-name year month)]
+      (eui-button {:href "#rank_result"} "评级结果参考") (space 3)
+      (eui-button {:href "#rank_detail" :onclick "grade_rank_detail()"} "评级结果细项图示") (space 6)      
+      (eui-button {:id "score_save" :onclick "grade_score_save()" :iconCls "icon-save" :disabled true} " 保存修改分值")      
       ; 指标体系大表
       [:table {:class "wr3table" :border 1 :style "border:1px solid black"}
-       [:caption rt-caption]
+       [:caption caption]
        [:tbody
         [:tr 
-         [:td {:rowspan (+ 1 (sum rowspan)) :style css1} rt-title]
-         (map #(html [:th %]) rt-head)]
-        (map-indexed 
-          (fn [i e] ; e  [{:code 11, :name "上..", :weight 20, :child [{:code 201, :name "所..", :weight 20} ..]}, ..] 
-            (let [w1 (:weight e) ; 一级指标权重，如：20
-                  f-td-score2 (fn [e2] ; “评价基本指标”和“修正指标”的html片段
-                                (let [code (:code e2)
-                                      v (get data (-> code str keyword))
-                                      w2 (:weight e2)
-                                      v2 (* v w1 w2 0.01 0.01)]
-                                  (html
-                                    [:td {:align "right" :group "score" :title "点击更改"} v]; 评价指标值 eg. 85
-                                    [:td {:align "right" :title (format "%.2f (=%s*%s%%*%s%%)" v2 v w1 w2)} ; 修正指标值 eg. 85*20%*20%=3.4 
-                                     (format "%.2f" v2)] ))) ]
-              (html [:tr 
-                     [:td {:rowspan (nth rowspan i) :style css2 :title "点击查看细该项" 
-                           :onclick (format "grade_indic2('%s','%s','%s-%s')" (:code e) corp-code year month)} 
-                      (fmt e)] ; 一级指标 eg. "上市公司治理评价 : 20%"
-                     (let [e2 (-> e :child first)] ; e2是第1个二级指标eg. {:code 201, :name "所有权结构及其影响", :weight 20}
-                       (html [:td (fmt e2)]
-                             (f-td-score2 e2))) ]
-                    (for [e2 (-> e :child rest)] ; e2是其他二级指标（不含第一个）如：'{:code 202, :name "金融相关者关系", :weight 25}
-                      [:tr
-                       [:td (fmt e2)] ; rest 二级指标 eg. 金融相关者关系
-                       (f-td-score2 e2) ]) )))
-          rt-indic) ]]
+         [:td {:rowspan (+ 1 rowspan) :style css1} title]
+         (map #(html [:th %]) head) ]
+        (for [e indic] ; e  {:code 11, :name "上..", :weight 20, :child [{:code 201, :name "所..", :weight 20} ..]}, ..] } 
+          (let [w1 (:weight e) ; 一级指标权重，如：20
+                f-td-score2 (fn [e2] ; “评价基本指标”和“修正指标”的html片段
+                              (let [code (-> e2 :code str keyword)
+                                    v (get data code)]
+                                (html
+                                  [:td {:align "right" :group "score" :title "点击更改" :code (name code)} v]; 评价指标值 eg. 85
+                                  [:td {:align "right"} (:factor e2)]; 修正指标值 eg. 1.1 
+                                  [:td {:group "advice" :title "点击更改" :code (name code)} 
+                                   (or (code advice) 1.0) " " (when-let [r (code reason)] (format "（%s）" r))] ; 专家委员会意见 eg. 1.1
+                                  ))) ]
+            (html [:tr 
+                   [:td {:rowspan (count (:child e)) :style css2} 
+                    (fmt e) [:br][:br] [:font {:color "red"} (get-score1 e data advice)] " 分"] ; 一级指标 eg. "上市公司治理评价 : 20%"
+                   (let [e2 (-> e :child first)] ; e2是[第1个]二级指标eg. {:code 201, :name "所有权结构及其影响", :weight 20 :factor}
+                     (html [:td (fmt e2)] 
+                           (f-td-score2 e2) ))]
+                  (for [e2 (-> e :child rest)] ; e2是[其他]二级指标（不含第一个）如：'{:code 202, :name "金融相关者关系", :weight 25}
+                    [:tr
+                     [:td (fmt e2)] ; rest 二级指标 eg. 金融相关者关系
+                     (f-td-score2 e2) ]) )))]]
       ; 综合评分及等级，驾驶仪表板示意图
-      (corp-score-sum corp-code year month rt-indic) [:br]
-      (eui-button {:href "#top" :style "margin: 3px" :iconCls "icon-redo"} "回到上面") [:br]
+      (corp-score-sum (get-score0 corp-code year month indic data advice)) [:br]
+      (eui-button {:href "#top" :style "margin: 3px" :iconCls "icon-redo"} "回到上面") (space 3)
+      (eui-button {:onclick "grade_rank_detail()"} "评级结果细项图示")
+      [:br]
       ; 各一级评价指标分值cup图显示
       [:a {:name "rank_detail"}]
-      (corp-score-detail rt-indic data) )))
+      (corp-score-detail indic data advice) )))
 
-(defn indic2
-  "app: 显示1级指标下面的二级指标
-  @ids 第一个参数为一级指标code，如11，12，13，14，15；
-       第二个参数为上市公司code，如 '000001'；
-       第三个参数为年月日，如'2012-1' "
-  [ids]
-  (let [code (or (first ids) "11")
-        corp-code (or (second ids) "000001")
-        year-month (or (get ids 3) "2012-1")
-        [year month] (split year-month "-")
-        rt-head (get-indic "head")
-        rt-indic (find-first #(= code (str (:code %))) (get-indic "indic"))
-        rt-indic2 (:child rt-indic)]
-    (html
-      [:h1 corp-code " : " (get-corp-name corp-code)
-       " &nbsp; " (format "（评价期：%s年%s月）" year month)]
-      (eui-button {:onclick (format "grade_indic('%s','%s')" corp-code year-month)} "返回综合评价")
-      [:table {:class "wr3table" :border 1 :style "border:1px solid black"}
-       [:caption (:name rt-indic)]
-       [:thead
-        [:tr (map #(html [:th %]) (rest rt-head))]]
-       [:tbody
-        (map
-          #(let [v (get (get-data corp-code year month) (-> % :code str keyword))
-                 w2 (-> % :weight)
-                 v2 (* v w2 0.01)]
-             (html [:tr 
-                    [:td (fmt %)] 
-                    [:td {:align "right"} (str v)] 
-                    [:td {:align "right"} (format "%.2f" v2)] ]))
-          rt-indic2) ]]
-      [:h2 "修正指标分值：" 
-       [:span {:style "color:red"} 
-        (format "%.4f" (sum-indic2 rt-indic2 corp-code year month))]]
-      )))
+(defn- corps-list
+  "所有上市公司列表 {'000001' '深发展Ａ' '000002' '万科Ａ' '000004' '国农科技' .. }  "
+  []
+  (with-mdb2 "grade"
+    (let [corps (fetch :corp :sort {:code 1}) ]
+      (apply array-map (flatten (for [corp corps] [(:code corp) (:name corp)])))) ))
+
+(defn- hs300-list
+  "沪深300公司列表"
+  []
+  (with-mdb2 "grade"
+    (let [ls300 (:v (mdb-get-one :dict :where {:code "hs300"}))
+          corps (fetch :corp :where {:code {:$in ls300}} :sort {:code 1}) ]
+      (apply array-map (flatten (for [corp corps] [(:code corp) (:name corp)])))) ))
+
+
+(defn- rank-list
+  "得到某年某月某评级的上市公司列表, eg. (rank-list '2012' '1' 'AA') 
+  @return {'000001' '大名城B', .. } "
+  [year month rank]
+  (with-mdb2 "grade"
+    (let [datas (fetch :data :only [:code :score] :where {:year year :month month :rank rank})
+          codes (map :code datas)
+          corps (fetch :corp :only [:code :name] :where {:code {:$in codes}})]
+      (apply array-map (flatten (for [corp corps] [(:code corp) (:name corp)]))))))
+
+(defn- corps-like-list
+  "符合代码模糊查询条件的公司列表"
+  [pattern]
+  (with-mdb2 "grade"
+    (let [corps (fetch :corp :where {:code (re-pattern pattern)} :sort {:code 1})]
+      (apply array-map (flatten (for [corp corps] [(:code corp) (:name corp)])))) ))
+
+(defn- app-corp-list
+  [corps title]
+  (html
+    [:h1 (format "%s（%s 家）：" title (count corps))]
+    (for [[code nam] corps] 
+      (eui-button {:plain "true" :onclick (format "grade_corp('%s','%s')" code nam)} 
+                  (format "%s: %s" code nam)) )))
 
 (defn corp
   "app: 列出所有上市公司"
-  []
-  (with-mdb "grade"
-    (let [rt-corp (fetch :corp :sort {:code 1})
-          n (fetch-count :corp)]
-      (html
-        [:h1 (format "上市公司列表（%s 家）：" n)]
-        (map 
-          #(eui-button {:plain "true" :onclick (format "grade_corp('%s','%s')" (:code %) (:name %))} 
-                       (format "%s: %s" (:code %)(:name %)))
-          rt-corp)
-        ))))
+  [] (app-corp-list (corps-list) "上市公司列表"))
 
 (defn hs300
   "app: 列出沪深300公司"
-  []
-  (with-mdb "grade"
-    (let [ls300 (:v (mdb-get-one :dict :where {:code "hs300"}))
-          rt-corp (fetch :corp :where {:code {:$in ls300}} :sort {:code 1}) ]
-      (html
-        [:h1 (format "沪深300公司列表：")]
-        (map 
-          #(eui-button {:plain "true" :onclick (format "grade_corp('%s','%s')" (:code %) (:name %))} 
-                       (format "%s: %s" (:code %)(:name %)))
-          rt-corp)
-        ))))
+  [] (app-corp-list (hs300-list) "沪深300公司"))
 
+(defn corp-like
+  "app: 列出符合代码模糊查询条件的公司"
+  [id] 
+  (let [pattern (or id "000001")]
+    (app-corp-list (corps-like-list pattern) (format "代码中含%s的上市公司" pattern)) ))
+  
+(defn save-score-advice
+  "app: 保存更改的评价分数以及评级；
+  @param ids ['000001' '2012' '1' '201 98.5 205 89.0 229 69.8'] "
+  [ids]
+  (let [corp-code (or (first ids) "000001")
+        year (or (second ids) "2012")
+        month (or (nth ids 2) "1")
+        scores (nth ids 3)
+        advices (nth ids 4)
+        ; scores 保存到 data
+        data (get-data corp-code year month) ; 原来data
+        score-map (eval (read-string (format "{%s}" scores)))
+        data2 (merge data (into {} (for [[k v] score-map] [(-> k str keyword) v]))) ; 修改了原始分值
+        score0 (double (get-score0 corp-code year month nil data2 nil))
+        rank (rank score0)
+        data3 (merge data2 {:score score0 :rank rank}) ; 修改最后分值以及评级
+        ; advices 保存到 advice 和 advice-reason
+        advice-map (eval (read-string (format "{%s}" advices)))
+        ]
+    (println (format "debug: scores=[%s], advices=[%s], advice-map=%s" scores advices advice-map))
+    (with-mdb2 "grade"
+      (let [o (fetch-by-id :data (:_id data))]
+        (update! :data o data3) ))))
+
+(defn report-score
+  "app: 分值分析, 一个企业各月份的分值分析"
+  [id]
+  (html
+    (let [corp-code (or id "000001")
+          ranks (get-indic "rank")
+          m (into {} (for [p periods]
+                       (let [[year month] (split p "-")
+                             data (get-data corp-code year month)
+                             v (:score data)]
+                         [(str p ": " (rank v ranks)) v])))]
+      (bar m {:title (format "[%s %s] 各评价期得分情况" corp-code (get-corp-name corp-code)) 
+              :x "评价期: 评级" :y "分值"}))))
+
+(defn- rank-count
+  "得到某年某月某评级的上市公司数量, eg. (rank-count '2012' '1' 'AA') "
+  [year month rank]
+  (with-mdb2 "grade"
+    (fetch-count :data :where {:year year :month month :rank rank})))
+
+(defn- ranks-count
+  "某年月所有企业各个评级的数量
+  @return {'AAA' 135 'AA' 89 'A' 32 .. '末级' 2} "
+  [year month]
+  (let [ranks (get-indic "rank")
+        rank-keys (concat (map name (keys ranks)) ["末级"])] ; ("AAA" "AA" .. "C") 
+    (apply array-map (flatten (for [k rank-keys]
+                                [k (rank-count year month k)] )))))
+
+(defn report-ranks
+  "app: 某年月所有企业评级分析，维度：评级，指标：数目
+  @param id '2012-1' 
+  @return {'AAA' 169, 'AA' 131, .. '末级' 1} "
+  [id]
+  (let [[year month] (or (split id "-") ["2012" "1"])
+        m (ranks-count year month)]
+    (html
+      (bar m {:title (format "%s年%s月各级别数量" year month) :x "评分级别" :y "上市公司数量"}) [:br]
+      [:h2 "点击如下参考详情："] [:br]
+      (for [[rank n] m]
+        (eui-button {:style "margin: 3px" :onclick (format "grade_report_ranks('%s')" rank)} 
+                    (format "%s: %s家" rank n)) ))))
+
+(defn corp-of-rank
+  "app: 列出某个rank的所有上市公司"
+  [ids]
+  (let [year (or (first ids) "2012")
+        month (or (second ids) "1")
+        rank (or (nth ids 2) "AAA") 
+        corps (rank-list year month rank) ]
+    (app-corp-list corps (format "评级为%s的公司" rank)) ))
+  
+(defn- industry-count
+  "得到某年月某行业某级别的企业个数 (corp-of-industry '2012' '1' 'A' 'AAA') "
+  [year month incode rank]
+  (with-mdb2 "grade"
+    (let [corps (fetch :corp :only [:code] :where {:incode (name incode)}) ]
+      (fetch-count :data :where {:year year :month month :rank rank :code {:$in (map :code corps)}}))))
+  
+(defn- industry-of
+  "得到某年月不同行业不同级别的企业数目, 维度：行业+评级，指标：count
+  @param id 年月如'2012-1' "
+  [year month]
+  (let [dd-industry (dd "industry") ; 行业大类字典  {:A "农、林、牧、渔业", :B "采掘业", .. }
+        incodes (map name (keys dd-industry)) ; ("A" "B" .. "C2")
+        ranks (get-indic "rank") ;  {:AAA ">= 90", :AA ">= 85", .. }
+        rank-keys  (concat (map name (keys ranks)) ["末级"]) ]; ("AAA" "AA" .. "C" "末级")
+    {:type "industry" :year year :month month
+     :count (vec (for [incode incodes rank rank-keys]
+                   [(name incode) rank (industry-count year month incode rank)]))} ))
+
+(defn- industry-report-save
+  "生成所有年月的行业评级分析报表保存到mongodb的report表中"
+  []
+  (doseq [p periods]
+    (let [[year month] (split p "-")]
+      (with-mdb2 "grade"
+        (insert! :report (industry-of year month))))))
+
+(defn- get-report
+  [year month report-type]
+  (with-mdb2 "grade"
+    (:count (mdb-get-one :report :where {:type report-type :year year :month month}))))
+  
+(defn report-industry
+  "app: 生成行业分析表"
+  [ids]
+  (let [year (or (first ids) "2012")
+        month (or (second ids) "1")
+        report (get-report year month "industry")
+        dd-industry (sort (dd "industry")) ; 行业大类字典  {:A "农、林、牧、渔业", :B "采掘业", .. }
+        incodes (map name (keys dd-industry)) ; ("A" "B" .. "C2")
+        ranks (get-indic "rank") ;  {:AAA ">= 90", :AA ">= 85", .. }
+        rank-keys  (concat (map name (keys ranks)) ["末级"]) ; ("AAA" "AA" .. "C" "末级")
+        ]
+    (html
+      [:table {:class "wr3table" :border 1} 
+       [:caption "维度：行业大类、评分级别； 指标：上市公司数量（单位：个）"]
+       [:tr 
+        [:th "行业大类 &nbsp; \\ &nbsp; 评分级别"] (for [rank rank-keys] [:th rank])]
+       (for [[incode inname] dd-industry]
+         [:tr
+          [:th {:style "text-align: left"} incode ": " inname]
+          (for [rank rank-keys]
+            [:td {:align "right"}
+             (last (find-first #(and (= (name incode) (first %)) (= rank (second %))) report))])
+          ]) ])))
+
+(defn- province-count
+  "得到某年月某省份某级别的企业个数 (province-count '2012' '1' '北京' 'AAA') "
+  [year month province rank]
+  (with-mdb2 "grade"
+    (let [corps (fetch :corp :only [:code] :where {:province province}) ]
+      (fetch-count :data :where {:year year :month month :rank rank :code {:$in (map :code corps)}}))))
+
+(defn- province-of
+  "得到某年月不同省份不同级别的企业数目, 维度：省份+评级，指标：count "
+  [year month]
+  (let [provinces (concat (dd "provinces") [nil])
+        ranks (get-indic "rank") ;  {:AAA ">= 90", :AA ">= 85", .. }
+        rank-keys  (concat (map name (keys ranks)) ["末级"]) ]; ("AAA" "AA" .. "C" "末级")
+    {:type "province" :year year :month month
+     :count (vec (for [province provinces rank rank-keys]
+                   [province rank (province-count year month province rank)]))} ))
+
+(defn- province-report-save
+  "生成所有年月的省份评级分析报表保存到mongodb的report表中"
+  []
+  (doseq [p periods]
+    (let [[year month] (split p "-")]
+      (with-mdb2 "grade"
+        (insert! :report (province-of year month))))))
+    
+(defn report-province
+  "app: 生成省份分析表"
+  [ids]
+  (let [year (or (first ids) "2012")
+        month (or (second ids) "1")
+        provinces (concat (dd "provinces") [nil])
+        report (get-report year month "province")
+        ranks (get-indic "rank") ;  {:AAA ">= 90", :AA ">= 85", .. }
+        rank-keys  (concat (map name (keys ranks)) ["末级"]) ; ("AAA" "AA" .. "C" "末级")
+        ]
+    (html
+      [:table {:class "wr3table" :border 1} 
+       [:caption "维度：省份、评级； 指标：上市公司数量（单位：个）"]
+       [:tr 
+        [:th "省份 &nbsp; \\ &nbsp; 评分级别"] (for [rank rank-keys] [:th rank])]
+       (for [province provinces]
+         [:tr
+          [:th {:style "text-align: left"} (or province "未知")]
+          (for [rank rank-keys]
+            [:td {:align "right"}
+             (last (find-first #(and (= province (first %)) (= rank (second %))) report))])
+          ]) ])))
+
+;{"深市" "000,001", "中小板" "002", "深市B股" "2", "创业板" "3", "沪市" "6", "沪市B股" "9"}
+(def boards ["上海主板" "深圳主板" "中小企业板" "创业板" "上海B股" "深圳B股"])
+  
+(defn- board-count
+  "得到某年月某板块某级别的企业个数 (corp-of-industry '2012' '1' 'A' 'AAA') "
+  [year month board rank]
+  (let [pattern (case board
+                  "深圳主板" #"^00[01]"
+                  "中小企业板" #"^002"
+                  "深圳B股" #"^2"
+                  "创业板" #"^3"
+                  "上海主板" #"^6"
+                  "上海B股" #"^9"
+                  nil )]
+  (with-mdb2 "grade"
+    (let [corps (fetch :corp :only [:code] :where {:code pattern}) ]
+      (fetch-count :data :where {:year year :month month :rank rank :code {:$in (map :code corps)}})))))
+
+
+(defn- board-of
+  "得到某年月不同板块不同级别的企业数目, 维度：省份+评级，指标：count "
+  [year month]
+  (let [ranks (get-indic "rank") ;  {:AAA ">= 90", :AA ">= 85", .. }
+        rank-keys  (concat (map name (keys ranks)) ["末级"]) ]; ("AAA" "AA" .. "C" "末级")
+    {:type "board" :year year :month month
+     :count (vec (for [board boards rank rank-keys]
+                   [board rank (board-count year month board rank)]))} ))
+
+
+(defn- board-report-save
+  "生成所有年月的板块评级分析报表保存到mongodb的report表中"
+  []
+  (doseq [p periods]
+    (let [[year month] (split p "-")]
+      (with-mdb2 "grade"
+        (insert! :report (board-of year month))))))
+
+(defn report-board
+  "app: 生成板块分析表"
+  [ids]
+  (let [year (or (first ids) "2012")
+        month (or (second ids) "1")
+        report (get-report year month "board")
+        ranks (get-indic "rank") ;  {:AAA ">= 90", :AA ">= 85", .. }
+        rank-keys  (concat (map name (keys ranks)) ["末级"]) ; ("AAA" "AA" .. "C" "末级")
+        ]
+    (html
+      [:table {:class "wr3table" :border 1} 
+       [:caption "维度：板块、评级； 指标：上市公司数量（单位：个）"]
+       [:tr 
+        [:th "板块 &nbsp; \\ &nbsp; 评分级别"] (for [rank rank-keys] [:th rank])]
+       (for [board boards]
+         [:tr
+          [:th {:style "text-align: left"} board]
+          (for [rank rank-keys]
+            [:td {:align "right"}
+             (last (find-first #(and (= board(first %)) (= rank (second %))) report))])
+          ]) ])))
+  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; test
 (defn test1 
   "把sqlserver里面的上市公司信息提到mongodb的corp"
@@ -360,40 +630,38 @@
         m (into {} (map #(vector (name (:incode2 %)) (:inname2 %)) rt))
         r {:code "industry2" :name "行业分类2" :v m}]    
     (with-mdb "grade"
-      (:v (mdb-get-one :dict :where {:code "industry"}))) ))
+      (:v (mdb-get-one :dict :where {:code "industry"}))
+      )))
 
 (defn test3 
   "初始化mongodb的指标表indic。所有项自己都是100分制，按照权证算出在整个系统中的分值。"
   []
   (let [indic-name "上市公司综合评价（时间跨度：三年）"
         indic [
-               {:code 11 :name "上市公司治理评价" :weight 20
+               {:code 11 :name "上市公司治理评价" :weight 20 :note "参考标普"
                 :child [
-                        {:code 201 :name "所有权结构及其影响" :weight 20}
+                        {:code 201 :name "所有权结构及其影响" :weight 40}
                         {:code 202 :name "金融相关者关系" :weight 20}
                         {:code 203 :name "财务透明与信息披露" :weight 20}
-                        {:code 204 :name "董事会的结构与运作" :weight 10}
-                        {:code 205 :name "（参考标普）" :weight 30}
+                        {:code 204 :name "董事会的结构与运作" :weight 20}
                         ]}
-               {:code 12 :name "上市公司业绩评价" :weight 25
+               {:code 12 :name "上市公司业绩评价" :weight 25 :note "参考中联评估"
                 :child [
-                        {:code 206 :name "财务效益状况" :weight 15}
-                        {:code 207 :name "资产质量状况" :weight 15}
-                        {:code 208 :name "偿债风险状况" :weight 15}
-                  {:code 209 :name "发展能力状况" :weight 15}
-                  {:code 210 :name "市场表现状况" :weight 15}
-                  {:code 211 :name "（参考中联评估）" :weight 25}
-                  ]}
-               {:code 13 :name "上市公司内控规范评价" :weight 20
+                        {:code 206 :name "财务效益状况" :weight 25}
+                        {:code 207 :name "资产质量状况" :weight 25}
+                        {:code 208 :name "偿债风险状况" :weight 20}
+                        {:code 209 :name "发展能力状况" :weight 15}
+                        {:code 210 :name "市场表现状况" :weight 15}
+                        ]}
+               {:code 13 :name "上市公司内控规范评价" :weight 20 :note "参考财政部内控规范"
                 :child [
-                        {:code 212 :name "内部环境" :weight 15}
-                        {:code 213 :name "风险评估" :weight 15}
+                        {:code 212 :name "内部环境" :weight 30}
+                        {:code 213 :name "风险评估" :weight 25}
                         {:code 214 :name "控制活动" :weight 15}
-                  {:code 215 :name "信息与沟通" :weight 15}
-                  {:code 216 :name "内部监督" :weight 15}
-                  {:code 217 :name "（参考财政部内控规范）" :weight 25}
+                        {:code 215 :name "信息与沟通" :weight 15}
+                        {:code 216 :name "内部监督" :weight 15}
                   ]}
-               {:code 14 :name "上市公司诚信评价" :weight 20
+               {:code 14 :name "上市公司诚信评价" :weight 20 :note ""
                 :child [
                         {:code 218 :name "财务诚信" :weight 15}
                         {:code 219 :name "金融诚信" :weight 15}
@@ -401,25 +669,27 @@
                         {:code 221 :name "质量诚信" :weight 15}
                         {:code 222 :name "信用记录" :weight 40}
                         ]}
-               {:code 15 :name "上市公司社会责任评价" :weight 15
+               {:code 15 :name "上市公司社会责任评价" :weight 15 :note "参考深交所"
                 :child [
                         {:code 223 :name "股东和债权人权益保护" :weight 20}
                         {:code 224 :name "职工权益保护" :weight 15}
                         {:code 225 :name "供应商、客户和消费者权益保护" :weight 15}
                         {:code 226 :name "对国家政府承担的责任" :weight 15}
                         {:code 227 :name "环境保护和社会公益保护" :weight 15}
-                        {:code 228 :name "综合指标" :weight 15}
-                        {:code 229 :name "（参考深交所）" :weight 5}
+                        {:code 228 :name "综合指标" :weight 20}
                         ]}
                ]
-        grade {:AAA ">= 90" :AA ">= 85" :A ">= 80" :BBB ">= 75" :BB ">= 70" :B ">= 65" :CCC ">= 60" :CC ">= 55" :C "< 55"}]
-    (with-mdb "grade"
-;      (mdb-add :corp 
+               grade (array-map :AAA ">= 90" :AA ">= 85" :A ">= 80" :BBB ">= 75" :BB ">= 70" :B ">= 65" :CCC ">= 60" :CC ">= 55" :C ">= 50" )
+               frandom (fn [] (+ 0.9 (* 0.1 (random 2))))
+               ]
+    (let [indic-new (for [e indic] (assoc e :child (for [e1 (:child e)] (into e1 {:factor (frandom)}))))]
+      (with-mdb "grade"
+;      (mdb-add :indic {:_id "rank" :v grade}) 
 ;      (mdb-add :indic {:_id "caption" :v "上市公司综合评价指标体系"})
 ;      (mdb-add :indic {:_id "head" :v ["评价一级指标"	"评价二级指标"	"评价基本指标"	"修正指标"]})
 ;      (mdb-add :indic {:_id "title" :v indic-name})
-;      (mdb-add :indic {:_id "indic" :v indic})
-      )))
+       (mdb-add :indic {:_id "indic" :v indic-new})
+       ))))
 
 (defn test4
   "产生mongodb中data表的随机模拟评价数据"
@@ -437,5 +707,22 @@
         )
     )))
 
-;(test4)
+(defn test5-province
+  "设置corp表的:province属性, 164家B股或沪市新股没有设置地域"
+  []
+  (let [provinces '(北京 上海 广东 江苏 陕西 山东 新疆 湖南 黑龙江 湖北 安徽 浙江 四川 贵州 甘肃 福建 辽宁 重庆 天津 广西 吉林 海南 河北 河南 内蒙古 山西 西藏 青海 江西 云南 宁夏)
+        ]
+    (with-mdb2 "grade"
+      (let [corp (fetch :corp :where {:province {:$exists false}})]
+        (doseq [o corp]
+          (println (select-keys o [:code :name :province]))))
+       )))
+    
 ;(dissoc (get-data "600109" "2012" "2") :_id)
+;(reduce into [[30] (reverse (map #(-> % val (right " ") to-int) (get-indic "rank"))) [100]]) ; [30 50 55 60 65 70 75 80 85 90 100]
+;(score "000001")
+;(test5-province)
+;(with-mdb2 "grade"
+;  (vec (map :code (fetch :corp :only [:code] :where {:code #"^9"}))))
+;  (doseq [r (fetch :data :where {:rank "末级"})] (println r)))
+;  (mdb-add :advice-reason {:code "000001" :year "2012" :month "1" :202 "对于此类公司该项权重高"}) )

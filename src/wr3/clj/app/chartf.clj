@@ -2,6 +2,7 @@
 
 ;;;; 生成Chart Flash控件图形的html代码片段 <embed ... />
 ;;;; todo: 根据data自动建议采用哪种chart-type
+;;;; @modify jamesqiu 2012-3-11 flash增加wmode="opaque" 以免挡住easyui弹出的内容如右键菜单，dialog等
 
 (use 'wr3.clj.web 'wr3.clj.s 'wr3.clj.n)
 (use 'hiccup.core)
@@ -145,7 +146,7 @@
         dataXML (replace-all (f data label) "\"" "'")
         html2 (html [:embed {:src (format "%s/chartf/%s.swf" webapp ctype2)
                              :width (or (first m) 600) :height (or (second m) 400)
-                             :type "application/x-shockwave-flash" :quality "high"
+                             :type "application/x-shockwave-flash" :quality "high" :wmode "opaque"
                              :flashVars "_flashVars_" } ])
         ]
     (replace-first html2 "_flashVars_" (str "dataXML=" dataXML)) ))

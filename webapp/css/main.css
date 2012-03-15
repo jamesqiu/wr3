@@ -270,7 +270,7 @@ th.desc a {
 /*------------ All Table ----------*/
 .wr3table {
 	border-collapse: collapse;
-	border: 1px solid #ccc;
+	border: 1px solid gray;
 	/*
 	width: 80%;
 	*/
@@ -280,7 +280,7 @@ th.desc a {
 	border: 0;
 }
 
-.wr3table td,.wr3table th {
+.wr3table td, .wr3table th {
 	font-size: 12px;
 	font-family: helvetica, verdana, arial, sans-serif;
 	line-height: 12px;
