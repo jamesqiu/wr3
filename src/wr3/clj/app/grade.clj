@@ -161,7 +161,7 @@
     "west" 
     {:title "快捷导航" :style "width: 210px"}
     [:div#corp {:code "000001" :style "margin: 10px"} "当前被评估的是：" 
-     [:span#corp2 {:style "font-family:微软雅黑; font-weight:bold" :title "在下面的“评价工作”中更改"} "深发展Ａ"] [:br]
+     [:span#corp2 {:style "font-family:微软雅黑; font-weight:bold" :title "在下面的“评价工作”中选择上市公司"} "深发展Ａ"] [:br]
      "评价期 : " [:b [:span#year "2012"] "年" [:span#month "2"] "月"] "&nbsp;"
      (eui-button {:id "year_month_bt" :plain "true" :iconCls "icon-arrow" :title "更改评价期"} "") ]
     (eui-context-menu 
@@ -174,9 +174,9 @@
       {:id "accord1" :style "" }
       (eui-accord- 
         {:iconCls "icon-pen"} "评价工作"
+        (eui-button {:id "indic0_bt" :plain "true" :iconCls "icon-sum"} "上市公司综合评价") [:br]
         (eui-button {:id "hs300_bt" :plain "true" :iconCls "icon-list"} "沪深300公司") [:br]
         (eui-button {:id "corp_bt" :plain "true" :iconCls "icon-list"} "所有上市公司") [:br]
-        (eui-button {:id "indic0_bt" :plain "true" :iconCls "icon-sum"} "上市公司综合评价") [:br]
         (eui-button {:id "report1_bt" :plain "true" :iconCls "icon-bar" } "各评价期得分") [:br]
         (eui-button {:id "report2_bt" :plain "true" :iconCls "icon-bar" } "各级别公司数目") [:br]
         (eui-button {:id "report3_bt" :plain "true" :iconCls "icon-pie" } "分行业统计") [:br]
@@ -266,6 +266,7 @@
         rowspan (sum (map #(count (:child %)) indic)) ; 25 = (+ 4 5 5 5 6)
         css1 "vertical-align:middle; text-align:center; width:110px"
         css2 "vertical-align:middle; text-align:left" 
+        css3 "color: blue"
         fmt (fn [e] (format "%s : %s%%" (:name e) (:weight e)))]
     (html
       [:a {:name "top"}]
@@ -286,9 +287,9 @@
                               (let [code (-> e2 :code str keyword)
                                     v (get data code)]
                                 (html
-                                  [:td {:align "right" :group "score" :title "点击更改" :code (name code)} v]; 评价指标值 eg. 85
+                                  [:td {:align "right" :group "score" :title "点击更改" :code (name code) :style css3 } v]; 评价指标值 eg. 85
                                   [:td {:align "right"} (:factor e2)]; 修正指标值 eg. 1.1 
-                                  [:td {:group "advice" :title "点击更改" :code (name code)} 
+                                  [:td {:group "advice" :title "点击更改" :code (name code) :style css3} 
                                    (or (code advice) 1.0) " " (when-let [r (code reason)] (format "（%s）" r))] ; 专家委员会意见 eg. 1.1
                                   ))) ]
             (html [:tr 
@@ -367,7 +368,8 @@
   
 (defn save-score-advice
   "app: 保存更改的评价分数以及评级；
-  @param ids ['000001' '2012' '1' '201 98.5 205 89.0 229 69.8'] "
+  @param ids ['000001' '2012' '1' '201 98.5 205 89.0 229 69.8' '201 \"1.0 合理\" 207 \"0.95\" '] 
+  保存到如下 data, advice, advice-reason "
   [ids]
   (let [corp-code (or (first ids) "000001")
         year (or (second ids) "2012")
@@ -382,12 +384,24 @@
         rank (rank score0)
         data3 (merge data2 {:score score0 :rank rank}) ; 修改最后分值以及评级
         ; advices 保存到 advice 和 advice-reason
-        advice-map (eval (read-string (format "{%s}" advices)))
+        advice-map (eval (read-string (format "{%s}" advices))) ; {201 "1.0 合理", 207 "0.95"}
+        advice (get-advice corp-code year month) ; 原来advice
+        advice-reason (get-advice-reason corp-code year month) ; 原来advice-reason
+        advice2 (merge advice (into {:code corp-code :year year :month month} 
+                                    (for [[k v] advice-map] [(-> k str keyword) (to-double (first (split v " ")))])))
+        advice-reason2 (merge advice-reason (into {:code corp-code :year year :month month} 
+                                                  (for [[k v] advice-map] [(-> k str keyword) (second (split v " "))])))
         ]
     (println (format "debug: scores=[%s], advices=[%s], advice-map=%s" scores advices advice-map))
     (with-mdb2 "grade"
-      (let [o (fetch-by-id :data (:_id data))]
-        (update! :data o data3) ))))
+      (update! :data data data3) 
+      (if advice
+        (update! :advice advice advice2)
+        (insert! :advice advice2))
+      (if advice-reason
+        (update! :advice-reason advice-reason advice-reason2)
+        (insert! :advice-reason advice-reason2))
+      )))
 
 (defn report-score
   "app: 分值分析, 一个企业各月份的分值分析"
@@ -723,6 +737,7 @@
 ;(score "000001")
 ;(test5-province)
 ;(with-mdb2 "grade"
+;  (destroy! :advice {:month "2"}))
 ;  (vec (map :code (fetch :corp :only [:code] :where {:code #"^9"}))))
 ;  (doseq [r (fetch :data :where {:rank "末级"})] (println r)))
 ;  (mdb-add :advice-reason {:code "000001" :year "2012" :month "1" :202 "对于此类公司该项权重高"}) )

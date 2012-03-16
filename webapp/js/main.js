@@ -2596,11 +2596,11 @@ function grade_indic(corp_code, year_month) {
 				}
 			})		
 		})
-		$('td[group="advice"]').click(function() {
+		$('td[group="advice"]').click(function() { 
 			var td = $(this)
 			var advice = td.text()
-			var title = '修改专家委员会意见：'
-			$.messager.prompt(title, '请输入新意见（空格分隔分值和原因）<br/>当前值：'+advice, function(r){
+			var title = '修改专家委员会意见：' 
+			$.messager.prompt(title, '请输入新意见（空格分隔分值和原因）<br/>当前值：'+advice.replace(/（|）/g,''), function(r){
 				if (r && (r!=advice)) {
 					td.text(r).css('background-color', '#ffffaa').attr('title', advice+' --> '+r)
 					td.attr('changed', '1')
@@ -2629,7 +2629,7 @@ function grade_score_save() {
 			scores += code+' '+score+' '
 		}
 	})
-	var advices = '';
+	var advices = ' ' // 空格是必须的
 	$('td[group="advice"]').each(function(i,e) {
 		if ($(e).attr('changed') == '1') {
 			var code = $(this).attr('code')
@@ -2640,7 +2640,7 @@ function grade_score_save() {
 	var corp_code = $('#corp').attr('code')
 	var year = $('#year').text()
 	var month = $('#month').text()
-	var url = '/c/grade/save-score-advice/'+corp_code+'/'+year+'/'+month+'/'+scores+'/'+advices;
+	var url = '/c/grade/save-score-advice/'+corp_code+'/'+year+'/'+month+'/'+scores+'/'+advices+'/';
 	$.get(url, function(data) {
 		$.messager.alert('提示：', '评价分值或专家委员会意见的更改已保存！', 'info')
 		$('#score_save').linkbutton('disable')
