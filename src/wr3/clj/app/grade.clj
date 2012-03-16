@@ -196,8 +196,7 @@
   (eui-region 
     "center" 
     {:border "false" :style "padding: 2px"} 
-    [:iframe {:id "ifrm1" :src "" 
-              :width "99%" :height "99%" :style "border: 1px dotted gray"}] ))
+    [:img {:src "/img/grade/grade-help.png" :style "margin-top: 30px"}] ))
 
 (defn- app-foot
   "layout.south"

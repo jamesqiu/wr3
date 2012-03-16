@@ -19,6 +19,7 @@
     :数据分析* (array-map
           :进场登记分析* {:id "31-enter"} 
           :交易流水分析 {:id "32-trade"} 
+          :综合分析* {:id "33-other"} 
           )
     :其他 (array-map
           :系统管理 {:id "41-admin"} 
@@ -92,6 +93,11 @@
                 :字典维度分析 {:id "32-trade-dict"}
                 :时间维度分析 {:id ""}
                 :来车属地分析 {:id ""}
+                )
+    :33-other (array-map
+                :十大菜品分析* {:id "33-other-top10"}
+                :价格趋势分析* {:id "33-other-trend"}
+                :地区分布* {:id "33-other-region"}
                 )
     :41-admin (array-map
                 :数据字典 {:id "41-dds"}

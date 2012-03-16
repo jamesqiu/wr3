@@ -2482,7 +2482,8 @@ function veg_onload() {
 			
 			var m2 = {'22-scb-vars':'app1' , '22-scb-price':'app2', '22-scb-quot':'app3', 
 			          '31-enter-from':'app4', '31-enter-dict':'app5', '31-enter-time':'app6',
-			          '32-enter-dict':'app7'};
+			          '32-enter-dict':'app7', '33-other-top10':'app-top10', '33-other-trend':'app-trend',
+			          '33-other-region':'app-region'};
 			$.each(m2, function(k, v) {
 				$('a#'+k).click(function() {
 					layout_load_center('/c/veg/'+v)
@@ -2495,6 +2496,8 @@ function veg_onload() {
 function veg_price(date) { layout_load_center('/c/veg/app2?date='+date) }
 function veg_quot(date) { layout_load_center('/c/veg/app3?date='+date) }
 function veg_enter_dict(dim) { layout_load_center('/c/veg/app5?dim='+dim) }
+function veg_top10(date) { layout_load_center('/c/veg/app-top10/'+date) }
+function veg_region(date) { layout_load_center('/c/veg/app-region/'+date) }
 
 function veg_app7() {
 	$.get('/app7.js', function() {
@@ -2515,7 +2518,7 @@ function test_cookie() {
  */
 function grade_onload() {
 
-	layout_load_center('/c/grade/hs300')
+//	layout_load_center('/c/grade/hs300')
 	
 	var bts = $('div[region="west"] a.easyui-linkbutton')
 	bts.click(function() {

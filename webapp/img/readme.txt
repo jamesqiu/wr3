@@ -12,3 +12,7 @@ idp-webreport.png  生成命令：
 	java tool.FontImage "WebReport BI 报表" "" "bold" "24" "#e0e0e0" "./webapp/img/idp-webreport.png"
 idp-webfirst       生成命令：
 	java tool.FontImage "WebFirst 应用服务器" "" "bold" "24" "#e0e0e0" "./webapp/img/idp-webfirst.png"
+
+cnggc/             中国黄金集团有限公司应急应用
+cnmc/              中国有色集团安全生产应急应用
+grade/             上市公司协会综合评价系统应用

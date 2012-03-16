@@ -6,7 +6,7 @@
 (use 'hiccup.core)
 (use 'wr3.clj.s 'wr3.clj.n 'wr3.clj.u 'wr3.clj.file 'wr3.clj.tb)
 (use 'wr3.clj.web 'wr3.clj.gmap 'wr3.clj.db 'wr3.clj.meta)
-(use 'wr3.clj.app.vegconf); :reload) ; reload 才能使配置更改生效
+(use 'wr3.clj.app.vegconf :reload) ; reload 才能使配置更改生效
 
 (require '[wr3.clj.app.dbm :as dbm])
 
@@ -374,6 +374,64 @@
         {:title "示意图" :x "日期" :y "称重"}) 
       )))
 
+(defn app-top10
+  "app: 十大菜品分析"
+  [id]
+  (let [dbname "mssql"
+        sql1 "select distinct date from TB_RF_VARIETY_STANDARD_DAY"
+        dates (select-col dbname sql1)
+        date (or id (first dates))
+        sql2 (str "SELECT TOP 10 a.VarietyNo,tbvc.CodeName,a.[Weight]"
+                  " FROM TB_RF_VARIETY_STANDARD_DAY a"
+                  " LEFT JOIN TB_BASIC_VARIETY_CODE tbvc ON a.VarietyNo=tbvc.Code AND tbvc.CodeType='0101' "
+                  " WHERE a.Date='" date "' AND a.[Type]='0501' "
+                  " ORDER BY a.[Weight] DESC")
+        rt (select-all dbname sql2)]
+    (html 
+      (map #(html (eui-button {:onclick (format "veg_top10('%s')" %)} %) (space 3)) dates)
+      [:h1 (format "十大菜品销售量分析（%s）" date)]
+      (wr3.clj.app.chartf/bar 
+        (apply array-map (flatten (map #(vector (:codename %) (:weight %)) rt))) 
+        {:title "十大菜品销售量" :x "菜品名称" :y "称重（百公斤）"}) 
+      )))
+
+(defn app-trend
+  "app: 价格趋势分析"
+  []
+  (let [data {"2012-3-1"	107 "2012-3-2"	108 "2012-3-3"	109 "2012-3-4"	106 "2012-3-5"	108 
+              "2012-3-6"	107 "2012-3-7"	107 "2012-3-8"	109 "2012-3-9"	106 "2012-3-10"	106}
+        ]
+    (wr3.clj.app.chartf/line 
+      data
+      {:title "价格趋势分析" :x "日期" :y "价格"}) ))
+
+(defn app-region
+  "app: 地区分布分析"
+  [id]
+  (let [dbname "mssql"
+        dates ["20120302" "20120301" "20120229" "20120228" "20120217" "20120216" "20120215"]
+        date (or id (first dates))
+        sql (str "SELECT TOP 10 ta.areaNo,tbva.AreaName,sum(ta.TotalWeight) AS weight FROM ("
+                 " SELECT LEFT(ta.AreaNo,2)+'0000' AS areaNo,ta.TotalWeight FROM temp_area ta" 
+                 " WHERE CONVERT(VARCHAR,ta.EnterDate,112)='" date "') ta"
+                 " LEFT JOIN TB_BASIC_VARIETY_AREA tbva ON tbva.AreaNo = ta.AreaNo"
+                 " GROUP BY ta.areaNo,tbva.AreaName"
+                 " ORDER BY sum(ta.TotalWeight) DESC")
+        rt (select-all dbname sql)
+        f (fn [d] (format "%s-%s-%s" (subs d 0 4) (subs d 4 6) (subs d 6 8)))]
+    (html 
+      (map #(html (eui-button {:onclick (format "veg_region('%s')" %)} 
+                              (f %)) (space 3)) 
+           dates)
+      [:h1 (format "地区分布Top 10分析（%s）" (f date))]
+      (wr3.clj.app.chartf/bar 
+        (apply array-map (flatten (map #(vector (:areaname %) (:weight %)) rt))) 
+        {:title "地区分布" :x "地区名称" :y "称重（百公斤）"}) 
+      (wr3.clj.app.chartf/pie 
+        (apply array-map (flatten (map #(vector (:areaname %) (:weight %)) rt))) 
+        {:title "地区分布" :x "地区名称" :y "称重（百公斤）"}) 
+      )))
+  
 (defn app7 
   ""
   []
