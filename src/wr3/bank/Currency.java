@@ -56,7 +56,7 @@ public class Currency {
 		StringBuffer sb = new StringBuffer ();
 		if (num < 0.0) {
 			num = -num;
-			sb.append('负');
+			sb.append('负'); 
 		}
 		if (num >= 999999999999.99) {
 			System.err.println("CurrencyUtil.java numberToChinese(): 大于1万亿。");

@@ -30,7 +30,7 @@ public class CubeTableTest {
 		data.add(Row.createByTypes("001", "2月", "cc", 50, 5000));
 		data.add(Row.createByTypes("001", "3月", "dd", 70, 7000));
 		data.add(Row.createByTypes("002", "1月", "ee", 90, 9000));
-		data.add(Row.createByTypes("002", "2月", "ff", 0,  0));
+		data.add(Row.createByTypes("002", "2月", "ff", 0,  0)); 
 		data.add(Row.createByTypes("002", "2月", "aa", 20, 2000));
 		data.add(Row.createByTypes("002", "3月", "cc", 40, 4000));
 		

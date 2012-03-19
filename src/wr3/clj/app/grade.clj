@@ -224,15 +224,21 @@
 
 (defn- corp-score-sum
   "综合评分及等级，驾驶仪表板示意图"
-  [score]
-  (html
-    [:a {:name "rank_result"}]
-    [:h2 (format "修正指标分值：<span style='color:red'>%.4f</span>（评级参考：<span style='color:red'>%s</span>）" 
-                 score (rank score))]
-    (panel {:value score 
-            ; range = [30, 50 55 60 65 70 75 80 85 90, 100]
-            :range (reduce into [[30] (reverse (map #(-> % val (right " ") to-int) (get-indic "rank"))) [100]]) }
-           {:lowerLimit 30 :upperLimit 100} 500 250) ))
+  [score rank-advice]
+  (let [ranks (get-indic "rank")
+        rank (rank score ranks)]
+    (html
+      [:a {:name "rank_result"}]
+      [:h2 
+       (format "修正指标分值：<span style='color:red'>%.4f</span>（评级参考：<span id='rank_ref' style='color:red'>%s</span>）" 
+               score rank) (space 3)
+       [:span#rank_advice0 {:value (or rank-advice rank)} "人工评级结果：" ]
+       (eui-combo {:id "rank_advice" :style "width:80px" } 
+                  (apply array-map (mapcat #(let [k (-> % key name)] [k k]) ranks)))]
+      (panel {:value score 
+              ; range = [30, 50 55 60 65 70 75 80 85 90, 100]
+              :range (reduce into [[30] (reverse (map #(-> % val (right " ") to-int) ranks)) [100]]) }
+             {:lowerLimit 30 :upperLimit 100} 500 250) )))
 
 (defn- corp-score-detail 
   "各一级评价指标分值cup图显示"
@@ -302,7 +308,7 @@
                      [:td (fmt e2)] ; rest 二级指标 eg. 金融相关者关系
                      (f-td-score2 e2) ]) )))]]
       ; 综合评分及等级，驾驶仪表板示意图
-      (corp-score-sum (get-score0 corp-code year month indic data advice)) [:br]
+      (corp-score-sum (get-score0 corp-code year month indic data advice) (:rank advice)) [:br]
       (eui-button {:href "#top" :style "margin: 3px" :iconCls "icon-redo"} "回到上面") (space 3)
       (eui-button {:onclick "grade_rank_detail()"} "评级结果细项图示")
       [:br]
@@ -366,7 +372,7 @@
     (app-corp-list (corps-like-list pattern) (format "代码中含%s的上市公司" pattern)) ))
   
 (defn save-score-advice
-  "app: 保存更改的评价分数以及评级；
+  "service: 保存更改的评价分数以及评级自动计算结果；
   @param ids ['000001' '2012' '1' '201 98.5 205 89.0 229 69.8' '201 \"1.0 合理\" 207 \"0.95\" '] 
   保存到如下 data, advice, advice-reason "
   [ids]
@@ -401,6 +407,20 @@
         (update! :advice-reason advice-reason advice-reason2)
         (insert! :advice-reason advice-reason2))
       )))
+
+(defn save-rank-advice
+  "service: 保存评级人工建议结果于advice
+  调用url: '/save-rank-advice/000001/2012/1/AA'
+  @ids '('000001' '2012' '1' 'AA') "
+  [ids]
+  (let [corp-code (first ids)
+        [year month] (rest ids)
+        rank-advice (last ids)
+        advice (get-advice corp-code year month)]
+    (with-mdb2 "grade"
+      (if advice
+        (update! :advice advice (merge advice {:rank rank-advice}))
+        (insert! :advice {:code corp-code :year year :month month :rank rank-advice}) ) )))
 
 (defn report-score
   "app: 分值分析, 一个企业各月份的分值分析"
@@ -485,6 +505,24 @@
   [year month report-type]
   (with-mdb2 "grade"
     (:count (mdb-get-one :report :where {:type report-type :year year :month month}))))
+
+; (report-chart "2012" "1" "industry" "AA" nil)
+(defn report-chart
+  "app: 生成报表中一列或者一行的图形显示；目前只做了行业分析的"
+  [year month report-type dim-top dim-left]
+  (let [report (get-report year month report-type)
+        title (if (nullity? dim-left) 
+                (format "评级为%s的各行业上市公司数量" dim-top) 
+                (format "%s的各评级上市公司数量" dim-left))
+        x (if (nullity? dim-left) "行业大类" "评级")
+        dict (into {} (dd "industry")) ; 行业大类字典  {:A "农、林、牧、渔业", :B "采掘业", .. }
+        v (if (nullity? dim-left)
+            (for [[dim rank c] report :when (= rank dim-top)] [((keyword dim) dict) c])
+            (for [[dim rank c] report :when (= dim (left dim-left ":"))] [rank c]))
+        m (apply array-map (flatten v))
+        ]
+    (bar m {:title title :x x :y "上市公司数量"})
+    ))
   
 (defn report-industry
   "app: 生成行业分析表"
@@ -498,17 +536,20 @@
         rank-keys  (concat (map name (keys ranks)) ["末级"]) ; ("AAA" "AA" .. "C" "末级")
         ]
     (html
+      [:h1 {:align "center"} (format "分行业统计（%s年%s月）" year month) ]
       [:table {:class "wr3table" :border 1} 
        [:caption "维度：行业大类、评分级别； 指标：上市公司数量（单位：个）"]
        [:tr 
-        [:th "行业大类 &nbsp; \\ &nbsp; 评分级别"] (for [rank rank-keys] [:th rank])]
+        [:th "行业大类 &nbsp; \\ &nbsp; 评分级别"] 
+        (for [rank rank-keys] [:th {:group "dim_top"} [:a {:href "#chart"} rank]])]
        (for [[incode inname] dd-industry]
          [:tr
-          [:th {:style "text-align: left"} incode ": " inname]
+          [:th {:style "text-align: left" :group "dim_left"} [:a {:href "#chart"} incode ": " inname]]
           (for [rank rank-keys]
-            [:td {:align "right"}
-             (last (find-first #(and (= (name incode) (first %)) (= rank (second %))) report))])
-          ]) ])))
+            [:td {:align "right"} (last (find-first #(and (= (name incode) (first %)) (= rank (second %))) report))])
+          ]) ] [:br]
+      [:a {:name "chart"}]
+      [:div#chart {:style "height: 400px"} "图形（请点击列头或者行头）"])))
 
 (defn- province-count
   "得到某年月某省份某级别的企业个数 (province-count '2012' '1' '北京' 'AAA') "
@@ -546,6 +587,7 @@
         rank-keys  (concat (map name (keys ranks)) ["末级"]) ; ("AAA" "AA" .. "C" "末级")
         ]
     (html
+      [:h1 {:align "center"} (format "分行业统计（%s年%s月）" year month) ]
       [:table {:class "wr3table" :border 1} 
        [:caption "维度：省份、评级； 指标：上市公司数量（单位：个）"]
        [:tr 
@@ -605,6 +647,7 @@
         rank-keys  (concat (map name (keys ranks)) ["末级"]) ; ("AAA" "AA" .. "C" "末级")
         ]
     (html
+      [:h1 {:align "center"} (format "分行业统计（%s年%s月）" year month) ]
       [:table {:class "wr3table" :border 1} 
        [:caption "维度：板块、评级； 指标：上市公司数量（单位：个）"]
        [:tr 
@@ -740,3 +783,4 @@
 ;  (vec (map :code (fetch :corp :only [:code] :where {:code #"^9"}))))
 ;  (doseq [r (fetch :data :where {:rank "末级"})] (println r)))
 ;  (mdb-add :advice-reason {:code "000001" :year "2012" :month "1" :202 "对于此类公司该项权重高"}) )
+;(report-chart "2012" "2" "industry" nil "E: 建筑业")

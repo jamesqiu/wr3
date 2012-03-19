@@ -251,7 +251,7 @@ public class Test1 {
 	static void Ð¡Ñ§°ÂÊý() {
 
 	L: for (int i = 111111; i < 1000000/6; i++) {
-			String si = set(i);
+			String si = set(i); 
 			List<String> ss =
 				Arrays.asList(set(i*2), set(i*3), set(i*4), set(i*5), set(i*6));
 			for (String s : ss) {
