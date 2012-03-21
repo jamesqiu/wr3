@@ -32,6 +32,7 @@ document.write('<script type="text/javascript" src="' + wr3path + 'jquery-ui-1.8
 document.write('<script type="text/javascript" src="' + wr3path + 'jquery.ui.datepicker-zh-CN.js"></script>');
 
 // -----------------------------------------------------------------------------
+
 /**
  * 应用主导航界面onload()的设置，用于: wr3.clj.web/html-apps
  */
@@ -2520,6 +2521,8 @@ function grade_onload() {
 
 //	layout_load_center('/c/grade/hs300')
 	
+	$.ajaxSetup({cache:false})
+
 	var bts = $('div[region="west"] a.easyui-linkbutton')
 	bts.click(function() {
 		bts.css("color", "")
@@ -2545,53 +2548,72 @@ function grade_onload() {
 			top: e.pageY
 		});
 	})
+	$('#site_bt').click(function() {
+		$('div [region="center"]')
+		.html('<img src="/img/loading3.gif" />')
+		.html('<img src="/img/grade/index-style.jpg" />')
+		window.open('/img/grade/index-style.jpg', '_blank')
+	})
+	$('#help_bt').click(function() {
+		$('div [region="center"]')
+		.html('<img src="/img/loading3.gif" />')
+		.html('<img src="/img/grade/grade-help.png" style="margin-top: 30px" />')
+	})
 	$('#report1_bt').click(function() {
 		layout_load_center('/c/grade/report-score/'+$('#corp').attr('code'))
 	})
 	$('#report2_bt').click(function() {
 		layout_load_center('/c/grade/report-ranks/'+$('#year').text()+'-'+$('#month').text())
 	})
+	
+	function dim_click(type_name) {
+		var type_name = $('h1').attr('type')
+		$('th[group="dim_top"]').click(function() {
+			var col_index = $(this).get(0).cellIndex
+			var tb = $(this).parent().parent().get(0)
+			var rows = tb.rows.length
+			$(tb).find('td').css('background-color', '')
+			for(var i=1; i<rows; i++) {
+				$(tb.rows[i].cells[col_index]).css('background-color', 'yellow')
+			}
+			var url = '/c/grade/report-chart?report-type='+type_name+'&year='
+				+$('#year').text()+'&month='+$('#month').text()+'&dim-top='+$(this).text()+'&dim-left=';
+			$('#chart').html('<img src="/img/loading3.gif" />').load(url)
+		})
+		$('th[group="dim_left"]').click(function() {
+			var row_index = $(this).parent().get(0).rowIndex
+			var tb = $(this).parent().parent().get(0)
+			var cols = tb.rows[row_index].cells.length
+			$(tb).find('td').css('background-color', '')
+			for(var i=1; i<cols; i++) {
+				$(tb.rows[row_index].cells[i]).css('background-color', 'yellow')
+			}
+			var url = '/c/grade/report-chart?report-type='+type_name+'&year='
+				+$('#year').text()+'&month='+$('#month').text()+'&dim-top='+'&dim-left='+$(this).text();	
+			// 碰到奇怪问题：直接调用load方法页面不绘制chart，
+			url = encodeURI(url)
+			$('#chart').html('<img src="/img/loading3.gif" />')
+			$.get(url, function(data) { $('#chart').html(data) })
+		})
+	}
 	// 分行业统计
 	$('#report3_bt').click(function() {
-		layout_load_center('/c/grade/report-industry/'+$('#year').text()+'/'+$('#month').text(), function() {
-			$('th[group="dim_top"]').click(function() {
-				var col_index = $(this).get(0).cellIndex
-				var tb = $(this).parent().parent().get(0)
-				var rows = tb.rows.length
-				$(tb).find('td').css('background-color', '')
-				for(var i=1; i<rows; i++) {
-					$(tb.rows[i].cells[col_index]).css('background-color', 'yellow')
-				}
-				var url = '/c/grade/report-chart?report-type=industry&year='
-					+$('#year').text()+'&month='+$('#month').text()+'&dim-top='+$(this).text()+'&dim-left=';
-				$('#chart').html('<img src="/img/loading3.gif" />').load(url)
-			})
-			$('th[group="dim_left"]').click(function() {
-				var row_index = $(this).parent().get(0).rowIndex
-				var tb = $(this).parent().parent().get(0)
-				var cols = tb.rows[row_index].cells.length
-				$(tb).find('td').css('background-color', '')
-				for(var i=1; i<cols; i++) {
-					$(tb.rows[row_index].cells[i]).css('background-color', 'yellow')
-				}
-				var url = '/c/grade/report-chart?report-type=industry&year='
-					+$('#year').text()+'&month='+$('#month').text()+'&dim-top='+'&dim-left='+$(this).text();	
-				// 碰到奇怪问题：直接调用load方法页面不绘制chart，
-				$('#chart').html('<img src="/img/loading3.gif" />')
-				$.get(url, function(data) { $('#chart').html(data) })
-			})
-		})
+		layout_load_center('/c/grade/report-industry/'+$('#year').text()+'/'+$('#month').text(), 
+				dim_click)
 	})
 	// 分地域（省份）统计
 	$('#report4_bt').click(function() {
-		layout_load_center('/c/grade/report-province/'+$('#year').text()+'/'+$('#month').text())
+		layout_load_center('/c/grade/report-province/'+$('#year').text()+'/'+$('#month').text(),
+				dim_click)
 	})
 	// 分板块统计
 	$('#report5_bt').click(function() {
-		layout_load_center('/c/grade/report-board/'+$('#year').text()+'/'+$('#month').text())
+		layout_load_center('/c/grade/report-board/'+$('#year').text()+'/'+$('#month').text(),
+				dim_click)
 	})
 	// 显示用户登录信息
-	$.getJSON('/c/auth/who', function(json) {
+	$.get('/c/auth/who', function(data) {
+		var json = $.parseJSON(data)
 		if (json) {
 			$('#wr3user').text(json.name)
 		} else {
@@ -2710,3 +2732,9 @@ function grade_search1(v, n) {
 	layout_load_center('/c/grade/corp-like/'+v)
 }
 
+function grade_exit() {
+	$.get('/c/auth/logout', function(data) {
+		alert(data)
+		window.location.href = '/c/grade/'
+	})
+}

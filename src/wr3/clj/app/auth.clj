@@ -1,5 +1,5 @@
 (ns ^{:doc "
-  完成登录校验的service，仅控制应用服务器session范围内的东西。
+  wr3的系统级service，完成登录校验，勿删！仅控制应用服务器session范围内的东西。
   request传入的参数一般为 ?uid=foo&pwd=bar
   session中写入的值为：wr3user, wr3role（逗号分隔的角色字符串）, wr3action（登录页面提交验证的action）, wr3url（登录后前往的页面）
   "   
@@ -12,7 +12,7 @@
 
 (def users 
   {"admin" {:name "管理员" :pwd "810016a5056c4f3f7dd74b3ff02b8f5e" :roles "root,user"} 
-   "user" {:name "合法用户" :pwd "1a1dc91c907325c69271ddf0c944bc72" :roles "user"} ; 密码为"pass"        
+   "user" {:name "用户" :pwd "1a1dc91c907325c69271ddf0c944bc72" :roles "user"} ; 密码为"pass"        
    "guest" {:name "访客" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "guest"} ; 密码为""
    })
 
@@ -59,6 +59,9 @@
   [request]
   (or (session request "wr3url") ""))
 
+(defn is-user
+  [request uid]
+  (= (:uid (who request)) uid))
   
 (defn index
   "app: 使用方法"

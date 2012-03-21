@@ -10,9 +10,23 @@
 (use 'somnium.congomongo)
 (use '[wr3.clj.app.chartf :only (panel cup bar line pie)])
 
+(require '[wr3.clj.app.auth :as au])
+(defn auth
+  "该函数被 CljServlet 调用 "
+  [request fname & args]
+  (cond
+    (session request "wr3user") true
+    :else false))
 
+(defn exit
+  "service: 退出重新登录"
+  [request]
+  (session-close request))
+  
 (def periods ["2011-10" "2011-11" "2011-12" "2012-1" "2012-2"]) ; 评价期数
-
+;{"深市" "000,001", "中小板" "002", "深市B股" "2", "创业板" "3", "沪市" "6", "沪市B股" "9"}
+(def boards ["上海主板" "深圳主板" "中小企业板" "创业板" "上海B股" "深圳B股"])
+  
 (defn- to-point4
   "四舍五入到小数点后4位
   @d 浮点数如3.14159
@@ -145,7 +159,9 @@
     "north" 
     {:id "layout_north" :style "height: 80px; padding: 10px;" }
     [:span {:class "layout_title"} "上市公司综合评价——演示版"]
-    [:div {:style "float: right"} "当前用户: " [:span#wr3user {:style "color:red; font-weight:bold"} ".."]]
+    [:div {:style "position: absolute; right: 10px; top: 8px; color: gray"} "当前用户: " 
+     [:span#wr3user {:style "color:red; font-weight:bold"} ".."] (space 3)
+     [:a {:href "#" :onclick "grade_exit()"} "退出"]]
     ; 搜索条
     [:div {:style "position: absolute; right: 10px; top: 35px"}
      (eui-searchbox 
@@ -184,11 +200,11 @@
         (eui-button {:id "report5_bt" :plain "true" :iconCls "icon-pie" } "分板块统计") [:br]
         )    
       (eui-accord- 
-        {:iconCls "icon-search"} "管理维护"
-        (eui-button {:id "grade_bt" :plain "true" :iconCls "icon-search" } "评估指标体系") [:br]
-        (eui-button {:id "grade_bt" :plain "true" :iconCls "icon-search" } "上市公司") [:br]
-        (eui-button {:id "grade_bt" :plain "true" :iconCls "icon-help" } "使用帮助") [:br]
-        )) ))
+        {:iconCls "icon-search"} "其他（网站样式等）"
+        (eui-button {:id "site_bt" :plain "true" :iconCls "icon-search" } "网站样式") [:br]
+        (eui-button {:id "help_bt" :plain "true" :iconCls "icon-help" } "使用帮助") [:br]
+        )
+      )))
 
 (defn- app-main
   "layout.center"
@@ -474,135 +490,24 @@
         corps (rank-list year month rank) ]
     (app-corp-list corps (format "评级为%s的公司" rank)) ))
   
+(defn- data-count-
+  "计算data表中指定：年、月、rank和公司代码集合的记录数量"
+  [year month rank corps]
+  (with-mdb2 "grade"
+    (fetch-count :data :where {:year year :month month :rank rank :code {:$in (map :code corps)}})))
+  
 (defn- industry-count
   "得到某年月某行业某级别的企业个数 (corp-of-industry '2012' '1' 'A' 'AAA') "
   [year month incode rank]
-  (with-mdb2 "grade"
-    (let [corps (fetch :corp :only [:code] :where {:incode (name incode)}) ]
-      (fetch-count :data :where {:year year :month month :rank rank :code {:$in (map :code corps)}}))))
-  
-(defn- industry-of
-  "得到某年月不同行业不同级别的企业数目, 维度：行业+评级，指标：count
-  @param id 年月如'2012-1' "
-  [year month]
-  (let [dd-industry (dd "industry") ; 行业大类字典  {:A "农、林、牧、渔业", :B "采掘业", .. }
-        incodes (map name (keys dd-industry)) ; ("A" "B" .. "C2")
-        ranks (get-indic "rank") ;  {:AAA ">= 90", :AA ">= 85", .. }
-        rank-keys  (concat (map name (keys ranks)) ["末级"]) ]; ("AAA" "AA" .. "C" "末级")
-    {:type "industry" :year year :month month
-     :count (vec (for [incode incodes rank rank-keys]
-                   [(name incode) rank (industry-count year month incode rank)]))} ))
-
-(defn- industry-report-save
-  "生成所有年月的行业评级分析报表保存到mongodb的report表中"
-  []
-  (doseq [p periods]
-    (let [[year month] (split p "-")]
-      (with-mdb2 "grade"
-        (insert! :report (industry-of year month))))))
-
-(defn- get-report
-  [year month report-type]
-  (with-mdb2 "grade"
-    (:count (mdb-get-one :report :where {:type report-type :year year :month month}))))
-
-; (report-chart "2012" "1" "industry" "AA" nil)
-(defn report-chart
-  "app: 生成报表中一列或者一行的图形显示；目前只做了行业分析的"
-  [year month report-type dim-top dim-left]
-  (let [report (get-report year month report-type)
-        title (if (nullity? dim-left) 
-                (format "评级为%s的各行业上市公司数量" dim-top) 
-                (format "%s的各评级上市公司数量" dim-left))
-        x (if (nullity? dim-left) "行业大类" "评级")
-        dict (into {} (dd "industry")) ; 行业大类字典  {:A "农、林、牧、渔业", :B "采掘业", .. }
-        v (if (nullity? dim-left)
-            (for [[dim rank c] report :when (= rank dim-top)] [((keyword dim) dict) c])
-            (for [[dim rank c] report :when (= dim (left dim-left ":"))] [rank c]))
-        m (apply array-map (flatten v))
-        ]
-    (bar m {:title title :x x :y "上市公司数量"})
-    ))
-  
-(defn report-industry
-  "app: 生成行业分析表"
-  [ids]
-  (let [year (or (first ids) "2012")
-        month (or (second ids) "1")
-        report (get-report year month "industry")
-        dd-industry (sort (dd "industry")) ; 行业大类字典  {:A "农、林、牧、渔业", :B "采掘业", .. }
-        incodes (map name (keys dd-industry)) ; ("A" "B" .. "C2")
-        ranks (get-indic "rank") ;  {:AAA ">= 90", :AA ">= 85", .. }
-        rank-keys  (concat (map name (keys ranks)) ["末级"]) ; ("AAA" "AA" .. "C" "末级")
-        ]
-    (html
-      [:h1 {:align "center"} (format "分行业统计（%s年%s月）" year month) ]
-      [:table {:class "wr3table" :border 1} 
-       [:caption "维度：行业大类、评分级别； 指标：上市公司数量（单位：个）"]
-       [:tr 
-        [:th "行业大类 &nbsp; \\ &nbsp; 评分级别"] 
-        (for [rank rank-keys] [:th {:group "dim_top"} [:a {:href "#chart"} rank]])]
-       (for [[incode inname] dd-industry]
-         [:tr
-          [:th {:style "text-align: left" :group "dim_left"} [:a {:href "#chart"} incode ": " inname]]
-          (for [rank rank-keys]
-            [:td {:align "right"} (last (find-first #(and (= (name incode) (first %)) (= rank (second %))) report))])
-          ]) ] [:br]
-      [:a {:name "chart"}]
-      [:div#chart {:style "height: 400px"} "图形（请点击列头或者行头）"])))
+  (let [corps (fetch :corp :only [:code] :where {:incode (name incode)}) ]
+    (data-count- corps)))
 
 (defn- province-count
   "得到某年月某省份某级别的企业个数 (province-count '2012' '1' '北京' 'AAA') "
   [year month province rank]
-  (with-mdb2 "grade"
     (let [corps (fetch :corp :only [:code] :where {:province province}) ]
-      (fetch-count :data :where {:year year :month month :rank rank :code {:$in (map :code corps)}}))))
+      (data-count- corps)))
 
-(defn- province-of
-  "得到某年月不同省份不同级别的企业数目, 维度：省份+评级，指标：count "
-  [year month]
-  (let [provinces (concat (dd "provinces") [nil])
-        ranks (get-indic "rank") ;  {:AAA ">= 90", :AA ">= 85", .. }
-        rank-keys  (concat (map name (keys ranks)) ["末级"]) ]; ("AAA" "AA" .. "C" "末级")
-    {:type "province" :year year :month month
-     :count (vec (for [province provinces rank rank-keys]
-                   [province rank (province-count year month province rank)]))} ))
-
-(defn- province-report-save
-  "生成所有年月的省份评级分析报表保存到mongodb的report表中"
-  []
-  (doseq [p periods]
-    (let [[year month] (split p "-")]
-      (with-mdb2 "grade"
-        (insert! :report (province-of year month))))))
-    
-(defn report-province
-  "app: 生成省份分析表"
-  [ids]
-  (let [year (or (first ids) "2012")
-        month (or (second ids) "1")
-        provinces (concat (dd "provinces") [nil])
-        report (get-report year month "province")
-        ranks (get-indic "rank") ;  {:AAA ">= 90", :AA ">= 85", .. }
-        rank-keys  (concat (map name (keys ranks)) ["末级"]) ; ("AAA" "AA" .. "C" "末级")
-        ]
-    (html
-      [:h1 {:align "center"} (format "分行业统计（%s年%s月）" year month) ]
-      [:table {:class "wr3table" :border 1} 
-       [:caption "维度：省份、评级； 指标：上市公司数量（单位：个）"]
-       [:tr 
-        [:th "省份 &nbsp; \\ &nbsp; 评分级别"] (for [rank rank-keys] [:th rank])]
-       (for [province provinces]
-         [:tr
-          [:th {:style "text-align: left"} (or province "未知")]
-          (for [rank rank-keys]
-            [:td {:align "right"}
-             (last (find-first #(and (= province (first %)) (= rank (second %))) report))])
-          ]) ])))
-
-;{"深市" "000,001", "中小板" "002", "深市B股" "2", "创业板" "3", "沪市" "6", "沪市B股" "9"}
-(def boards ["上海主板" "深圳主板" "中小企业板" "创业板" "上海B股" "深圳B股"])
-  
 (defn- board-count
   "得到某年月某板块某级别的企业个数 (corp-of-industry '2012' '1' 'A' 'AAA') "
   [year month board rank]
@@ -614,30 +519,139 @@
                   "上海主板" #"^6"
                   "上海B股" #"^9"
                   nil )]
-  (with-mdb2 "grade"
     (let [corps (fetch :corp :only [:code] :where {:code pattern}) ]
-      (fetch-count :data :where {:year year :month month :rank rank :code {:$in (map :code corps)}})))))
+      (data-count- corps))))
 
+(defn- report-of-
+  "@param type-name 如 'industry' 'province' 'board'
+  @param f-count 统计函数如 industry-count, province-count, board-count "
+  [year month type-name f-count dims]
+  (let [ranks (get-indic "rank") ;  {:AAA ">= 90", :AA ">= 85", .. }
+        rank-keys  (concat (map name (keys ranks)) ["末级"]) ]; ("AAA" "AA" .. "C" "末级")
+    {:type type-name :year year :month month
+     :count (vec (for [dim dims rank rank-keys]
+                   [dim rank (f-count year month dim rank)]))} ))
+  
+(defn- industry-of
+  "得到某年月不同行业不同级别的企业数目, 维度：行业+评级，指标：count
+  @param id 年月如'2012-1' "
+  [year month]
+  (let [dd-industry (dd "industry") ; 行业大类字典  {:A "农、林、牧、渔业", :B "采掘业", .. }
+        incodes (map name (keys dd-industry))] ; ("A" "B" .. "C2")
+    (report-of- year month "industry" industry-count incodes)))
+
+(defn- province-of
+  "得到某年月不同省份不同级别的企业数目, 维度：省份+评级，指标：count "
+  [year month]
+  (let [provinces (concat (dd "provinces") [nil])]
+    (report-of- year month "province" province-count provinces)))
 
 (defn- board-of
   "得到某年月不同板块不同级别的企业数目, 维度：省份+评级，指标：count "
   [year month]
-  (let [ranks (get-indic "rank") ;  {:AAA ">= 90", :AA ">= 85", .. }
-        rank-keys  (concat (map name (keys ranks)) ["末级"]) ]; ("AAA" "AA" .. "C" "末级")
-    {:type "board" :year year :month month
-     :count (vec (for [board boards rank rank-keys]
-                   [board rank (board-count year month board rank)]))} ))
+  (report-of- year month "board" board-count boards))
 
-
-(defn- board-report-save
-  "生成所有年月的板块评级分析报表保存到mongodb的report表中"
-  []
+(defn- report-save-
+  "@param f-of 函数如 industry-of, province-of, board-of "
+  [f-of]
   (doseq [p periods]
     (let [[year month] (split p "-")]
       (with-mdb2 "grade"
-        (insert! :report (board-of year month))))))
+        (insert! :report (f-of year month))))))
+
+(defn- industry-report-save
+  "生成所有年月的行业评级分析报表保存到mongodb的report表中"
+  [] (report-save- industry-of))
+
+(defn- province-report-save
+  "生成所有年月的省份评级分析报表保存到mongodb的report表中"
+  [] (report-save- province-of))
+
+(defn- board-report-save
+  "生成所有年月的板块评级分析报表保存到mongodb的report表中"
+  [] (report-save- board-of))
+    
+(defn- get-report
+  [year month report-type]
+  (with-mdb2 "grade"
+    (:count (mdb-get-one :report :where {:type report-type :year year :month month}))))
+
+; (report-chart "2012" "1" "industry" "AA" nil)
+(defn report-chart
+  "app: 生成报表中一列或者一行的图形显示；目前只做了行业分析的
+  @param report-type 如：'industry', 'province', 'board' 
+  @param dim-top ''或者 'AAA', .., '末级' 
+  @param dim-left ''或者 'C5: 电子', .., '上海主板: 上海主板' "
+  [year month report-type dim-top dim-left]
+  (let [top? (nullity? dim-left)
+        report (get-report year month report-type)
+        title (if top? 
+                (format "评级为“%s”的各行业上市公司数量" dim-top) 
+                (format "“%s”的各评级上市公司数量" dim-left))
+        x (if top? "行业大类" "评级")
+        dict (case report-type
+               "industry" (into {} (for [[k v] (dd "industry")] [(name k) v])) ; {:A "农、林、牧、渔业", :B "采掘业", .. }
+               "province" (into {} (for [e (dd "provinces")] [e e]))
+               "board" (into {} (for [e boards] [e e]))
+               )
+        v (if top?
+            (for [[dim rank c] (sort report) :when (= rank dim-top)] [(dict dim) c])
+            (for [[dim rank c] report :when (= dim (left dim-left ":"))] [rank c]))
+        m (apply array-map (flatten v)) ]
+    (bar m {:title title :x x :y "上市公司数量"}) ))
+ 
+(defn report-
+  "@param type-name 如：'industry', 'province', 'board' 
+  @param dims 如 {'A' ' 农、林、牧、渔业' 'B' '采掘业' .. 'M' '综合类' }
+  [['北京' '北京'] ['上海' '上海'] .. ['广东' '广东']] 
+  (('上海A股' '上海A股') () ) "
+  [year month type-name dims]
+  (let [year (or year "2012")
+        month (or month "1")
+        report (get-report year month type-name)
+        ranks (get-indic "rank") ;  {:AAA ">= 90", :AA ">= 85", .. }
+        rank-keys  (concat (map name (keys ranks)) ["末级"]) ; ("AAA" "AA" .. "C" "末级")
+        type-cn ({"industry" "行业" "province" "省份" "board" "板块"} type-name)
+        ]
+    (html
+      [:h1 {:align "center" :type type-name} (format "分%s统计（%s年%s月）" type-cn year month) ]
+      [:table {:class "wr3table" :border 1} 
+       [:caption (format "维度：%s、评级； 指标：上市公司数量" type-cn)]
+       [:tr 
+        [:th type-cn " &nbsp; \\ &nbsp; 评分级别"] 
+        (for [rank rank-keys] [:th {:group "dim_top"} [:a {:href "#chart"} rank]])]
+       (for [[dcode dname] dims]
+         [:tr
+          [:th {:style "text-align: left" :group "dim_left"} 
+           [:a {:href "#chart"} [:font {:color "gray"} (name dcode)] ": " dname]]
+          (for [rank rank-keys]
+            [:td {:align "right"} (last (find-first #(and (= (name dcode) (first %)) (= rank (second %))) report))])
+          ]) ] [:br]
+      [:a {:name "chart"}]
+      [:div#chart {:style "height: 400px"} "图形（请点击列头或者行头）"])))
+  
+(defn report-industry
+  "app: 生成行业分析表"
+  [ids]
+  (let [[year month] (take 2 ids)
+        dims (sort (dd "industry")) ]
+    (report- year month "industry" dims) ))
+  
+(defn report-province
+  "app: 生成省份分析表"
+  [ids]
+  (let [[year month] (take 2 ids)
+        dims (for [e (dd "provinces")] [e e]) ]
+    (report- year month "province" dims) ))
 
 (defn report-board
+  "app: 生成板块分析表"
+  [ids]
+  (let [[year month] (take 2 ids)
+        dims (for [e boards] [e e]) ]
+    (report- year month "board" dims) ))
+  
+(defn report-board0
   "app: 生成板块分析表"
   [ids]
   (let [year (or (first ids) "2012")

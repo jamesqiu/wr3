@@ -115,7 +115,7 @@
                ; (fcall ns fn {:request request :id id})
                (fcall-binding-params ns fn (make-binding-params request ids))))
         ]
-    (println "-- debug: auth =" auth " fn =" fn)
+;    (println "-- debug: auth =" auth " fn =" fn)
     ; jamesqiu (2012-2-25) 支持输出多客户：http://server/c/chartf/chinamap2?content-type=text/xml&charset=gbk
     (.setContentType response (format "%s; charset=%s" content-type charset))    
     (if (true? auth) 
@@ -123,7 +123,7 @@
       (-> response .getWriter
         (.println (? rt "fcall return nil")))
       (do
-        (println "-- debug: path-info =" (format "%s/c%s" (BaseConfig/webapp) path-info))
+;        (println "-- debug: path-info =" (format "%s/c%s" (BaseConfig/webapp) path-info))
         (-> request .getSession
           (.setAttribute "wr3url" (format "%s/c%s" (BaseConfig/webapp) path-info)))
         (.sendRedirect response "/login.html"))
