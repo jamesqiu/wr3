@@ -307,7 +307,7 @@
 ;; 从meta.clj的dds定义中得到一个表的所有维度字段名称，如：("SignMode" "Area" ...)
 (defn- table-dims [tb] (map name (keys (dds (keyword tb)))))
   
-(require 'wr3.clj.app.chartf)
+(use 'wr3.clj.chart)
 
 (defn app5
   "app: 进场登记表字典维度分析。
@@ -340,7 +340,7 @@
                      [:td (fratio % :weight)] 
                      ]) rt)]
        ]
-      (wr3.clj.app.chartf/pie 
+      (pief 
         (into {} (map #(vector (dd (dim-key %)) (:weight %)) rt)) 
         {:title "简单图形" :x "序号" :y "数值"}) 
       ) ))
@@ -369,7 +369,7 @@
                      [:td (:weight %)]
                      [:td (fratio % :weight)] 
                      ]) rt)]]
-      (wr3.clj.app.chartf/bar 
+      (barf 
         (into {} (map #(vector (:date %) (:weight %)) rt)) 
         {:title "示意图" :x "日期" :y "称重"}) 
       )))
@@ -390,7 +390,7 @@
     (html 
       (map #(html (eui-button {:onclick (format "veg_top10('%s')" %)} %) (space 3)) dates)
       [:h1 (format "十大菜品销售量分析（%s）" date)]
-      (wr3.clj.app.chartf/bar 
+      (barf 
         (apply array-map (flatten (map #(vector (:codename %) (:weight %)) rt))) 
         {:title "十大菜品销售量" :x "菜品名称" :y "称重（百公斤）"}) 
       )))
@@ -401,7 +401,7 @@
   (let [data {"2012-3-1"	107 "2012-3-2"	108 "2012-3-3"	109 "2012-3-4"	106 "2012-3-5"	108 
               "2012-3-6"	107 "2012-3-7"	107 "2012-3-8"	109 "2012-3-9"	106 "2012-3-10"	106}
         ]
-    (wr3.clj.app.chartf/line 
+    (linef 
       data
       {:title "价格趋势分析" :x "日期" :y "价格"}) ))
 
@@ -424,10 +424,10 @@
                               (f %)) (space 3)) 
            dates)
       [:h1 (format "地区分布Top 10分析（%s）" (f date))]
-      (wr3.clj.app.chartf/bar 
+      (barf 
         (apply array-map (flatten (map #(vector (:areaname %) (:weight %)) rt))) 
         {:title "地区分布" :x "地区名称" :y "称重（百公斤）"}) 
-      (wr3.clj.app.chartf/pie 
+      (pief 
         (apply array-map (flatten (map #(vector (:areaname %) (:weight %)) rt))) 
         {:title "地区分布" :x "地区名称" :y "称重（百公斤）"}) 
       )))

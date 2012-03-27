@@ -36,7 +36,7 @@ import wr3.web.Session;
 public class TestTable {
 
 	public Params params;	// 变量名必须为"params"
-	public Session session;	// 变量名必须为"session"
+	public Session session;	// 变量名必须为"session" 
 
 	// 生成内存随机数据表
 	private final static String dbname = "h2";

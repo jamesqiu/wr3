@@ -207,5 +207,36 @@
   [table]
   (println (table-string table "\t")))
 
-  
+(defn cross-table
+  "生成交叉表的html片段
+  @param data [[c1 c2 v] ..] c1表示left维度，c2表示top维度，如 (['北京' 'A级' 10] ['上海' 'B级' 15] .. ) 
+  @pram m 定制化参数如 {:caption '' .. } 支持如下的参数和函数：
+  caption: [str] 表标题
+  dim-top-name / dim-left-name: [str] 列头/行头的维度名称
+  f-dim-left / f-dim-top: 行/列头元素的处理函数如：(fn [dim] [:i dim])
+  f-value: 数据项处理函数  
+  "
+  [data m]
+  (let [caption (:caption m)
+        dim-top-name (:dim-top-name m)
+        dim-left-name (:dim-left-name m)
+        dims-left (distinct (for [[c1 c2 v] data] c1))
+        dims-top (distinct (for [[c1 c2 v] data] c2))
+        f-dim-left (:f-dim-left m)
+        f-dim-top (:f-dim-top m)
+        f-dim (fn [f dim] (if f (f dim) dim))
+        f-value (fn [v] (if-let [f (:f-value m)] (f v) v)) 
+        ]
+    (html
+      [:table {:class "wr3table" :border 1} 
+       (when caption [:caption caption])
+       [:tr 
+        [:td {:class "crossLine"} [:div {:class "dimTop"} dim-top-name] [:div {:class "dimLeft"} dim-left-name]]; (format "%s &nbsp; \\ &nbsp; %s" dim-left-name dim-top-name)] 
+        (for [dim-top dims-top] [:th {:group "dim_top"} (f-dim f-dim-top dim-top)])]
+       (for [dim-left dims-left]
+         [:tr
+          [:th {:style "text-align: left" :group "dim_left"} (f-dim f-dim-left dim-left)]
+          (for [dim-top dims-top]
+            [:td {:align "right"} (sum (for [[c1 c2 v] data :when (and (= c1 dim-left) (= c2 dim-top))] (f-value v)))])
+          ]) ] )))
   

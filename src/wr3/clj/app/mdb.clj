@@ -42,11 +42,11 @@
         [:div (join (f dbc2) " &nbsp;|&nbsp; ")]) )))
 
 (defn data
-  "service：给定db和collection，得到前20条数据"
+  "service：给定db和collection，得到前1000条数据"
   [ids]
   (let [dbname (first ids)
         collection (second ids)
-        limit 100]
+        limit 1000]
     (with-mdb2 dbname
       (html
         [:h2 (format "[%s.%s]的数据(前%s条)：" dbname collection limit)]

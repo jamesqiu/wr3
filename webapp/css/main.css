@@ -285,8 +285,8 @@ th.desc a {
 	font-family: helvetica, verdana, arial, sans-serif;
 	line-height: 12px;
 	padding: 5px 6px;
-	/* text-align: left; */
-	vertical-align: top;
+/*	text-align: left; 
+	vertical-align: top; */
 }
 
 .wr3table th {
@@ -351,17 +351,22 @@ th.desc a {
 
 /*------------ CrossTable ----------*/
 .crossLine { /* <td class='crossLine'> */
-	background: url('../img/crossLine.gif');
+	background-image: url('../img/crossLine.gif');
+	background-repeat: no-repeat;
+	background-attachment: scroll;
+	background-position: top left;
 	width: 125px;
-	height: 40px;
+	height: 40px; 
 }
 
 .dimTop { /* <div class=dimTop> */
 	text-align: right;
+	font-weight: bold;
 }
 
 .dimLeft { /* <div class=dimLeft> */
 	text-align: left;
+	font-weight: bold;
 }
 
 .dim {

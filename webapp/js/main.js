@@ -38,7 +38,7 @@ document.write('<script type="text/javascript" src="' + wr3path + 'jquery.ui.dat
  */
 function app_onload() {
 	/**
-	 * 应用主导航界面的hover效果设置
+	 * 应用主导航界面多个应用div的hover效果设置
 	 */
 	$("div.app").slideDown("fast").hover(
 			function() {
@@ -46,7 +46,8 @@ function app_onload() {
 			},
 			function() {
 				$(this).css({background:"#6af",border:""});
-			});
+			}
+	);
 }
 
 /**
@@ -2548,17 +2549,20 @@ function grade_onload() {
 			top: e.pageY
 		});
 	})
+	// 显示站点设计图像文件
 	$('#site_bt').click(function() {
 		$('div [region="center"]')
 		.html('<img src="/img/loading3.gif" />')
 		.html('<img src="/img/grade/index-style.jpg" />')
 		window.open('/img/grade/index-style.jpg', '_blank')
 	})
+	// 显示帮助图像文件
 	$('#help_bt').click(function() {
 		$('div [region="center"]')
 		.html('<img src="/img/loading3.gif" />')
 		.html('<img src="/img/grade/grade-help.png" style="margin-top: 30px" />')
 	})
+	// 简单报表
 	$('#report1_bt').click(function() {
 		layout_load_center('/c/grade/report-score/'+$('#corp').attr('code'))
 	})
@@ -2566,7 +2570,8 @@ function grade_onload() {
 		layout_load_center('/c/grade/report-ranks/'+$('#year').text()+'-'+$('#month').text())
 	})
 	
-	function dim_click(type_name) {
+	// 点击报表行头或者列头后绘制图形
+	function dim_click() {
 		var type_name = $('h1').attr('type')
 		$('th[group="dim_top"]').click(function() {
 			var col_index = $(this).get(0).cellIndex
@@ -2732,9 +2737,45 @@ function grade_search1(v, n) {
 	layout_load_center('/c/grade/corp-like/'+v)
 }
 
-function grade_exit() {
+/**
+ * 注销一个clj应用，登录后转到本clj应用.
+ * 可用于所有clj应用
+ * @param url 本应用的url
+ */
+function app_exit(url) {
 	$.get('/c/auth/logout', function(data) {
-		alert(data)
-		window.location.href = '/c/grade/'
+		alert(data) // 注销返回信息
+		window.location.href = url
 	})
 }
+
+function grade_exit() {
+	app_exit('/c/grade/')
+}
+
+/**
+ * 将 div#wr3user 替换成登录名
+ */
+function app_user() {
+	// 显示用户登录信息
+	$.get('/c/auth/who', function(data) {
+		var json = $.parseJSON(data)
+		if (json) {
+			$('#wr3user').text(json.name)
+		} else {
+			$('#wr3user').text("未登录")
+		}
+	})
+}
+
+/**
+ * 
+ */
+function demo_search(v, n) {
+	alert('\n搜索关键字：' + v + '\n搜索范围：' + n)
+}
+
+
+
+
+

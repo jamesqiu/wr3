@@ -476,10 +476,17 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   [m & body]
   (tags :ul {:class "easyui-tree" :animate "true" :dnd "true"} m body))
 
+;; eui layout 常用模式
+(defn eui-foot-region
+  "layout.south"
+  ([m info] (eui-region "south"
+                  (merge {:style "height: 30px; background: #cde; padding: 5px; text-align: center; color: #444"} m) 
+                  (or info (str "版本信息: IDP集成数据平台系列——行业支撑平台 @" (wr3.clj.u/year)))))
+  ([] (eui-foot-region nil nil)))
+
 ;---------------------------------- eui wrapper (-end-)
 
 (defn space 
   "1个或者n个html占位空格"
   ([] "&nbsp;")
   ([n] (apply str (repeat n "&nbsp;"))))
-

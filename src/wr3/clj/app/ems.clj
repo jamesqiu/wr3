@@ -5,7 +5,6 @@
 (use 'hiccup.core)
 (use 'wr3.clj.s 'wr3.clj.n 'wr3.clj.u 'wr3.clj.file 'wr3.clj.tb)
 (use 'wr3.clj.web 'wr3.clj.gmap 'wr3.clj.db)
-(use '[wr3.clj.app.chartf :only (pie)])
 (use 'wr3.clj.app.emsconf :reload) ; reload 才能使配置更改生效
 
 (defn gmap

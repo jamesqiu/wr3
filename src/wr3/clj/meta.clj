@@ -1,4 +1,3 @@
-
 (ns ^{:doc "关系数据库、表、字段的meta信息。为方便管理，已经全部导入monggodb"
       :author "JamesQiu"}
      wr3.clj.meta)
@@ -10,9 +9,10 @@
 (use 'somnium.congomongo)
 (use 'wr3.clj.u)
 
-; 数据字段字典，表名-字段名-字段字典
+; 数据字段字典，表名-字段名-字段字典, 用于veg.clj
 (def dds 
   {
+   ;;---------- 用于veg.clj的表：
    :TB_TR_REGISTER_RECORD 
    {
     :SignMode '{"001" 地磅收费 "002" 卡机登记 "003" 郊菜收费 "004" 剩菜收费 "005" 卡机剩菜 "006" 二批登记}
@@ -35,7 +35,6 @@
    :TB_BASIC_VARIETY_DETAIL
    {
     :CheckFlag '{0 免检 1 待检}    
-    
     }
    :TB_TR_TRADE_DETAIL_RECORD
    {
@@ -43,6 +42,7 @@
     :MaundMode '{0 计重 1 计件 2 输重}
     :Status '{0 未结算 1 已结算 2 上家卡无效}
     }
+   ;;---------- 其他表
    })
 
 (defn- find-key-i
@@ -65,34 +65,9 @@
     (let [rs (fetch :dict :where {:code (re-pattern (str "(?i)^" code "$"))})
           rt (map #(dissoc  % :_id) rs)
           nam (:name (first rt))]
-      (or nam "/")
-      )))
+      (or nam "/") )))
 
-(def tb14 
-  {
-   :StaffId, '操作员
-   :Memo, '备注           
-   })
-
-;;--- test page
-(defn test-meta []
-  (with-mongo (make-connection "meta")
-;    (destroy! :dict {:etc"vmarket.TB_TR_TRADE_DETAIL_RECORD"})
-;    (println (fetch :dict :where {:etc "vmarket.TB_TR_TRADE_DETAIL_RECORD"}))
-
-;    (doseq [[k v] tb14]
-;      (let [code1 (name k)
-;            name1 (name v)
-;            type1 "fd"
-;            etc1 "vmarket.TB_TR_TRADE_DETAIL_RECORD"]
-;        (println {:code code1 :name name1 :type type1 :etc etc1})
-;        (insert! :dict {:code code1 :name name1 :type type1 :etc etc1})
-;    ))
-    
-;  (meta-name "TB_TR_REGISTER_reCORd")
-  )) 
-;(test-meta)
-
+;; test
 ;(meta-name "TB_TR_REGISTER_reCORd")
 ;(dd-map "tb_TR_TRADE_DETAIL_RECORD" "Status")
-(keys (dds (keyword "TB_TR_REGISTER_RECORD")))
+;(keys (dds (keyword "TB_TR_REGISTER_RECORD")))

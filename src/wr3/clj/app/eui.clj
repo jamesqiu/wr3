@@ -161,7 +161,10 @@
     {:onload "eui_onload()"}
     [:h1 "打开EasyUI自带Demo: " (space 3)
      [:a {:href "F:/lib/jQuery/EasyUI/jquery-easyui-1.2.4/demo/" :target "_blank"} "[Demo]"] (space 3) 
-     [:a {:href "http://easyui.btboys.com/api/" :target "_blank"} "[API doc]"]]
+     [:a {:href "http://easyui.btboys.com/api/" :target "_blank"} "[API doc]"] (space 6)
+     "Layout的例子: "
+     [:a {:href "/c/eui/layout" :target "_blank"} "Google地图/地球"]
+     ]
     (menubar)
     (tags 
       :div {:class "easyui-layout" :style "width: 100%; height: 700px"} nil
@@ -349,9 +352,28 @@
     ;----------------------- center
     (app-main)
     ;----------------------- south
-    (app-foot)
-    ))
+    (app-foot) ))
 
+;; google map ,earth
+(use 'wr3.clj.gmap)
+
+(defn glocate
+  "app: 调用google map api显示一个位置, 如：/c/eui/gmap/48.858288/2.294427
+  具体绘图在js函数gmap()中完成"
+  [ids]
+  (googlemap (format "eui_glocate(%s,%s);" (first ids) (second ids))))
+
+(defn gmap
+  "app: 调用google map页面，执行main.js中如eui_gtask(), eui_gclick2mark()的js函数"
+  [id]
+  (googlemap (format "eui_%s()" id)))
+
+(defn gearth
+  "app: 调用google earth页面，执行main.js中如eui_g3basic()的js函数"
+  [id]
+  (googleearth (format "eui_%s()" id)))
+
+;;----------------------------- 测试
 (defn t
   "app: 测试"
   []
@@ -400,26 +422,6 @@
      [:div {:style "float: left; width: 100px; height: 100px; border: 1px solid red; margin:5px"} "666666"]
      [:div {:style "float: left; width: 100px; height: 100px; border: 1px solid red; margin:5px"} "777777"]]
     ))
-
-;; google map ,earth
-(use 'wr3.clj.gmap)
-
-(defn glocate
-  "app: 调用google map api显示一个位置, 如：/c/eui/gmap/48.858288/2.294427
-  具体绘图在js函数gmap()中完成"
-  [ids]
-  (googlemap (format "eui_glocate(%s,%s);" (first ids) (second ids))))
-
-(defn gmap
-  "app: 调用google map页面，执行main.js中如eui_gtask(), eui_gclick2mark()的js函数"
-  [id]
-  (googlemap (format "eui_%s()" id)))
-
-(defn gearth
-  "app: 调用google earth页面，执行main.js中如eui_g3basic()的js函数"
-  [id]
-  (googleearth (format "eui_%s()" id)))
-
 
 
 

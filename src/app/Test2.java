@@ -18,7 +18,7 @@ import wr3.util.Numberx;
 import wr3.web.Chart;
 import wr3.web.Params;
 import wr3.web.Render;
-import domain.Person;
+import domain.Person; 
 
 public class Test2 {
 
