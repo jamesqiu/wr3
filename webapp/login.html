@@ -1,0 +1,63 @@
+<html>
+<head>
+<title>WebReport Login</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<script type="text/javascript" src="/js/main.js"></script>
+<script type="text/javascript" src="/js/login.js"></script>
+
+<style>
+body {
+	background-image: url("/img/idp-main.png");
+	background-repeat: no-repeat;
+	background-position: center;
+	background-attachment: fixed;
+}
+
+form {
+	border: 1px solid #1861ae;
+	font-family: Consolas,宋体;
+	font-size: 14px;
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	background-color: #1861ae;
+	color: lightgray;
+	margin-left: -110px;
+	margin-top: -20px;
+	padding: 5px;
+}
+
+form input {
+	font-size: 14px;
+	margin: 3px;
+}
+
+form input[name='wr3user'] {
+	color: gray;
+}
+</style>
+
+</head>
+<body>
+	<script>
+		if (window.top.location.href.search(/\/login\.html$/) == -1)
+			window.top.location.href = '/login.html';
+	</script>
+	
+	<img src="/img/idp-webfirst.png" style="position: absolute; top: 50%; left: 50%; margin-top: -80px; margin-left: -110px;" />
+	<form id="fm1" class="ui-corner-all" method="post" action="." onsubmit="return check();" style="vertical-align: middle">
+		用 户 : <input name="uid" type="text" value="在此输入用户名" class="ui-corner-all"></input> <br /> 
+		密 码 : <input name="pwd" type="password" value="" class="ui-corner-all"></input> <br />
+		<p align="center" style="padding: 6px">
+			<input type="submit" class="ui-state-default ui-corner-all" style="font-weight: bold; color: green;" value="登 录"></input>&nbsp;&nbsp;&nbsp; 
+			<input type="reset" class="ui-state-default ui-corner-all" style="font-weight: bold; color: green;" value="重 置"></input>
+		</p>
+		<center>
+			<div id="wr3user">登录情况</div> <br/>
+			<img alt="nasoft" src="/img/nasoft-rnd.png">
+		</center>
+	</form>
+
+</body>
+</html>
+
