@@ -1,10 +1,9 @@
-(ns ^{:doc "常用eui layout布局的demo应用模板"} 
+(ns ^{:doc "常用eui layout布局的demo应用模板"
+      :todo "待成熟后把通用函数都命名为frame-xx封装到wr3.clj.web中"} 
      wr3.clj.app.demo)
 
-;;;------ 必须的
 (use 'hiccup.core)
 (use 'wr3.clj.web)
-;;;------ 可选的
 
 (require '[wr3.clj.app.auth :as au])
 (defn auth
@@ -14,74 +13,74 @@
     (session request "wr3user") true
     :else false))
 
-(defn index
-  ""
-  []
-  (html-body
-    [:h1 "使用说明及链接"]
-    [:h2
-     [:a {:href "/c/demo/layout1"} "蓝色模板"] (space 7)
-     [:a {:href "/c/demo/layout2"} "金色模板"]
-     ]))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; layout
 
 ;; app-conf 说明：
-;; :id              应用的标识，用于?
+;; :name            应用名称，用于javascript函数的前缀，如 function demo_xxx()
+;; :style           上方色调，["layout_north" "layout_title"]（蓝色）或 ["layout_north1" "layout_title1"]（金色）
 ;; :title           应用名称，位于上方
-;; :search-title    搜索框的label，位于右上方
+;; :searcher        搜索框的label，位于右上方
 ;; :nav             导航条，位于左边
-;; :menu            菜单条，位于上方
+;; :menu            2层菜单条，位于上方
 (def app-conf
-  {:id "app1"
+  {:name "demo"
+   :style (map #(str % "1") ["layout_north" "layout_title"]) 
    :title "IDP行业应用——演示系统"
-   :search-title "代码模糊查询"
-   
+   :searcher ["000001" ; default-value
+              ["AA范围" "range1" "icon-ok"] ; label name icon
+              ["BB范围" "range2" "icon-tip"] ]
    :nav [["业务工作"            "icon-pen" ; title id
-          [["综合业务"          "icon-sum"    "indic0_bt"] ; title icon id 
-           ["列表查看"          "icon-list"   "hs300_bt" ]
-           ["统计报表"          "icon-pie"    "report3_bt"]]]
+          ["综合业务"          "icon-sum"    "indic0_bt"] ; title icon id 
+          ["列表查看"          "icon-list"   "hs300_bt" ]
+          ["统计报表"          "icon-pie"    "report3_bt"]]
          
          ["系统管理及帮助"      "icon-search"
-          [["网站样式"          "icon-search" "site_bt"]
-           ["使用帮助"          "icon-help"   "help_bt"]]]]
-   
-   :menu [["核心业务数据查询"   "icon-pen"    "m1"
-           ["客户信息"          "icon-sum"    "m11"
-            ["名称查询"         ""            "m111"]
-            ["客户统计"         ""            "m112"]]
-           ["客户经理信息"      "icon-sum"    "m12"]
-           ]
-          ]
+          ["网站样式"          "icon-search" "site_bt"]
+          ["使用帮助"          "icon-help"   "help_bt"]]
+         ]   
+   :menu [["基础数据查看" 
+           ["进场登记表"     "11-reg"] 
+           ["登记细项"       "12-reg2"]
+           ["交易明细流水表" "13-trade"]
+           ["菜品代码表"     "14-variety"]]
+          
+          ["统计报表管理"
+           ["结算中心报表"   "21-jszx"]     
+           ["蔬菜部报表*"    "22-scb"]     
+           ["质管科报表"     "23-zgk"]     
+           ["其他报表"       "24-other"]]     
+          
+          ["数据分析*"
+           ["进场登记分析*" "31-enter"] 
+           ["交易流水分析" "32-trade"] 
+           ["综合分析*" "33-other"]]
+          
+          ["其他"
+           ["系统管理" "41-admin"] 
+           ["帮助" "42-help"]]
+          ] 
    })
 
-(defn- menubar
-  "生成menubar，数据来源于(:nav app-conf) "
-  []
-  (html
-    (eui-menubar 
-      {}
-      (eui-menu "mn1" {:id "m1" :iconCls "icon-edit"} "[eui-menubar/eui-menu]")
-      (eui-menu "mn2" {:iconCls "icon-search"} "搜索") 
-      (eui-menu "mn3" {:iconCls "icon-help" :plain "false"} "帮助")
-      ) 
-    [:div {:id "mn1" :style "width: 200px"}
-     [:div "和eui-menubar并列的div"]
-     [:div {:class "menu1-sep"}]
-     [:div {:iconCls "icon-cut"} "Cut"]
-     [:div
-      [:span "Toolbar"]
-      [:div {:style "width:150px;"}
-       [:div "New Toolbar..."] ]]]
-    [:br]))
+(def top-height (if (:menu app-conf) 135 85))
 
+(defn- top-menu
+  []
+  (eui-tabs
+    {:style "height: 65px; position: absolute; left:0px; bottom: 0px;"}
+    (for [[title & m2] (:menu app-conf)]
+      (eui-tab1
+        (html [:span {:style "font-size: 14px; padding-left: 10px; padding-right: 10px"} title]) 
+        {:closable "false" :style "padding: 4px"} 
+        (for [[title id] m2] 
+          (eui-button {:id id :plain "true" :iconCls "icon-arrow" :group2 "menu2"} title)) ))))
+  
 (defn- app-top
   "layout.north"
   []
   (eui-region 
     "north" 
-    {:id "layout_north" :style "height: 80px; padding: 10px;" }
-    [:span {:class "layout_title"} (:title app-conf)]
+    {:id (first (:style app-conf)) :style (format "height: %spx; padding: 10px;" top-height) }
+    [:span {:class (second (:style app-conf))} (:title app-conf)]
     [:div {:style "position: absolute; right: 10px; top: 8px; color: gray"} "当前用户: " 
      [:span#wr3user {:style "color:red; font-weight:bold"} ".."] (space 3)
      [:script "app_user()"]
@@ -89,10 +88,11 @@
     ; 搜索条
     [:div {:style "position: absolute; right: 10px; top: 35px"}
      (eui-searchbox 
-       {:searcher "demo_search" :style "width: 250px;" :value "000001" :title (:search-title app-conf)} 
-       [:div {:name "范围A" :iconCls "icon-ok" :style "margin: 0px"} "AA范围"]
-       [:div {:name "范围B" :iconCls "icon-tip" :style "margin: 0px"} "BB范围"])]          
-    ))
+       {:searcher (str (:name app-conf) "_search") :style "width: 250px;" :value (first (:searcher app-conf))} 
+       (for [[label nam icon] (rest (:searcher app-conf))]
+         [:div {:name nam :iconCls icon :style "margin: 0px"} label] ))]
+    ; 1、2级导航条
+    (when (:menu app-conf) (top-menu)) ))
 
 (defn- app-left
   "layout.west"
@@ -104,7 +104,7 @@
      
     (eui-accord 
       {:id "accord1" :style "" }
-      (for [[title icon nav2] (:nav app-conf)]
+      (for [[title icon & nav2] (:nav app-conf)]
         (eui-accord- 
           {:iconCls icon} title
           (for [[title icon id] nav2]
@@ -119,11 +119,10 @@
     {:border "false" :style "padding: 10px"} 
     [:h2 "主显示页面"] ))
 
-(defn layout1
-  "app: 蓝色背景的app模板"
+(defn index
   []
   (eui-layout
-    {:id "layout1" :onload "demo_onload()"}
+    {:id "layout1" :onload (str (:name app-conf) "_onload()")}
     ;----------------------- north
     (app-top)   
     ;----------------------- west
@@ -134,8 +133,3 @@
 ;    (app-right)
     ;----------------------- south
     (eui-foot-region) ))
-
-(defn layout2
-  "app: 黄色背景的app模板"
-  []
-  nil)

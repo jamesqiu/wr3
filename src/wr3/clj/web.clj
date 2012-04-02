@@ -2,8 +2,9 @@
 ;;;; 还包装了 dojo 和 jquery easyui
 (ns wr3.clj.web)
 
-(use 'wr3.clj.s)
+(use 'wr3.clj.s 'wr3.clj.u)
 (use 'hiccup.core)
+
 (import '(wr3 BaseConfig))
 (import '(javax.servlet.http HttpSession))
 
@@ -481,7 +482,7 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   "layout.south"
   ([m info] (eui-region "south"
                   (merge {:style "height: 30px; background: #cde; padding: 5px; text-align: center; color: #444"} m) 
-                  (or info (str "版本信息: IDP集成数据平台系列——行业支撑平台 @" (wr3.clj.u/year)))))
+                  (or info (str "版本信息: IDP集成数据平台系列——行业支撑平台 @" (year)))))
   ([] (eui-foot-region nil nil)))
 
 ;---------------------------------- eui wrapper (-end-)

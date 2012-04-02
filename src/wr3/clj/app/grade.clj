@@ -162,7 +162,7 @@
     ; 搜索条
     [:div {:style "position: absolute; right: 10px; top: 35px"}
      (eui-searchbox 
-       {:searcher "grade_search1" :style "width: 250px;" :value "000001" :title "上市公司代码模糊查询"} 
+       {:searcher "grade_search1" :style "width: 250px;" :value "000001"} 
        [:div {:name "范围A" :iconCls "icon-ok" :style "margin: 0px"} "上市公司代码"]
        [:div {:name "范围B" :iconCls "icon-tip" :style "margin: 0px"} "局部搜索"])]          
     ))

@@ -18,7 +18,7 @@ document.write('<link type="text/css" href="' + wr3path + '../css/uniform.defaul
 document.write('<link type="text/css" href="' + wr3path + '../css/easyui/default/easyui.css" rel="stylesheet" />');
 document.write('<link type="text/css" href="' + wr3path + '../css/easyui/icon.css" rel="stylesheet" />');
 // ---------------- jquery js
-document.write('<script type="text/javascript" src="' + wr3path + 'jquery-1.5.2.min.js"></script>');
+document.write('<script type="text/javascript" src="' + wr3path + 'jquery-1.6.3.min.js"></script>');
 document.write('<script type="text/javascript" src="' + wr3path + 'jquery.draw.js"></script>');
 document.write('<script type="text/javascript" src="' + wr3path + 'jquery.tablesorter.min.js"></script>');
 document.write('<script type="text/javascript" src="' + wr3path + 'jquery.uniform.min.js"></script>');
@@ -2443,9 +2443,9 @@ function ems_layout2() {
 function layout_load_center(url, func) {
 	$('div [region="center"]')
 	.html('<img src="/img/loading3.gif" />')
-	.load(url, function() {
+	.load(url, function(data) {
 		$.parser.parse()
-		if (func) { func() }
+		if (func) { func(data) }
 	})
 	.css('padding', '20px')				
 }
@@ -2769,13 +2769,51 @@ function app_user() {
 }
 
 /**
- * 
+ * demo 点击搜索按钮后的动作
  */
 function demo_search(v, n) {
 	alert('\n搜索关键字：' + v + '\n搜索范围：' + n)
 }
 
+/**
+ *  点击搜索按钮后的动作
+ */
+function bank_search(v, n) {
+	if (n=='cust') {
+		layout_load_center('/c/bank/cust/'+v)		
+	} else {
+		alert('\n搜索关键字：' + v + '\n搜索范围：' + n)
+	}
+}
 
+/**
+ * 通用函数：改变被点击的 easyui linkbutton 样式 
+ */
+function app_linkbutton_css() {
+	var bts = $('a.easyui-linkbutton')
+	bts.click(function(e) { 
+		bts.css("color", "")
+		$(this).css("color", "red")
+	})	
+}
+
+/**
+ * wr3.clj.app.bank
+ */
+function bank_onload() {
+	
+	app_linkbutton_css()
+	
+	layout_load_center('/c/bank/custs')
+	
+	var m2 = {'11-cust':'custs' , '12-mng':'mngs'};
+	$.each(m2, function(k, v) {
+		$('a#'+k).click(function() {
+			layout_load_center('/c/bank/'+v)
+		})
+	})			
+	
+}
 
 
 

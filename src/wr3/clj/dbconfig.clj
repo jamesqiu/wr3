@@ -53,6 +53,11 @@
           :username "sa"
           :password "passdb"}
 
+  :bank  {:driver (:sqlserver drivers)
+          :url (gstring (:sqlserver urls) {:ip "localhost:1433" :db "km_gf"})
+          :username "sa"
+          :password "passdb"}
+
   :gbms {:driver (:oracle drivers)
          :url (gstring (:oracle urls) {:ip "10.60.108.58:1521" :db "gbms"})
          :username "gbmsdb"
