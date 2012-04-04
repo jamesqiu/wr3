@@ -102,7 +102,7 @@
     "west" 
     {:title "快捷导航" :style "width: 210px"}
     [:div {:style "margin: 10px"} "全局信息提示内容……" ]
-     
+    
     (eui-accord 
       {:id "accord1" :style "" }
       (for [[title icon & nav2] (:nav app-conf)]
@@ -136,16 +136,32 @@
     (eui-foot-region) ))
 
 (defn- org-map
-  "得到org_id和org_name的hash-map"
+  "得到org_id和org_name的hash-map, 
+  @deprecated 一般用org-dict即可，除非数据库更改了"
   []
   (let [sql "select org_id,org_name from sys_org order by org_id"
         rt (select-all "bank" sql)]
     (into {} (for [{id :org_id nam :org_name} rt] [id nam]))))
 
-(def cust-type {"1" "个人客户" "2" "企业客户"})
+(def org-dict 
+  {"132121" "护国支行", "132033" "部门033", "132055" "部门055", "132111" "江岸支行", "132001" "分行营业部", 
+   "132101" "第三支行", "132002" "部门002", "132003" "双龙支行", "132006" "个人营业部", "132008" "金碧支行", 
+   "132901" "办公室", "132902" "会计结算部", "132903" "人力资源部", "132904" "中间业务部", "132905" "公司银行部", 
+   "132906" "保卫部", "132091" "部门091", "132092" "国际业务部", "132071" "第一支行", "132061" "人民中路支行",
+   "132161" "北京路支行", "132051" "玉溪支行", "132151" "华龙支行", "132052" "部门052", "132031" "曲靖支行", 
+   "132053" "部门053", "132131" "国贸支行", "132021" "第二支行", "132032" "部门032"})
+  
+(def hb-dict {"1" "个人客户" "2" "企业客户"})
+(def currency-dict {"1" "人民币", "12" "英镑", "13" "港元", "14" "美元", "15" "瑞土法朗", "16" "德国马克", 
+                    "17" "法国法郎", "18" "新加坡元", "20" "荷兰盾", "21" "瑞典克朗", "22" "丹麦克朗", 
+                    "23" "挪威克朗", "24" "奥地利先令", "25" "比利时法朗", "26" "意大利里拉", "27" "日元", 
+                    "28" "加拿大元", "29" "澳大利亚元", "31" "西班牙比塞塔", "32" "马来西亚林吉特", 
+                    "33" "欧洲贷币单位", "42" "芬兰马克", "81" "澳门元", "84" " 泰国铢", "87" "新西兰元", 
+                    "95" "清算瑞士法朗", "96" "欧元"})
   
 (defn- cust-search
-  "得到模糊查询客户的sql结果"
+  "得到模糊查询客户的sql结果
+  @pattern 为中文时查姓名，非中文时查pid"
   [pattern]
   (let [field (if (wr3.util.Charsetx/isChinese pattern) "name" "cust_pid")
         sql (format "select top 100 * from in_cust where %s like '%%%s%%' order by org_id" field pattern)]
@@ -156,12 +172,11 @@
   [row & keys] 
   (join (remove nullity? (unique (map #(trim (row %)) keys))) " ， "))
 
-(defn cust
-  "service: 模糊查找客户的结果列表
-  @id 模糊查询的字符串"
-  [id]
-  (let [m (org-map)
-        rt (cust-search (or id ""))]
+(defn- cust-list
+  "得到in_cust客户列表的html片段
+  @rt clojure.sql结果集"
+  [rt]  
+  (let [m (org-map)]
     (html 
       [:h1 (let [n (count rt)] (format "符合查询条件的客户%s个" (if (= n 100) "可能已超过100" n)))]
       (result-html rt {:f-head (fn [thead] 
@@ -170,16 +185,21 @@
                                 [:tr (bgcolor-css row-index)
                                  [:td {:align "right" :style "color: lightgray"} row-index]
                                  [:td (row :name)]
-                                 [:td (cust-type (row :hb))]
+                                 [:td (hb-dict (row :hb))]
                                  [:td (m (row :org_id))]
                                  [:td (f-join row :cust_pid :en_pid)]
                                  [:td (f-join row :tel :phone)] 
                                  [:td (f-join row :address :addr :zip)] 
                                  [:td {:align "center"} 
                                   [:a {:href (format "/c/bank/acct?org=%s&cif=%s" (row :org_id) (row :cif_key))
-                                       :target "_blank"} "查看"]]
-                                 ]) 
+                                       :target "_blank"} "查看"]] ]) 
                        } ))))
+
+(defn cust
+  "service: 模糊查找客户的结果列表
+  @id 模糊查询的字符串"
+  [id]
+  (let [rt (cust-search (or id ""))] (cust-list rt)))
 
 (defn- cust-count
   "按网点、类型统计客户数目
@@ -218,7 +238,7 @@
        (cross-table data {:caption "客户类型、网点-数量统计表"
                           :dim-top-name "客户类型"
                           :dim-left-name "分支网点"
-                          :f-dim-top (fn [v] (cust-type v))
+                          :f-dim-top (fn [v] (hb-dict v))
                           :f-dim-left (fn [v] (orgs v))
                           } ) ]
       [:div {:style "float: left; margin-left: 20px"}
@@ -303,10 +323,117 @@
                                        } "查看"]]
                                  ]) } ))))
 
-(defn acct
-  "app: 根据（1、指定网点、客户号）或者（2、客户pid）查出账户信息"
-  [id org cif]
-  (html 
-    [:div "id=" id ", " org "-" cif "的账户信息"]))
+(defn- cust-search2
+  "根据org、cif查询客户"
+  [org cif]
+  (let [sql (format "select * from in_cust where org_id='%s' and cif_key='%s'" org cif)]
+    (select-all "bank" sql)))
 
-;(mng-cust "132051" "530122770302002")   
+(defn acct-search
+  "根据org、cif查询账户"
+  [org cif]
+  (let [sql (format "select * from acct where org_id='%s' and cif_key='%s' " org cif)]
+    (select-all "bank" sql)))
+
+(defn- acct-list
+  "得到acct账户列表的html片段
+  @rt clojure.sql结果集"
+  [rt]  
+  (html 
+    [:h1 (format "有%s个账户" (count rt))]
+    (result-html rt {:f-head (fn [thead] 
+                               (map (fn [th] [:th th]) '[序号 业务类型 币种 开户日期]))
+                     :f-row (fn [row-index row]
+                              [:tr (bgcolor-css row-index)
+                               [:td {:align "right" :style "color: lightgray"} row-index]
+                               [:td (row :yw_type)]
+                               [:td (currency-dict (trim (row :bz)))]
+                               [:td (-> (row :khrq) str (subs 0 10))]
+                               ]) 
+                     } )))
+
+(defn acct
+  "app: 根据（1、指定网点、客户号）或者（2、客户pid）查出账户信息
+  @id 有id时进行客户模糊搜索，id为中文时按客户名称搜索，id为非中文时按照pid进行搜索，有多个结果时显示第一个客户的帐号
+  @org 网点号
+  @cif "
+  [id org cif]
+  (let [cust-rt (if id (cust-search id) (cust-search2 org cif))]
+    (html-body 
+      (if (or (nil? cust-rt) (empty? cust-rt))
+        (eui-tip "未找到指定客户或该客户没有任何账户")
+        (let [cust (first cust-rt)
+              acct-rt (acct-search org cif)]
+          (html
+            (cust-list cust-rt)
+            (eui-tip (format "<b>%s</b> 在 <b>%s</b> 的账户情况如下：" (cust :name) ((org-map) (cust :org_id))))
+            (acct-list acct-rt)
+            [:h1 "帐户详情："]
+            (eui-tabs 
+              {:style "width:1230px; height:1000px;"}
+              (for [row acct-rt]
+                (eui-tab1 
+                  (str "帐号" (:zh row)) 
+                  {:href (apply format "/c/bank/acct-detail?org=%s&cif=%s&bz=%s&yw=%s&zh=%s" 
+                                (map #(-> % row trim) [:org_id :cif_key :bz :yw_type :zh]) )} "11" ))) ))) )))
+
+(defn- result-html-
+  "对没有特殊要求的结果进行列表展示
+  @rt Clojure.sql结果集 [{:c1 v :c2 v ..} ..]
+  @thead 表头名称 [活期余额 业务类型 币种 日期] 
+  @cols 列名称 [:ye :yw_type :bz :_created] 
+  @m 客户化定制 {} "
+  [rt head cols]
+  (result-html rt {:f-head (fn [thead] (for [th (cons "序号" head)] [:th th]))
+                   :f-row (fn [row-index row]
+                            [:tr (bgcolor-css row-index)
+                             [:td {:align "right" :style "color: lightgray"} row-index]
+                             (for [col cols] (let [v0 (-> col row)
+                                                   v (-> v0 str trim)
+                                                   v (if (.endsWith v "00:00:00.0") (subs v 0 10) v)]
+                                             [:td (td-align v0) 
+                                              (case col
+                                                :bz (currency-dict v)
+                                                :org_id (org-dict v)
+                                                v)])) ])
+                   } ))  
+  
+(defn acct-detail
+  "service: 账户存贷款明细"
+  [org cif yw bz zh]
+  (let [sql-hq (format "select * from in_depo_hq where org_id='%s' and yw_type='%s' and bz='%s' and zh='%s' "
+                       org yw bz zh)
+        sql-dq (format "select * from in_depo_dq where org_id='%s' and bz='%s' and cif_key='%s' order by khrq "
+                       org bz cif)
+        sql-loan-main (format "select * from in_loan_main where org_id='%s'  and bz='1' and zh='%s' order by khrq"
+                              org zh)
+        sql-loan-detail (format "select * from in_loan_detail where org_id='%s' and bz='%s' and zh='%s' order by rq"
+                                org bz zh)
+        sql-daybook (format "select * from in_daybook where org_id='%s'  and yw_type='%s' and bz='%s' and zh='%s' "
+                            org yw bz zh)
+        [hq dq loan loan2 daybook] (for [sql [sql-hq sql-dq sql-loan-main sql-loan-detail sql-daybook]] 
+                                     (select-all "bank" sql))
+        css {:style "float:left; margin: 5px"}]
+    (html
+      [:h2 "存款总额：" (currency-dict bz) " <font color=red>" (sum (map :ye (into hq dq))) "</font> 圆"]
+      [:div css [:h2 "活期存款："] 
+       (result-html- hq '[余额 币种 日期] [:ye :bz :rq])]
+      [:div css [:h2 "定期存款："]
+       (result-html- dq '[余额 币种 开户日期 到期日期] [:ye :bz :khrq :dqrq])]
+      [:div css [:h2 "贷款情况："]
+       (result-html- loan '[贷款额 币种 利率 开户日期 到期日期] [:cdje :bz :ll :khrq :dqrq])]
+      [:div css [:h2 "贷款明细："]
+       (result-html- loan2 '[贷款余额 金额 币种 利率 日期] [:ye :je :bz :ll :rq])]
+      (when (not (empty? daybook))
+        [:div css [:h2 "账户余额变化："]
+         (linef {:category (vec (map #(-> % :rq str (subs 0 10)) daybook)) 
+                 :余额 (vec (map #(-> % :ye) daybook)) 
+                 :金额 (vec (map #(-> % :je) daybook))}
+                {} 1200 300)])
+      [:div css [:h2 "账户交易明细："]
+       (result-html- daybook '[交易金额 余额 币种 交易日期] [:je :ye :bz :rq])]
+      )))
+
+; &org_id=132001&yw_type=100&bz=1%20&zh=82082%20%20&cif_key=13237  
+;(acct-detail "132001" "13237" "100" "1" "82082")
+;(currency-dict (str 1))
