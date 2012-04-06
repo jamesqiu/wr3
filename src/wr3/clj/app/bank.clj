@@ -1,4 +1,5 @@
-(ns ^{:doc "商业银行存贷款分析Demo"} 
+(ns ^{:doc "商业银行存贷款分析Demo"
+      :todo "1、从账户查客户、客户经理；2、客户经理查询"} 
      wr3.clj.app.bank)
 
 (use 'hiccup.core)
@@ -41,19 +42,14 @@
    :menu [["业务系统数据查询" 
            ["客户信息"     "11-cust"] 
            ["客户经理"     "12-mng"]
-           ["分支网点"     "13-org"]
-           ["其他"         "14-other"]]
+           ["存贷业务"     "13-biz"]]
           
           ["分析报表"
            ["活期存款分析"    "21-hq"]     
            ["定期存款分析"    "22-dq"]     
-           ["存款分析"        "23-depo"]
-           ["贷款分析"        "24-loan"] ]
-   
-          ["时间序列分析"
-           ["进场登记分析*" "31-enter"] 
-           ["交易流水分析" "32-trade"] 
-           ["综合分析*" "33-other"]]
+           ["存款分析"        "23-ck"]
+           ["贷款分析"        "24-loan"] 
+           ["时间序列分析"    "25-time"] ]
           
           ["其他"
            ["首页"     "41-home"]
@@ -268,11 +264,36 @@
                                     (orgs v)] 
                                    v)]) })]
       [:div {:style "float: left; margin-left: 20px"} 
-       (pief (apply array-map (flatten (for [{org :org_id n :n} rt] [(orgs org) n]))) {} 600 500)] 
+       (pief (apply array-map (flatten (for [{org :org_id n :n} rt] [(orgs org) n]))) {} 500 500)] 
       [:div {:style "float: left; margin-left: 20px"} 
-       (barf (apply array-map (flatten (for [{org :org_id n :n} rt] [(orgs org) n]))) {} 600 500)] 
+       (barf (apply array-map (flatten (for [{org :org_id n :n} rt] [(orgs org) n]))) {} 500 500)] 
       )))
 
+(defn biz
+  "service: 存贷款业务概况"
+  []
+  (let [sql1 "select sum(ye) e, sum(count) n from tv_olap01" ; 活期余额，账户数
+        sql2 "select SUM(ye) e, SUM(count) n from tv_olap09" ; 定期余额，账户数
+        sql3 "select sum(amount) e ,sum(n) n from loan_s" ; 放贷额，账户数
+        [rt1 rt2 rt3] (map #(select-all "bank" %) [sql1 sql2 sql3])
+        [e1 e2 e3] (for [rt [rt1 rt2 rt3]] (sum (map :e rt)))
+        [n1 n2 n3] (for [rt [rt1 rt2 rt3]] (sum (map :n rt)))
+        e (+ e1 e2 e3)
+        n (+ n1 n2 n3)
+        css {:style "border: 1px dashed gray; width: 610px; margin: 5px"}
+        ]
+    (html
+      [:h1 (format "共有 <font color=red>%s（约%s）</font>个存贷款账户，存贷款总额 <font color=red>%s（约%s）</font>圆，其中：" 
+                   n (wr3.bank.Currency/about n) e (wr3.bank.Currency/about e))]
+      (for [[s e n] [["活期存款" e1 n1] ["定期存款" e2 n2] ["贷款" e3 n3]]]
+        [:h2 (format "&nbsp; &nbsp; ● 有<font color=red>%s（约%s）</font>个%s账户，%s额<font color=red>%s（%s）</font>圆。" 
+                     n (wr3.bank.Currency/about n) s s e (wr3.bank.Currency/about e))])
+      [:div css
+       (pief {"活期存款" n1 "定期存款" n2 "贷款" n3} {:title "账户数（单位：个）"})]      
+      [:div css
+       (pief {"活期存款" e1 "定期存款" e2 "贷款" e3} {:title "额度（单位：圆人民币）"})]
+      )))
+  
 (defn mng
   "app: 客户经理列表"
   [org]
@@ -398,6 +419,8 @@
                                                 v)])) ])
                    } ))  
   
+(def css {:style "float:left; margin: 5px"})
+
 (defn acct-detail
   "service: 账户存贷款明细"
   [org cif yw bz zh]
@@ -413,7 +436,7 @@
                             org yw bz zh)
         [hq dq loan loan2 daybook] (for [sql [sql-hq sql-dq sql-loan-main sql-loan-detail sql-daybook]] 
                                      (select-all "bank" sql))
-        css {:style "float:left; margin: 5px"}]
+        ]
     (html
       [:h2 "存款总额：" (currency-dict bz) " <font color=red>" (sum (map :ye (into hq dq))) "</font> 圆"]
       [:div css [:h2 "活期存款："] 
@@ -434,6 +457,262 @@
        (result-html- daybook '[交易金额 余额 币种 交易日期] [:je :ye :bz :rq])]
       )))
 
+(def hq-dims
+  {:org ["分支网点" "select org_name dim, ye, count from tv_olap01 order by ye desc "]
+   :yw ["业务类型" (str "select yw_type+'业务' dim, sum(ye) ye, sum(count) count"
+                    " from tv_olap02 where ye<>0"
+                    " group by yw_type order by SUM(ye) desc ")]
+   :hb ["账户类型" (str " select (case when(hb='1') then '个人' when(hb='2') then '企业' end) dim,SUM(ye) ye,SUM(count) count"
+                    " from tv_olap03 group by hb order by SUM(ye) desc ")]
+   :age ["岁数" (str "select ltrim(age2006)+'岁' dim, sum(ye) ye, sum(count) count from tv_olap04"
+                   " group by age2006 order by sum(ye) desc")]
+   :age4 ["四个年龄层" (str "select '0-19岁' dim,sum(ye) ye, sum(count) count  from tv_olap04 where  (age2006/10) < 2"
+                       " union "
+                       "select '20-29岁' dim,sum(ye) ye, sum(count) count  from tv_olap04 where  (age2006/10)=2"
+                       " union "
+                       "select '30-49岁' dim,sum(ye) ye, sum(count) count  from tv_olap04 where  (age2006/10) in (3,4)"
+                       " union "
+                       "select '大于50岁'dim, sum(ye) ye, sum(count) count  from tv_olap04 where  (age2006/10) > 4 ")]
+   :age10 ["年龄阶段" (str "select ltrim(age2006/10*10)+'~'+ltrim(age2006/10*10+9)+'岁' dim, sum(ye) ye, sum(count) count from tv_olap04"
+                       " group by (age2006/10)"
+                       " order by SUM(ye) desc ")]
+   :ye ["余额段" (str "select ltrim(yed)+'位数余额段' dim, sum(ye) ye, sum(count) count from tv_olap06"
+                   " group by yed order by SUM(ye) desc")]
+   })
+
+(def dq-dims
+  {:ye ["余额段" (str "select ltrim(yed)+'位数余额' dim,  sum(ye) ye, sum(count)count from tv_olap09"
+                   " group  by yed order by sum(ye) desc")]
+   })
+
+(def loan-dims
+  {:org ["分支网点" (str "select org_name dim,SUM(amount) ye, SUM(n) count from loan_s2 group by org_name")]
+   :yepn ["个人放款额段" (str "select ltrim(amounts)+'圆额段' dim, sum(amount) ye, sum(n) count from custpnloan_s group by amounts")]
+   :yeen ["企业放款额段" (str "select ltrim(amounts)+'圆额段' dim, sum(amount) ye, sum(n) count from custenloan_s group by amounts")]
+   :sex ["个人贷款性别" (str "select (case gender when '1' then '男' when '2' then '女' end) dim, sum(amount) ye, sum(n) count "
+                       " from custpnloan_s group by gender ")]
+   :age10 ["个人贷款年龄段" (str "select ltrim(ages)+'年龄段' dim, sum(amount) ye, sum(n) count from custpnloan_s group by ages ")]
+   :age ["个人贷款岁数" (str "select ltrim(age)+'岁' dim,sum(amount) ye, SUM(n) count from custpnloan_s group by age ")]
+   })
+
+(defn- analysis
+  "分析数据
+  @return 返回前6个里以70%以内递减的个数，1表示第一个数据遥遥领先，2～5表示前几个领先，6表示从前5个看不出优势。"
+  [data]
+  (let [n (count data)
+        top (min 5 n) ; 分析5个之内的产品
+        s1 (take top (rest data))
+        s2 (take top data)
+        r1 (map #(/ %1 (double %2)) s1 s2)
+        r2 (for [v r1 :while (>= v 0.7)] v) ]
+    (count r2)))
+
+(defn olap-dim
+  "app: 活期、定期存款及贷款的余额、账户数指标分析
+  @id 维度代码，结果集有3个字段：dim ye count，分别代表维度、余额指标、账户数指标
+  @typ 可以为如下之一：hq（缺省值）、dq、loan，分别代表活期存款、 定期存款、贷款"
+  [id typ]
+  (let [id (or id "org")
+        dims (case typ 
+               "dq" dq-dims 
+               "loan" loan-dims
+               hq-dims) 
+        [dim sql] (dims (keyword id))
+        rt (select-all "bank" sql)
+        rt1 (sort-by :ye > rt)
+        rt2 (sort-by :count > rt)
+        n-ye (sum (map :ye rt))
+        n-count (sum (map :count rt))
+        [n1 n2] [(analysis (map :ye rt1)) (analysis (map :count rt2))] 
+        s1 (let [s "<font color=blue>%s</font> 的余额"] 
+             (cond (= n1 0) (format (str s "一枝独秀") (:dim (first rt1)))
+                   (< n1 (min 5 (dec (count rt1)))) (format (str s "位居前列") (join (map :dim (take (inc n1) rt1)) "，"))
+                   :else (format (str s "居首") (:dim (first rt1)))))
+        s2 (let [s "<font color=blue>%s</font> 的账户数"]
+             (cond (= n2 0) (format (str s "一枝独秀") (:dim (first rt2)))
+                   (< n2 (min 5 (dec (count rt2)))) (format (str s "位居前列") (join (map :dim (take (inc n2) rt2)) "，"))
+                   :else (format (str s "居首") (:dim (first rt2)))))        
+        [about-ye about-count] (map #(wr3.bank.Currency/about %)  [n-ye n-count])]
+    (html-body
+      [:h1 (case typ 
+             "dq" "定期存款分析" 
+             "loan" "贷款分析"
+             "活期存款分析")]
+      (eui-tip (format "共有<font color=red> %s（约%s）</font>个账户，共计余额<font color=red> %s（约%s）</font>圆。
+                        &nbsp; &nbsp; &nbsp; 从图表可以看出：%s； %s" 
+                       n-count about-count n-ye about-ye 
+                       s1 s2))
+      [:div css [:h2 (format "各 %s 的余额和账户数" dim)]
+       (result-html- rt1 [dim	"余额"	"帐户数"] [:dim :ye :count])]
+      [:div css
+       (barlinef {:category (vec (map :dim rt1))
+                  :账户 (vec (map :count rt1))
+                  :余额 (vec (map :ye rt1))
+                  } {:title "按余额排序" :x dim :y "账户数,余额"} 900) 
+       [:br]
+       (barlinef {:category (vec (map :dim rt2))
+                  :账户 (vec (map :count rt2))
+                  :余额 (vec (map :ye rt2))
+                  } {:title "按账户数排序" :x dim :y "账户数,余额"} 900)] )))
+
+(defn olap-hq
+  "service: 活期存款分析目录"
+  []
+  (html
+    [:h1 "按照如下指标，以及余额、账户数维度进行活期存款分析："]
+    [:ul
+     (for [[k [dim sql]] hq-dims]
+       [:li (eui-button {:href (str "/c/bank/olap-dim/" (name k)) :target "_blank" :style "margin: 7px"} 
+                        (format "<b>%s</b> 维度分析" dim)) ])]))
+  
+(defn olap-dq
+  "service: 定期存款分析目录"
+  []
+  (html
+    [:h1 "按照如下指标，以及余额、账户数维度进行定期存款分析："]
+    [:ul
+     (for [[k [dim sql]] dq-dims]
+       [:li (eui-button {:href (format "/c/bank/olap-dim/%s?typ=dq" (name k)) :target "_blank" :style "margin: 7px"} 
+                        (format "<b>%s</b> 维度分析" dim)) ])]))
+
+(defn olap-ck
+  "service: 存款（活期+定期）分析目录"
+  []
+  (html
+    [:h1 "按照如下指标，以及余额、账户数维度进行存款（活期+定期）分析："]
+    [:ul
+     [:li (eui-button {:href "/c/bank/olap-top9" :target "_blank" :style "margin: 7px"} "Top9 分析") ]
+     [:li (eui-button {:href "/c/bank/olap-sex"  :target "_blank" :style "margin: 7px"} "性别分析") ] ]))
+
+(defn olap-loan
+  "service: 贷款分析目录"
+  []
+  (html
+    [:h1 "按照如下指标，以及余额、账户数维度进行贷款分析："]
+    [:ul
+     (for [[k [dim sql]] loan-dims]
+       [:li (eui-button {:href (format "/c/bank/olap-dim/%s?typ=loan" (name k)) :target "_blank" :style "margin: 7px"} 
+                        (format "<b>%s</b> 维度分析" dim)) ])]))
+
+(defn olap-top9
+  "service: 存款（定活期）Top9 分析"
+  []
+  (let [sql1 "select top 9 org_name, (ye_hq+ye_dq) ye, ye_hq, ye_dq from tv_olap08 order by (ye_hq+ye_dq) desc"
+        rt1 (select-all "bank" sql1)
+        ye1 (sum (map :ye rt1))
+        sql2 "select sum(ye) ye from tv_olap08 "
+        rt2 (select-all "bank" sql2)
+        ye2 (sum (map :ye rt2))]
+    (html-body
+      [:h1 "总余额Top9的分支网点"]
+      [:div css
+       (result-html- rt1 '[分支网点 存款总余额 活期余额 定期余额] [:org_name :ye :ye_hq :ye_dq])]
+      [:div css
+       (stackf {:category (vec (map :org_name rt1))
+               :活期余额 (vec (map :ye_hq rt1))
+               :定期余额 (vec (map :ye_dq rt1))
+               } {} 750)] [:br] 
+      [:div css
+       [:h2 (format "Top9分支网点的总余额在所有22个网点中占 <font color=red>%.2f%%</font>，图示如下：" 
+                    (/ (* 100 ye1) (double ye2)))]
+       (pief {"Top9总余额小计" ye1 "其他总余额小计" (- ye2 ye1)} {} 900)]
+      )))
+
+(defn olap-sex
+  "service: 活定期存款性别分析"
+  []
+  (let [sql (str "select (case when sex=0 then '女' when sex=1 then '男' end) sex,"
+                 " sum (ye_dq) ye_dq, sum(count_dq) n_dq, sum (ye_hq) ye_hq, sum(count_hq)  n_hq"
+                 " from tv_olap10 group by sex")
+        rt (select-all "bank" sql)
+        female (first rt)
+        male (second rt)
+        [ye-max n-max ye-hq-max n-hq-max ye-dq-max n-dq-max] (for [ks [[:ye_hq :ye_dq]
+                                                                       [:n_hq :n_dq]
+                                                                       [:ye_hq]
+                                                                       [:n_hq]
+                                                                       [:ye_dq]
+                                                                       [:n_dq]]]
+                                                               (:sex (first (sort-by #(sum (map % ks)) rt))))
+        ]
+    (html-body
+      (eui-tip (apply format "解读：<b>存款总体情况</b>%s性总余额更大，%s性账户数更多；
+                              <b>定期存款</b>%s性总余额更大，%s性账户数更多；<b>活期存款</b>%s性总余额更大，%s性账户数更多。" 
+                       (for [n [ye-max n-max ye-hq-max n-hq-max ye-dq-max n-dq-max]] (html [:font {:color "red"} n]))))
+      (result-html- rt '[性别 定期余额 定期账户数 活期余额 活期账户数] [:sex :ye_dq :n_dq :ye_hq :n_hq])
+      (for [[title & ks] [["总存款余额" :ye_hq :ye_dq] 
+                          ["活期存款余额" :ye_hq] 
+                          ["定期存款余额" :ye_dq] 
+                          ["总存款账户" :n_hq :n_dq] 
+                          ["活期存款账户数" :n_hq]
+                          ["定期存款账户数" :n_dq]
+                          ]]
+        (pief {"女性" (sum (map female ks)) "男性" (sum (map male ks))} {:title (format "男女%s对比" title)} 400)) )))
+
+(defn olap-time
+  "service: 时间分析目录"
+  []
+  (html
+    [:h1 "存款、贷款余额、账户数年度变化情况分析："]
+    [:ul
+     [:li (eui-button {:href "/c/bank/olap-time-ye" :target "_blank" :style "margin: 7px"} "存款余额变化") ]
+     [:li (eui-button {:href "/c/bank/olap-time-zh" :target "_blank" :style "margin: 7px"} "存款账户数变化") ]
+     [:li (eui-button {:href "/c/bank/olap-time-loan" :target "_blank" :style "margin: 7px"} "贷款变化") ] ]))
+
+(defn olap-time-ye
+  "app: 存款余额变化图"
+  []
+  (let [sql (str "select ltrim(year)+'-'+substring(ltrim(100+month),2,2) date, sum(ye_hq) ye_hq, sum(ye_dq) ye_dq from tv_olap11"
+                 " where year>2002"
+                 " group by ltrim(year)+'-'+substring(ltrim(100+month),2,2)"
+                 " order by ltrim(year)+'-'+substring(ltrim(100+month),2,2)")
+        rt (select-all "bank" sql)]
+    (html-body
+      [:div css
+       (barlinef {:category (vec (map :date rt))
+                  :定期余额 (vec (map :ye_dq rt)) 
+                  :活期余额 (vec (map :ye_hq rt)) 
+                  } {} 1000 600)]
+      [:div css
+       (result-html- rt '[日期 活期余额 定期余额] [:date :ye_hq :ye_dq])] )))
+
+(defn olap-time-zh
+  "app: 存款人民币账户数变化图"
+  []
+  (let [sql1 (str "select type,yyyy,sum(n) n from depo_t where currency='1'"
+                  " group by type,yyyy order by type,yyyy")
+        rt1 (select-all "bank" sql1)
+        ]
+    (html-body
+      [:div css
+       (stackf {:category (vec (distinct (map :yyyy rt1)))
+                :活期账户数 (vec (map :n (filter #(= "hq" (:type %)) rt1)))
+                :定期账户数 (vec (map :n (filter #(= "dq" (:type %)) rt1)))
+              } {})]
+      [:div css
+       (cross-table (for [{type :type yyyy :yyyy n :n} rt1] [type yyyy n]) 
+                    {:caption "账户数逐年变化表"
+                     :dim-top-name "年份"
+                     :dim-left-name  "活定期类型"
+                     :f-dim-left (fn [v] (if (= v "hq") "活期账户数" "定期账户数"))
+                     :f-dim-top (fn [v] v)
+                     } )] )))
+
+(defn olap-time-loan
+  ""
+  []
+  (let [sql "select yyyy, sum(n) n, sum(amount) amount from loan_t group by yyyy order by yyyy"
+        rt (select-all "bank" sql)]
+    (html-body
+      [:div css
+       (barlinef {:category (vec (map :yyyy rt))
+                :放贷笔数 (vec (map :n rt))
+                :放贷余额 (vec (map :amount  rt))
+                } {})]
+      [:div css
+       (result-html- rt '[年份 放贷笔数 放贷额] [:yyyy :n :amount])] )))
+
 ; &org_id=132001&yw_type=100&bz=1%20&zh=82082%20%20&cif_key=13237  
 ;(acct-detail "132001" "13237" "100" "1" "82082")
 ;(currency-dict (str 1))
+;(olap-hq)

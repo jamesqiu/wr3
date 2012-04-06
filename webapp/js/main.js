@@ -2804,15 +2804,15 @@ function bank_onload() {
 	
 	app_linkbutton_css()
 	
-	layout_load_center('/c/bank/custs')
-	
-	var m2 = {'11-cust':'custs' , '12-mng':'mngs'};
+	var m2 = {'11-cust':'custs' , '12-mng':'mngs', '13-biz':'biz',
+			  '21-hq':'olap-hq', '22-dq':'olap-dq', '23-ck':'olap-ck', '24-loan':'olap-loan', '25-time':'olap-time'};
 	$.each(m2, function(k, v) {
 		$('a#'+k).click(function() {
 			layout_load_center('/c/bank/'+v)
 		})
 	})			
 	
+	$('a#11-cust').click()	
 }
 
 
