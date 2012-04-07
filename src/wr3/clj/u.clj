@@ -108,6 +108,14 @@
   [ns fn]
   (count (fargs ns fn)))
 
+(defn app-timestamp
+  "传入app名称，得到最后更新日期，用于自动文件reload
+  @app 如'wr3.clj.app.bank', 指 wr3/clj/app/bank.clj "
+  [app]
+  (let [fname (str (wr3.util.Stringx/replaceAll app "." "/") ".clj")
+        res (.getResource (clojure.lang.RT/baseLoader) fname)]
+    (.lastModified (java.io.File. (.getPath res)))))
+
 ;;;-------------- source-fn 和 source 函数的utf-8修正
 (import '(java.io LineNumberReader InputStreamReader PushbackReader))
 

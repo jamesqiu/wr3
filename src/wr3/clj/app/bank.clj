@@ -30,7 +30,8 @@
    :searcher ["红塔证券股份"
               ["客户智能搜索" "cust" "icon-find"]
               ["客户经理搜索" "mng" "icon-user"]]
-   :nav [["业务工作"            "icon-pen" ; title id
+   :nav [
+         ["业务工作"            "icon-pen" ; title id
           ["综合业务"          "icon-sum"    "indic0_bt"] ; title icon id 
           ["列表查看"          "icon-list"   "hs300_bt" ]
           ["统计报表"          "icon-pie"    "report3_bt"]]
@@ -39,7 +40,8 @@
           ["网站样式"          "icon-search" "site_bt"]
           ["使用帮助"          "icon-help"   "help_bt"]]
          ]   
-   :menu [["业务系统数据查询" 
+   :menu [
+          ["业务系统数据查询" 
            ["客户信息"     "11-cust"] 
            ["客户经理"     "12-mng"]
            ["存贷业务"     "13-biz"]]
@@ -50,15 +52,10 @@
            ["存款分析"        "23-ck"]
            ["贷款分析"        "24-loan"] 
            ["时间序列分析"    "25-time"] ]
-          
-          ["其他"
-           ["首页"     "41-home"]
-           ["系统管理" "41-admin"] 
-           ["帮助"     "42-help"]]
           ] 
    })
 
-(def top-height (if (:menu app-conf) 135 85))
+(def top-height (if (:menu app-conf) 135 85)) ; 有或者没有菜单时的上方的高度
 
 (defn- top-menu
   []
@@ -161,6 +158,19 @@
   [pattern]
   (let [field (if (wr3.util.Charsetx/isChinese pattern) "name" "cust_pid")
         sql (format "select top 100 * from in_cust where %s like '%%%s%%' order by org_id" field pattern)]
+    (select-all "bank" sql)))
+  
+(defn- mng-search
+  "得到模糊查询客户经理的sql结果
+  @pattern 为中文时查姓名，非中文时查pid"
+  [pattern]
+  (let [field (if (wr3.util.Charsetx/isChinese pattern) "name" "pid")
+        sql (format "select top 100 * from mng_base where %s like '%%%s%%'" field pattern)]
+    (select-all "bank" sql)))
+
+(defn- mng-by-org
+  [org]
+  (let [sql (format "select * from mng_base where org_id='%s'" org)]
     (select-all "bank" sql)))
 
 (defn- f-join
@@ -293,25 +303,30 @@
       [:div css
        (pief {"活期存款" e1 "定期存款" e2 "贷款" e3} {:title "额度（单位：圆人民币）"})]
       )))
-  
+
+(defn- mng-list
+  [rt title blank?]
+  (html
+    [:h1 (format "%s （客户经理 %s 位）" title (count rt))]
+    (result-html rt {:f-head (fn [thead]
+                               (map (fn [th] [:th th]) '[序号 姓名 性别 职务 职称 学历 证件号码 生日 手机 电话 负责客户]))
+                     :f-row (fn [row-index row]
+                              [:tr (bgcolor-css row-index)
+                               [:td {:align "right" :style "color: lightgray"} row-index]
+                               (for [col [:name :sex :job :job_title :education :pid :birth :mobile :tel]] [:td (row col)])  
+                               [:td {:align "center"} 
+                                [:a {:href (format "/c/bank/mng-cust?org=%s&mng=%s" (row :org_id) (row :pid))
+                                     :target (if blank? "_blank" "_self")} "查看"]]]) 
+                     } )))
+
 (defn mng
-  "app: 客户经理列表"
-  [org]
-  (let [org (or org "132051")
-        sql (format "select * from mng_base where org_id='%s'" org)
-        rt (select-all "bank" sql)
-        orgs (org-map)]
-    (html-body 
-      [:h1 (let [n (count rt)] (format "%s （客户经理 %s 位）" (orgs org) (count rt)))]
-      (result-html rt {:f-head (fn [thead]
-                                 (map (fn [th] [:th th]) '[序号 姓名 性别 职务 职称 学历 证件号码 生日 手机 电话 负责客户]))
-                       :f-row (fn [row-index row]
-                                [:tr (bgcolor-css row-index)
-                                 [:td {:align "right" :style "color: lightgray"} row-index]
-                                 (for [col [:name :sex :job :job_title :education :pid :birth :mobile :tel]] [:td (row col)])  
-                                 [:td {:align "center"} 
-                                  [:a {:href (format "/c/bank/mng-cust?org=%s&mng=%s" org (row :pid))} "查看"]]
-                                 ]) } ))))
+  "app: 客户经理列表。"
+  [id org]
+  (let [org (or org "132001")]
+    (if id
+      (mng-list (mng-search id) (format "查询“%s”的结果" id) true)
+      (html-body 
+        (mng-list (mng-by-org org) (org-dict org) false)) )))
 
 (defn mng-cust
   "app: 指定客户经理负责的所有客户

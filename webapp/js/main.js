@@ -2782,7 +2782,7 @@ function bank_search(v, n) {
 	if (n=='cust') {
 		layout_load_center('/c/bank/cust/'+v)		
 	} else {
-		alert('\n搜索关键字：' + v + '\n搜索范围：' + n)
+		layout_load_center('/c/bank/mng/'+v)
 	}
 }
 
