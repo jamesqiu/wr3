@@ -16,7 +16,7 @@
 
 (import java.io.PrintWriter)
 (import wr3.BaseConfig)
-(use '[wr3.clj.u :only (fcall fget fargs fargc ?)])
+(use '[wr3.clj.u :only (fcall require+ fget fargs fargc ? app-timestamp)])
 
 ;; 缺省的 namespace 及函数名, "wr3.clj.app.controller/index"
 (def ns0 "wr3.clj.app.")
@@ -92,18 +92,22 @@
 
 (import wr3.util.Stringx)
 
+(def not-reload (= "0" (System/getProperty "wr3.clj.reload")))
+
 (defn- need-reload?
-  "context中没有记录过时间         ，不需要reload，返回false，并setAttribute；
+  "jvm的设置-Dwr3.clj.reload=0优先，设为0则始终不reload；不设为0或者没有设置时：
+  context中没有记录过时间         ， 不需要reload，返回false，并setAttribute；
   context中已经有时间并且和最新符合，不需要reload，返回false；
   context中已经有时间并且和最新不符，  需要reload，返回true， 并setAttribute"
   [context ns]
-  (let [t1 (.getAttribute context ns) 
-        t2 (app-timestamp ns) ]
-    (cond
-      (nil? t1) (do (.setAttribute context ns t2) false)
-      (= t1 t2) false
-      (do (.setAttribute context ns t2) true))))
-  
+  (if not-reload false
+    (let [t1 (.getAttribute context ns) 
+          t2 (app-timestamp ns) ]
+      (cond
+        (nil? t1) (do (.setAttribute context ns t2) false)
+        (= t1 t2) false
+        :else (do (.setAttribute context ns t2) true)))))
+
 ;; 处理形如 http://server:8080/wr3/clj/wr3.clj.controller1/action2?k1=v1 的url
 (defn -doGet
   [this request response]
@@ -119,6 +123,7 @@
         fn (:fn ns-fn-id)
         ids (:id ns-fn-id)
         ; 判断能否有权限执行本函数fn，无auth函数视为有权限
+        need-reload (require+ ns (need-reload? context ns))
         auth (if-let [f (and (not= fn "auth") (fget ns "auth"))] 
                (f request fn) 
                true) 

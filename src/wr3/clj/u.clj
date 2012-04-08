@@ -68,7 +68,7 @@
   (try (require (symbol ns)) true
     (catch Exception _ (do (println "ns-exist? error: " _) false))))
 
-(defn fget
+(defn fget0
   "根据namespace字符串，函数名字符串，得到函数，没有则为nil.
    要禁止reload，可在启动jvm时设置 -Dwr3.clj.reload=0 "
   [ns fn]
@@ -80,6 +80,20 @@
           (require n)
           (require n :reload)) ; 使用 :reload 就可以动态转载，但对性能有较大影响。
         (ns-resolve (the-ns n) f)))))
+
+(defn require+
+  "require引用namespace
+  @ns 可以是symbol或者str类型，如'wr3.clj.app.bank' 
+  @reload? "
+  [ns reload?]
+  (let [n (symbol ns)]
+    (if reload? (require n :reload) (require n))))
+  
+(defn fget
+  "不自动require，需要在调用本函数前自行调用require+函数"
+  [ns fn]
+  (let [[n f] (map symbol [ns fn])]
+    (when (ns-exist? ns) (ns-resolve (the-ns n) f) )))
 
 (defn fcall
   "根据namespace字符串，函数名字符串，参数列表来调用函数"
