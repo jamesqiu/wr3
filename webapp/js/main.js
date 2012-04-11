@@ -2816,4 +2816,26 @@ function bank_onload() {
 }
 
 
+/**
+ * esp 点击搜索按钮后的动作
+ */
+function esp_search(v, n) {
+	alert('\n搜索关键字：' + v + '\n搜索范围：' + n)
+}
+
+function esp_onload() {
+
+	app_linkbutton_css()
+	
+	var m2 = {'11-input':'en-input', '12-mng':'en-list',
+			  '21-apply':'apply-input',
+			  '52-analysis':'en-analysis'}
+	$.each(m2, function(k, v) {
+		$('a#'+k).click(function() {
+			layout_load_center('/c/esp/'+v)
+		})
+	})			
+
+}
+
 

@@ -24,7 +24,7 @@
 ;; :menu            2层菜单条，位于上方
 (def app-conf
   {:name "demo"
-   :style (map #(str % "1") ["layout_north" "layout_title"]) 
+   :style (map #(str % "1") ["layout_north" "layout_title"])  ; "" 蓝色 或者 "1" 金色
    :title "IDP行业应用——演示系统"
    :searcher ["000001" ; default-value
               ["AA范围" "range1" "icon-ok"] ; label name icon

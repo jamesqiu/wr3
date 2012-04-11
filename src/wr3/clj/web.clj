@@ -342,21 +342,23 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   
 (defn eui-combo
   "得到一个下拉选择列表，需要在js中初始化: $('#id1').combobox()，参数：
-  m: {id: 'id1' ..} id是必须的
+  m: {:id 'id1' :v '02'} id是必须的, :v 缺省选中的value
   options: 如'{01 java 02 ruby 03 python}"
   [m options]
-  (tags :select m nil (for [[k v] options] [:option {:value k} v])))
+  (tags :select m nil (for [[k v] options] [:option (merge {:value k} (when (= k (:v m)) {:selected "true"})) v])))
 ;  (tags :select {:id id} nil (map #(vector :option {:value (key %)} (val %)) options)))
   
 (defn eui-text
-  "输入必填文本框"
+  "输入必填文本框, 
+  有:required属性，无论值为true，false，都代表必须填写"
   [m]
-  (tags :input {:class "easyui-validatebox" :type "text" :required "true"} m))
+  (tags :input {:class "easyui-validatebox" :type "text"} m))
 
 (defn eui-textarea
-  "输入必填多行文本区"
+  "输入必填多行文本区, 
+  有:required属性，无论值为true，false，都代表必须填写"
   [m]
-  (tags :textarea {:class "easyui-validatebox" :required "true" :style "height: 100px"} m))
+  (tags :textarea {:class "easyui-validatebox" :style "height: 100px"} m))
 
 (defn eui-email
   "输入email框，发生变化时校验"
