@@ -9,14 +9,14 @@
   "app: tool.*工具的web界面化主页"
   []
   (html-apps (map #(format "<h1><a href=\"%s/c/tool/%s\">%s</a></h1><p>%s</p>"
-                     webapp (second %) (first %) (last %))
-               [["身份证" "pid"   "身份证转换、分析"]
-                ["分词"   "gname" "Tokenizer分词，及Goodname变量名"]
-                ["标拼音" "pinyin"    "得到1+个汉字串的拼音"]
-                ["算税率" "tax"   "计算个人所得税"]
-                ["读金额" "money" "转换成大写金额；得到易读大约数"]
-                ["翻译"   "dict"  "得到1+个中文词的简明英文解释"]
-                ] )))
+                           webapp (second %) (first %) (last %))
+                  [["身份证" "pid"   "身份证转换、分析"]
+                   ["分词"   "gname" "Tokenizer分词，及Goodname变量名"]
+                   ["标拼音" "pinyin"    "得到1+个汉字串的拼音"]
+                   ["算税率" "tax"   "计算个人所得税"]
+                   ["读金额" "money" "转换成大写金额；得到易读大约数"]
+                   ["翻译"   "dict"  "得到1+个中文词的简明英文解释"]
+                   ] )))
 
 ;;;---------------------------- pid
 ;; pid校验身份证的样例

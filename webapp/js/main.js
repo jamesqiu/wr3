@@ -2828,7 +2828,7 @@ function esp_onload() {
 	app_linkbutton_css()
 	
 	var m2 = {'11-input':'en-input', '12-mng':'en-list',
-			  '21-apply':'apply-input',
+			  '21-pn':'pn-input', '22-org':'org-input',
 			  '52-analysis':'en-analysis'}
 	$.each(m2, function(k, v) {
 		$('a#'+k).click(function() {

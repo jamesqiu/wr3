@@ -450,6 +450,12 @@ div.app h1 {
 	text-shadow: rgba(255, 255, 255, 0.85) 0 0 15px;
 }
 
+div.app h2 {
+	font-size: 24px;
+	font-family: 微软雅黑;
+	text-shadow: rgba(255, 255, 255, 0.85) 0 0 15px;
+}
+
 div.app {
 	float: left;
 	width: 300px;

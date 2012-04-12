@@ -357,18 +357,18 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
 (defn eui-textarea
   "输入必填多行文本区, 
   有:required属性，无论值为true，false，都代表必须填写"
-  [m]
-  (tags :textarea {:class "easyui-validatebox" :style "height: 100px"} m))
+  [m & text]
+  (tags :textarea {:class "easyui-validatebox" :style "height: 100px"} m text))
 
 (defn eui-email
   "输入email框，发生变化时校验"
   [m]
-  (eui-text (merge {:validType "email" :required "false"} m)))
+  (eui-text (merge {:validType "email"} m)))
 
 (defn eui-url
   "输入url框"
   [m]
-  (eui-text (merge {:validType "url" :required "false"} m)))
+  (eui-text (merge {:validType "url"} m)))
 
 (defn eui-numberbox
   "输入限定范围的数字，失去焦点后格式化，非数字格式化为空"
