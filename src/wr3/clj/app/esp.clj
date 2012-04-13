@@ -1,5 +1,5 @@
 (ns ^{:doc "企业安全生产标准化管理系统 Enterprise Safety Production Standardization "
-      :todo "待成熟后把通用函数都命名为frame-xx封装到wr3.clj.web中"} 
+      :todo "生成数据（考评员、考评机构、企业）；文件上传"} 
      wr3.clj.app.esp)
 
 (use 'hiccup.core)
@@ -30,14 +30,28 @@
    :searcher ["000001" ; default-value
               ["交通运输企业搜索" "range1" "icon-ok"] ; label name icon
               ["评审人搜索" "range2" "icon-tip"] ]
-   :nav [["业务工作"            "icon-pen" ; title id
-          ["综合业务"          "icon-sum"    "indic0_bt"] ; title icon id 
-          ["列表查看"          "icon-list"   "hs300_bt" ]
-          ["统计报表"          "icon-pie"    "report3_bt"]]
-         
-         ["系统管理及帮助"      "icon-search"
+   :nav [["考评员" "icon-pen" ; title id
+          ["在线申请考评证书" "icon-list"    "pn-input"] ; title icon id 
+          ]
+         ["考评机构" "icon-pen" ; title id
+          ["在线申请考评资格" "icon-list"    "org-input"] ; title icon id 
+          ["管理考评员" "icon-list"    "indic0_bt"] ; title icon id 
+          ["评估企业" "icon-list"    "org-eval"] ; title icon id 
+          ]
+         ["交通运输企业"           "icon-pen" ; title id
+          ["在线申请"          "icon-list"    "indic0_bt"] ; title icon id 
+          ["达标标准自评"          "icon-list"    "indic0_bt"] ; title icon id 
+          ]
+         ["交通运输管理部门"           "icon-pen" ; title id
+          ["考评员管理"          "icon-list"    "indic0_bt"] ; title icon id 
+          ["考评机构管理"          "icon-list"    "indic0_bt"] ; title icon id 
+          ["交通运输企业管理"          "icon-list"    "indic0_bt"] ; title icon id 
+          ["统计分析"          "icon-list"    "indic0_bt"] ; title icon id 
+          ]
+         ["系统管理及帮助"     "icon-search"
           ["网站样式"          "icon-search" "site_bt"]
-          ["使用帮助"          "icon-help"   "help_bt"]]
+          ["使用帮助"          "icon-help"   "help_bt"]
+          ]
          ]   
    :menu [["企业安全生产标准化申报系统" 
            ["企业在线填报子系统"     "11-input"] 
@@ -73,10 +87,20 @@
           ] 
    })
 
-(def top-height (if (:menu app-conf) 135 85))
+(def app-conf-pn
+  {:name "esp"
+   :style (map #(str % "1") ["layout_north" "layout_title"])  ; "" 或者 "1"
+   :title "交通运输企业安全生产标准化——考评员在线申请系统（试行）"
+   :nav [["考评员" "icon-pen" ; title id
+          ["在线申请考评证书" "icon-list"    "pn-input"] ; title icon id 
+          ["在线申请进度查询" "icon-list"    "pn-process"] 
+          ["使用帮助"          "icon-help"   "help_bt"]
+          ]
+         ]   
+   })
 
 (defn- top-menu
-  []
+  [app-conf]
   (eui-tabs
     {:style "height: 65px; position: absolute; left:0px; bottom: 0px;"}
     (for [[title & m2] (:menu app-conf)]
@@ -88,31 +112,32 @@
   
 (defn- app-top
   "layout.north"
-  []
+  [app-conf]
   (eui-region 
     "north" 
-    {:id (first (:style app-conf)) :style (format "height: %spx; padding: 10px;" top-height) }
+    {:id (first (:style app-conf)) :style (format "height: %spx; padding: 10px;" (if (:menu app-conf) 135 70)) }
     [:span {:class (second (:style app-conf))} (:title app-conf)]
     [:div {:style "position: absolute; right: 10px; top: 8px; color: gray"} "当前用户: " 
      [:span#wr3user {:style "color:red; font-weight:bold"} ".."] (space 3)
      [:script "app_user()"]
      [:a {:href "#" :onclick "app_exit('/c/esp')"} "退出"]]
     ; 搜索条
-    [:div {:style "position: absolute; right: 10px; top: 35px"}
-     (eui-searchbox 
-       {:searcher (str (:name app-conf) "_search") :style "width: 250px;" :value (first (:searcher app-conf))} 
-       (for [[label nam icon] (rest (:searcher app-conf))]
-         [:div {:name nam :iconCls icon :style "margin: 0px"} label] ))]
+    (when (:searcher app-conf)
+      [:div {:style "position: absolute; right: 10px; top: 35px"}
+       (eui-searchbox 
+         {:searcher (str (:name app-conf) "_search") :style "width: 250px;" :value (first (:searcher app-conf))} 
+         (for [[label nam icon] (rest (:searcher app-conf))]
+           [:div {:name nam :iconCls icon :style "margin: 0px"} label] ))])
     ; 1、2级导航条
-    (when (:menu app-conf) (top-menu)) ))
+    (when (:menu app-conf) (top-menu app-conf)) ))
 
 (defn- app-left
   "layout.west"
-  []
+  [app-conf]
   (eui-region 
     "west" 
     {:title "快捷导航" :style "width: 210px"}
-    [:div {:style "margin: 10px"} "全局信息提示内容……" ]
+    [:div {:style "margin: 10px"} (eui-button {:href "/c/esp" :plain "true" :iconCls "icon-back" } "返回子系统列表") ]
      
     (eui-accord 
       {:id "accord1" :style "" }
@@ -133,14 +158,52 @@
     [:img {:src "/img/esp/en-input.jpg"}]
     ))
 
-(defn sys-pn
+; 子系统名称
+(def cfg-subsys
+  [
+   ["考评员管理系统" "index-pn" "考评人员在线申请"]
+   ["考评机构管理系统" "index-org" "考评机构在线申请、评定管理"]
+   ["企业在线填报管理系统" "index-en" "企业在线填报管理"]
+   ["安全生产标准化管理系统" "index-mot" "交通运算管理部门（交通部）内部管理"]
+   ])
+
+(defn index
+  "app: 所有子系统的进入界面，临时，最后应该是一个不用登录即可访问的静态页面"
+  []
+  (html-body
+    [:div {:style "text-align: center; margin: 100px; border: 1px solid blue; width:992px"}
+     [:img {:src "/img/esp/esp.jpg"}]
+     [:table {:align "center"}
+      (for [[nam id meta] cfg-subsys ] 
+        [:tr [:td [:h1 [:a {:href (format "%s/c/esp/%s" webapp id) :title meta}
+                        (str "进入 " nam )]]]])]
+     [:div {:style "width:100%; height:50px; margin-top:30px; background-color:#48f"}]]))
+  
+(defn index-pn
+  "考评员子系统入口"
   []
   (eui-layout
     {:id "layout1" :onload (str (:name app-conf) "_onload()")}
     ;----------------------- north
-    (app-top)   
+    (app-top app-conf-pn)   
     ;----------------------- west
-    (app-left)  
+    (app-left app-conf-pn)  
+    ;----------------------- center
+    (app-main)  
+    ;----------------------- east
+;    (app-right)
+    ;----------------------- south
+    (eui-foot-region) ))
+    
+(defn index-mot
+  "交通部子系统入口"
+  []
+  (eui-layout
+    {:id "layout1" :onload (str (:name app-conf) "_onload()")}
+    ;----------------------- north
+    (app-top app-conf)   
+    ;----------------------- west
+    (app-left app-conf)  
     ;----------------------- center
     (app-main)  
     ;----------------------- east
@@ -149,15 +212,6 @@
     (eui-foot-region) ))
 
 ;;------------------- 
-; 子系统名称
-(def cfg-subsys
-  [
-   ["考评员管理系统*" "sys-pn" "考评人员在线申请"]
-   ["考评机构管理系统" "sys-org" "考评机构在线申请、评定管理"]
-   ["企业在线填报管理系统" "sys-en" "企业在线填报管理"]
-   ["安全生产标准化管理系统*" "sys-mng" "交通运算管理部门（交通部）内部管理"]
-   ])
-
 ; 申请类别
 (def dd-type 
   {"d" "道路运输" 
@@ -166,7 +220,24 @@
    "c" "城市客运" 
    "j" "交通运输工程建设"})
 (def dd-type2 
-  (apply array-map (flatten (for [i (range 1 17)] [i (str "类别" i)]))))
+  (array-map
+    "d1" "道路运输普通货运"
+    "d2" "机动车维修"
+    "d3" "汽车客运站"
+    "d4" "道路危险货物运输"
+    "d5" "道路旅客运输"
+    "d6" "道路货物运输场站"
+    "s1" "水路危险货物运输"
+    "s2" "水路散货运输"
+    "s3" "水路旅客运输"
+    "g1" "危险货物码头运输"
+    "g2" "港口客运（滚装、渡船渡口）码头"
+    "g3" "港口散杂货（集装箱）码头"
+    "c1" "出租汽车"
+    "c2" "城市公共汽车客运"
+    "c3" "城市轨道交通运输"
+    "j1" "交通运输建筑施工"
+   ))
 ; 撤销考核员资格原因
 (def dd-reason
   {1 "（一）隐瞒企业重大安全问题的；"
@@ -238,7 +309,7 @@
    ["行政区划" "region" {:t '[东北 华北 华南 西南 西北 华中 华东] :v '西南}]
    ["法人信息" "legel" {:t 'textarea :v "aaa\nbbbb\nccccc"}]
    ["企业类型" "type" {:t dd-type :v "s"}]
-   ["企业具体分类" "type2" {:t dd-type2 :v 6}]
+   ["企业具体分类" "type2" {:t dd-type2 :v "s1"}]
    ["企业地址" "address" "" {:title "选择GIS坐标"}]
    ["企业所在地描述" "belong" {:t 'textarea}]
    ["安全生产标准化等级" "grade" {:t [:一级 :二级 :三级] :v :一级}]
@@ -247,16 +318,6 @@
    ["企业法人资格证件" "qual" {:t 'file}] 
    ["经营许可证" "license" {:t 'file}]
    ])
-
-(defn index
-  []
-  (html-body
-    [:div {:style "text-align: center; margin: 100px"}
-     [:h1 {:style "font-size: 26px"} "交通运输企业安全生产标准化管理系统"][:br]
-     [:table {:align "center"}
-      (for [[nam id meta] cfg-subsys ] 
-        [:tr [:td [:h1 [:a {:href (format "%s/c/esp/%s" webapp id) :title meta}
-                        (str "进入 " nam )]]]])]]))
 
 (defn- input-form-
   [form title]
@@ -343,30 +404,48 @@
     (vec (fetch (keyword tb)))))  
 
 (defn stand
-  "道路交通普通货运企业安全生产达标标准——自评，机构考评"
+  "app: 道路交通普通货运企业安全生产达标标准——自评，机构考评"
   []
   (html-body
-    (let [[rt1 rt2 rt3] (map #(get-stand- (str "en-stand" %)) [1 2 3])]
+    (let [[rt1 rt2 rt3] (map #(get-stand- (str "en-stand" %)) [1 2 3])
+          f3 (fn [r] ; r:  某个2级考核指标，如“1.安全工作方针与目标”
+               (let [s1 (html [:td {:style "width: 800px"} (:name r)] 
+                              [:td [:b (:score r)] (when (= 1 (:required r)) [:font {:color "red"} "★"])] 
+                              [:td {:align "right"} (eui-numberspin {:min 0 :max (:score r) :increment 1 
+                                                                     :value (:score r) :style "width:40px"})])
+                     s2 (if (= 1 (:k r)) s1 (html [:tr s1]))]
+                 s2))
+          f2 (fn [r] ; r:  某个2级考核指标，如“1.安全工作方针与目标”
+               (let [rt3i (filter #(and (= (:i r) (:i %)) (= (:j r) (:j %))) rt3) ;该2级指标对应的所有三级指标
+                     s1 (html [:td {:rowspan (count rt3i)} (str (:j r) ". " (:name r))]
+                              (f3 (first rt3i)) 
+                              (for [r (rest rt3i)] (f3 r)))
+                     s2 (if (= 1 (:j r)) s1 (html [:tr s1])) ]
+                 s2))
+          f1 (fn [r] ; r： 某个1级考核指标，如“一、安全目标 35分 ”
+               (let [rt2i (filter #(= (:i r) (:i %)) rt2) ;该1级指标对应的所有二级指标
+                     rt3i (filter #(= (:i r) (:i %)) rt3)] ;该1级指标对应的所有三级指标
+                 (html [:tr
+                        [:td {:rowspan (count rt3i)} (:name r) [:br][:br](space 10) (:score r) "分"]
+                        (f2 (first rt2i))] ; 产生后面2、3级指标的多个[:tr]html片段 
+                       (for [r (rest rt2i)] (f2 r)))))
+          ]
       [:table.wr3table {:border 1}
        [:caption "道路交通普通货运企业安全生产达标标准"]
-       [:thead [:tr 
-                [:th "考核内容"]
-                [:th {:colspan 2} "考核要点"] 
-                [:th "分数"]
-                [:th "自评分"]]]
-       [:tbody
-        [:tr
-         [:td (:name (first rt1))]
-        ]]
-       [:tfoot]
-       ]
-      )))
+       [:thead 
+        [:tr [:th "考核内容"] [:th {:colspan 2} "考核要点"] [:th "分数"] [:th "自评分"] ]]
+       [:tbody 
+        (for [r rt1] (f1 r))]
+       [:tfoot
+        [:tr [:td {:colspan 5} [:h2 "注：打 “ <font color=red>★</font> ” 的为必备项，必须完全满足。"]]]]
+       ] )))
 
 ;;;; test
 ;(with-mdb2 "esp"
+;  (let [r (fetch-one :en-stand2 :where {:i 8 :j 4 :name "规范档案"})]
+;    (update! :en-stand2 r (assoc r :j 5))) 
 ;  (destroy! :en-stand1 {:name nil})
 ;  (drop-coll! :en-stand3)
 ;  (doseq [[i j k nam score & r] en-stand3]
 ;    (insert! :en-stand3 {:i i :j j :k k :name (str nam) :score score :required (if r 1 0)}))
 ;  )
-

@@ -2829,7 +2829,10 @@ function esp_onload() {
 	
 	var m2 = {'11-input':'en-input', '12-mng':'en-list',
 			  '21-pn':'pn-input', '22-org':'org-input',
-			  '52-analysis':'en-analysis'}
+			  '52-analysis':'en-analysis',
+			  // 左侧连接
+			  'pn-input':'pn-input',
+			  'org-input':'org-input', 'org-eval':'stand'}
 	$.each(m2, function(k, v) {
 		$('a#'+k).click(function() {
 			layout_load_center('/c/esp/'+v)
