@@ -16,14 +16,15 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; layout
 
-;; app-conf 说明：
+;; frame-cfg 说明：
 ;; :name            应用名称，用于javascript函数的前缀，如 function demo_xxx()
 ;; :style           上方色调，["layout_north" "layout_title"]（蓝色）或 ["layout_north1" "layout_title1"]（金色）
 ;; :title           应用名称，位于上方
 ;; :searcher        搜索框的label，位于右上方
 ;; :nav             导航条，位于左边
 ;; :menu            2层菜单条，位于上方
-(def app-conf
+;; :left-or-right   "left" or "right"
+(def frame-cfg-mot
   {:name "esp"
    :style (map #(str % "") ["layout_north" "layout_title"])  ; "" 或者 "1"
    :title "交通运输企业安全生产标准化管理系统（试行）"
@@ -87,87 +88,64 @@
           ] 
    })
 
-(def app-conf-pn
+(def frame-cfg-pn
   {:name "esp"
-   :style (map #(str % "1") ["layout_north" "layout_title"])  ; "" 或者 "1"
+   :style (map #(str % 1) ["layout_north" "layout_title"])  ; "" 或者 "1"
    :title "交通运输企业安全生产标准化——考评员在线申请系统（试行）"
-   :nav [["考评员" "icon-pen" ; title id
+   :nav [
+         ["考评员" "icon-pen" ; title id
           ["在线申请考评证书" "icon-list"    "pn-input"] ; title icon id 
+          ["在线申请进度查询" "icon-list"    "pn-process"] 
+          ["使用帮助"          "icon-help"   "help_bt"]
+          ]
+         ]  
+   })
+
+(def frame-cfg-org
+  {:name "esp"
+   :style (map #(str % 1) ["layout_north" "layout_title"])  ; "" 或者 "1"
+   :title "交通运输企业安全生产标准化——考评机构管理系统（试行）"
+   :nav [
+         ["企业考评" "icon-pen" ; title id
+          ["企业考评流程" "icon-list"    "pn-input"] ; title icon id 
+          ["考评企业查询统计" "icon-list"    "pn-process"] 
+          ]
+         ["考评员" "icon-pen" ; title id
+          ["在线申请考评证书" "icon-list"    "pn-input"] ; title icon id 
+          ["在线申请进度查询" "icon-list"    "pn-process"] 
+          ["考评员查询统计" "icon-list"    "pn-process"] 
+          ]
+         ["考评机构" "icon-pen" ; title id
+          ["在线申请考评机构证书" "icon-list"    "pn-input"] ; title icon id 
           ["在线申请进度查询" "icon-list"    "pn-process"] 
           ["使用帮助"          "icon-help"   "help_bt"]
           ]
          ]   
    })
 
-(defn- top-menu
-  [app-conf]
-  (eui-tabs
-    {:style "height: 65px; position: absolute; left:0px; bottom: 0px;"}
-    (for [[title & m2] (:menu app-conf)]
-      (eui-tab1
-        (html [:span {:style "font-size: 14px; padding-left: 10px; padding-right: 10px"} title]) 
-        {:closable "false" :style "padding: 4px"} 
-        (for [[title id] m2] 
-          (eui-button {:id id :plain "true" :iconCls "icon-arrow" :group2 "menu2"} title)) ))))
-  
-(defn- app-top
-  "layout.north"
-  [app-conf]
-  (eui-region 
-    "north" 
-    {:id (first (:style app-conf)) :style (format "height: %spx; padding: 10px;" (if (:menu app-conf) 135 70)) }
-    [:span {:class (second (:style app-conf))} (:title app-conf)]
-    [:div {:style "position: absolute; right: 10px; top: 8px; color: gray"} "当前用户: " 
-     [:span#wr3user {:style "color:red; font-weight:bold"} ".."] (space 3)
-     [:script "app_user()"]
-     [:a {:href "#" :onclick "app_exit('/c/esp')"} "退出"]]
-    ; 搜索条
-    (when (:searcher app-conf)
-      [:div {:style "position: absolute; right: 10px; top: 35px"}
-       (eui-searchbox 
-         {:searcher (str (:name app-conf) "_search") :style "width: 250px;" :value (first (:searcher app-conf))} 
-         (for [[label nam icon] (rest (:searcher app-conf))]
-           [:div {:name nam :iconCls icon :style "margin: 0px"} label] ))])
-    ; 1、2级导航条
-    (when (:menu app-conf) (top-menu app-conf)) ))
-
-(defn- app-left
-  "layout.west"
-  [app-conf]
-  (eui-region 
-    "west" 
-    {:title "快捷导航" :style "width: 210px"}
-    [:div {:style "margin: 10px"} (eui-button {:href "/c/esp" :plain "true" :iconCls "icon-back" } "返回子系统列表") ]
-     
-    (eui-accord 
-      {:id "accord1" :style "" }
-      (for [[title icon & nav2] (:nav app-conf)]
-        (eui-accord- 
-          {:iconCls icon} title
-          (for [[title icon id] nav2]
-            (html
-              (eui-button {:id id :plain "true" :iconCls icon} title) [:br] ) ))) )))
-
-(defn- app-main
-  "layout.center"
-  []
-  (eui-region 
-    "center" 
-    {:border "false" :style "padding: 10px"} 
-    [:h2 "主显示页面"] 
-    [:img {:src "/img/esp/en-input.jpg"}]
-    ))
+(def frame-cfg-en
+  {:name "esp"
+   :style (map #(str % 1) ["layout_north" "layout_title"])  ; "" 或者 "1"
+   :title "交通运输企业安全生产标准化——企业在线填报管理系统（试行）"
+   :nav [
+         ["企业申请" "icon-pen" ; title id
+          ["在线填报" "icon-list"    "pn-input"] ; title icon id 
+          ["选择考评机构" "icon-list"    "pn-process"] 
+          ["企业年审" "icon-list"    "pn-process"] 
+          ]
+         ]   
+   })
 
 ; 子系统名称
 (def cfg-subsys
   [
-   ["考评员管理系统" "index-pn" "考评人员在线申请"]
-   ["考评机构管理系统" "index-org" "考评机构在线申请、评定管理"]
-   ["企业在线填报管理系统" "index-en" "企业在线填报管理"]
-   ["安全生产标准化管理系统" "index-mot" "交通运算管理部门（交通部）内部管理"]
+   ["考评员管理系统" "pn" "考评人员在线申请"]
+   ["考评机构管理系统" "org" "考评机构在线申请、评定管理"]
+   ["企业在线填报管理系统" "en" "企业在线填报管理"]
+   ["安全生产标准化管理系统" "mot" "交通运算管理部门（交通部）内部管理"]
    ])
 
-(defn index
+(defn- index-all
   "app: 所有子系统的进入界面，临时，最后应该是一个不用登录即可访问的静态页面"
   []
   (html-body
@@ -175,41 +153,21 @@
      [:img {:src "/img/esp/esp.jpg"}]
      [:table {:align "center"}
       (for [[nam id meta] cfg-subsys ] 
-        [:tr [:td [:h1 [:a {:href (format "%s/c/esp/%s" webapp id) :title meta}
+        [:tr [:td [:h1 [:a {:href (format "%s/c/esp/index/%s" webapp id) :title meta}
                         (str "进入 " nam )]]]])]
      [:div {:style "width:100%; height:50px; margin-top:30px; background-color:#48f"}]]))
   
-(defn index-pn
-  "考评员子系统入口"
-  []
-  (eui-layout
-    {:id "layout1" :onload (str (:name app-conf) "_onload()")}
-    ;----------------------- north
-    (app-top app-conf-pn)   
-    ;----------------------- west
-    (app-left app-conf-pn)  
-    ;----------------------- center
-    (app-main)  
-    ;----------------------- east
-;    (app-right)
-    ;----------------------- south
-    (eui-foot-region) ))
-    
-(defn index-mot
-  "交通部子系统入口"
-  []
-  (eui-layout
-    {:id "layout1" :onload (str (:name app-conf) "_onload()")}
-    ;----------------------- north
-    (app-top app-conf)   
-    ;----------------------- west
-    (app-left app-conf)  
-    ;----------------------- center
-    (app-main)  
-    ;----------------------- east
-;    (app-right)
-    ;----------------------- south
-    (eui-foot-region) ))
+(defn index
+  "@id 为nil时显示入口页面；为 pn,org,en,mot 时为子系统layout入口"
+  [id]
+  (if id 
+    (frame-index (case id
+                   "pn" frame-cfg-pn
+                   "org" frame-cfg-org
+                   "en" frame-cfg-en
+                   "mot" frame-cfg-mot
+                   "not-found"))
+    (index-all)))
 
 ;;------------------- 
 ; 申请类别
@@ -298,7 +256,7 @@
 ; 考评机构申请表  
 (def cfg-apply-org 
   [["评审机构名称" "name" {:require true :v "xxx"}]
-   ["评审机构资质" "qual" {:t '[A级 B级 C级] :v 'B级}]
+   ["评审机构资质" "qual" {:t dd-org-grade :v "甲类"}]
    ["评审人员姓名" "person" {:require true :v "张三"}]
    ["评审人员编码" "pcode" {:require true :v "007"}]
    ["评审人员资质" "pqual" {:t '[A级 B级 C级] :v 'C级}]

@@ -493,3 +493,94 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   "1个或者n个html占位空格"
   ([] "&nbsp;")
   ([n] (apply str (repeat n "&nbsp;"))))
+
+;---------------------------------- eui frame layout (-begin-)
+(defn- frame-top-menu
+  [cfg]
+  (eui-tabs
+    {:style "height: 65px; position: absolute; left:0px; bottom: 0px;"}
+    (for [[title & m2] (:menu cfg)]
+      (eui-tab1
+        (html [:span {:style "font-size: 14px; padding-left: 10px; padding-right: 10px"} title]) 
+        {:closable "false" :style "padding: 4px"} 
+        (for [[title id] m2] 
+          (eui-button {:id id :plain "true" :iconCls "icon-arrow" :group2 "menu2"} title)) ))))
+  
+(defn frame-top
+  "layout.north"
+  [cfg]
+  (eui-region 
+    "north" 
+    {:id (first (:style cfg)) :style (format "height: %spx; padding: 10px;" (if (:menu cfg) 135 70)) }
+    [:span {:class (second (:style cfg))} (:title cfg)]
+    [:div {:style "position: absolute; right: 10px; top: 8px; color: gray"} "当前用户: " 
+     [:span#wr3user {:style "color:red; font-weight:bold"} ".."] (space 3)
+     [:script "app_user()"]
+     [:a {:href "#" :onclick "app_exit('/c/esp')"} "退出"]]
+    ; 搜索条
+    (when (:searcher cfg)
+      [:div {:style "position: absolute; right: 10px; top: 35px"}
+       (eui-searchbox 
+         {:searcher (str (:name cfg) "_search") :style "width: 250px;" :value (first (:searcher cfg))} 
+         (for [[label nam icon] (rest (:searcher cfg))]
+           [:div {:name nam :iconCls icon :style "margin: 0px"} label] ))])
+    ; 1、2级导航条
+    (when (:menu cfg) (frame-top-menu cfg)) ))
+
+(defn frame-left-right
+  "layout.west | layout.east"
+  [cfg]
+  (eui-region 
+    (if (= "right" (:left-or-right cfg)) "east" "west") 
+    {:title "快捷导航" :style "width: 210px"}
+    [:div {:style "margin: 10px"} (eui-button {:href "/c/esp" :plain "true" :iconCls "icon-back" } "返回子系统列表") ]
+    
+    (eui-accord 
+      {:id "accord1" :style "" }
+      (for [[title icon & nav2] (:nav cfg)]
+        (eui-accord- 
+          {:iconCls icon} title
+          (for [[title icon id] nav2]
+            (html
+              (eui-button {:id id :plain "true" :iconCls icon} title) [:br] ) ))) )))
+
+(defn frame-main
+  "layout.center"
+  [cfg]
+  (eui-region 
+    "center" 
+    {:border "false" :style "padding: 10px"} 
+    [:h2 "主显示页面"] 
+    [:img {:src "/img/esp/en-input.jpg"}]
+    ))
+
+(defn frame-foot
+  "layout.foot"
+  [cfg]
+  (eui-foot-region))
+
+(defn frame-index
+  "@cfg 含如下参数的hashmap：
+  :name      应用名称，用于javascript函数的前缀，如 function demo_xxx()
+  :style     上方色调，[\"layout_north\" \"layout_title\"]（蓝色）或 [\"layout_north1\" \"layout_title1\"]（金色）
+  :title     应用名称，位于上方
+  :searcher  搜索框的label，位于右上方
+  :nav       导航条，位于左边
+  :menu      2层菜单条，位于上方
+  @m 客户化定制hashmap，有如下参数：
+  :left-or-right 'left' or 'right'
+  :top/left/right/main/foot 或者 frame-top | frame-left | frame-right | frame-main | frame-foot 的html片段
+  "
+  [cfg]
+  (eui-layout
+    {:id "layout1" :onload (str (:name cfg) "_onload()")}
+    ;----------------------- north
+    (frame-top cfg)   
+    ;----------------------- west or east
+    (frame-left-right cfg)
+    ;----------------------- center
+    (frame-main cfg)  
+    ;----------------------- south
+    (frame-foot cfg) ))
+  
+;---------------------------------- eui frame layout (-end-)
