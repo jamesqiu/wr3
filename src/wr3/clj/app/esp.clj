@@ -399,11 +399,20 @@
        ] )))
 
 ;;;; test
-;(with-mdb2 "esp"
+(def ens '(
+            
+            ))
+
+
+(with-mdb2 "esp"
+;  (let [rs (for [[p n] ens] {:name n :province p :type "d" :type2 "d6" :grade "一级"})]
+;    (mass-insert! :en rs)
+;    )
+
 ;  (let [r (fetch-one :en-stand2 :where {:i 8 :j 4 :name "规范档案"})]
 ;    (update! :en-stand2 r (assoc r :j 5))) 
 ;  (destroy! :en-stand1 {:name nil})
 ;  (drop-coll! :en-stand3)
 ;  (doseq [[i j k nam score & r] en-stand3]
 ;    (insert! :en-stand3 {:i i :j j :k k :name (str nam) :score score :required (if r 1 0)}))
-;  )
+  )
