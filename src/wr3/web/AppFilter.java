@@ -67,12 +67,14 @@ public class AppFilter implements Filter {
 		// 从web.xml设置取wr3.home, 没有则取webapp当期目录
 		context = config.getServletContext();
 		String wr3home = config.getInitParameter(BaseConfig.WR3HOME);
-		if (wr3home==null) wr3home = context.getRealPath("");
+		if (wr3home==null) wr3home = context.getRealPath(""); 
 		// 覆盖从java启动的wr3.home设置
 		System.setProperty(BaseConfig.WR3HOME, wr3home);
 		
 		// 设置context，如："/wr3"
-		String contextPath = context.getContextPath();
+//		String contextPath = context.getContextPath(); 
+		String contextPath = context.getContextPath();   
+//		System.out.println("debug AppFilter: contextPath=" + contextPath);
 		BaseConfig.set(BaseConfig.CONTEXT_PATH, contextPath);
 		
 		// 提示基本配置

@@ -149,5 +149,5 @@
 
 ;; 下面的方法写不写皆可
 (defn -doPost 
-  [_ request response]
-  (-doGet nil request response))
+  [this request response]
+  (-doGet this request response))

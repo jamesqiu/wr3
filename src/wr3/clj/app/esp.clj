@@ -28,18 +28,21 @@
   {:name "esp"
    :style (map #(str % "") ["layout_north" "layout_title"])  ; "" 或者 "1"
    :title "交通运输企业安全生产标准化管理系统（试行）"
-   :searcher ["000001" ; default-value
-              ["交通运输企业搜索" "range1" "icon-ok"] ; label name icon
-              ["评审人搜索" "range2" "icon-tip"] ]
+   :searcher ["张" ; default-value
+              ["考评人员搜索" "range_pn" "icon-ok"] ; label name icon
+              ["考评机构搜索" "range_org" "icon-ok"]
+              ["交通运输企业搜索" "range_en" "icon-tip"] ]
    :nav [["考评员" "icon-pen" ; title id
-          ["在线申请考评证书" "icon-list"    "pn-input"] ; title icon id 
+          ["考评员列表" "icon-list"    "pn-list"] ; title icon id 
           ]
          ["考评机构" "icon-pen" ; title id
+          ["考评机构列表" "icon-list"  "org-list"] ; title icon id 
+          ["达标考评" "icon-list"    "stand-list"] ; title icon id 
           ["在线申请考评资格" "icon-list"    "org-input"] ; title icon id 
           ["管理考评员" "icon-list"    "indic0_bt"] ; title icon id 
-          ["评估企业" "icon-list"    "org-eval"] ; title icon id 
           ]
          ["交通运输企业"           "icon-pen" ; title id
+          ["企业列表" "icon-list"  "en-list"] ; title icon id 
           ["在线申请"          "icon-list"    "indic0_bt"] ; title icon id 
           ["达标标准自评"          "icon-list"    "indic0_bt"] ; title icon id 
           ]
@@ -132,6 +135,7 @@
           ["在线填报" "icon-list"    "pn-input"] ; title icon id 
           ["选择考评机构" "icon-list"    "pn-process"] 
           ["企业年审" "icon-list"    "pn-process"] 
+          ["变更申请" "icon-list"    "en-change"] 
           ]
          ]   
    })
@@ -227,6 +231,15 @@
   {1 "甲类"
    2 "乙类"
    3 "丙类"})
+; 数据项英文、中文对照
+(def dd-meta
+  {:name "名称"
+   :province "省份"
+   :type "类型"
+   :type2 "细类"
+   :grade "级别"
+   })
+
 ; 考评员申请表
 (def cfg-apply-pn ; [name id {:t :title ..}] :t类型,不写时为text 
   [
@@ -248,7 +261,7 @@
    ["现从事专业" "prof"]
    ["申请专业" "type"] ; 最多两类
    ["申请级别" "grade" {:t dd-en-grade}]
-   ["主要学习（培训）经历" "train" {:t 'textarea}]
+   ["主要学习（培<br/>训）经历" "train" {:t 'textarea}]
    ["主要工作简历" "resume" {:t 'textarea}]
    ["专业工作业绩" "perf" {:t 'file}]
    ["相关证明文件" "proof" {:t 'file :title "包括身份证明、学历证明以及其他资格证的电子文档等（pdf, doc或者jpg格式）"}]
@@ -279,21 +292,22 @@
 
 (defn- input-form-
   [form title]
-  (let [css-label "font-family:微软雅黑; font-size:14px; vertical-align:center; height: 35px"]
+  (let [css-label "font-family:微软雅黑; font-size:14px; vertical-align:center; height: 35px; border-bottom:1px dotted gray"]
     (html
       [:table 
        [:caption {:style "padding: 5px"} [:h1 title]]
        (for [[nam id {t :t v :v require :require title :title}] form]
          [:tr 
-          [:td {:align "right" :style css-label} [:label (str nam "：")]]
-          [:td (cond 
-                 (true? require)       (eui-text {:id id :required "true" :value v :title title})
-                 (= t 'textarea)       (eui-textarea {:id id} v)
-                 (= t 'file)           (eui-text {:id id :type "file"})
-                 (= t 'email)          (eui-email {:id id})
-                 (map? t)              (eui-combo {:id id :v v} t)
-                 (vector? t)           (eui-combo {:id id :v v} (apply array-map (flatten (for [e t] [e e]))))
-                 :else                 (eui-text {:id id :value v :title title}))
+          [:td {:style css-label} [:label (str nam "：")]]
+          [:td {:style "border-bottom:1px dotted gray"}
+           (cond 
+             (true? require)       (eui-text {:id id :required "true" :value v :title title})
+             (= t 'textarea)       (eui-textarea {:id id} v)
+             (= t 'file)           (eui-text {:id id :type "file"})
+             (= t 'email)          (eui-email {:id id})
+             (map? t)              (eui-combo {:id id :v v} t)
+             (vector? t)           (eui-combo {:id id :v v} (apply array-map (flatten (for [e t] [e e]))))
+             :else                 (eui-text {:id id :value v :title title}))
            ]])
        [:tfoot [:tr [:td {:colspan 2 :align "center" :style "padding: 15px"} 
                      (eui-button {} " 保 存 ") (space 5)
@@ -332,21 +346,50 @@
                                                 :province (if (> (count v) 3) (subs v 0 2) v)
                                                 v)])) ]) } ))
 
-(defn- ens-
-  []
-  (with-mdb2 "esp" (vec (fetch :en))))
+(defn- data-
+  "@tb :pn | :en | :org"
+  [tb]
+  (with-mdb2 "esp" 
+    (vec (fetch tb))))
 
+(defn- search-
+  "@tb :pn | :en | :org
+  @s 名字字符串"
+  [tb s]
+  (with-mdb2 "esp" 
+    (vec (fetch tb :limit 100 :where {:name (re-pattern (or s ""))}))))
+  
+(defn pn-list
+  "service: 考评员列表"
+  [id]
+  (let [tb :pn
+        rt (if id (search- tb id) (data- tb))]
+    (html
+      [:h1 (format "考评人员列表（%s 名）" (count rt))]
+      (result-html- rt '[姓名 单位 属地] [:name :org :from]))))
+  
+(defn org-list
+  "service: 企业列表"
+  [id]
+  (let [tb :org
+        rt (if id (search- tb id) (data- tb))]
+    (html
+      [:h1 (format "交通运输企业列表（%s 名）" (count rt))]
+      (result-html- rt '[机构名称 所属省份] [:name :province]))))
+  
 (defn en-list
   "service: 企业列表"
-  []
-  (html
-    [:h1 "交通运输企业列表"]
-    (result-html- (ens-) '[所属省份 企业名称 企业类型 等级] [:province :name :type :grade])))
+  [id]
+  (let [tb :en
+        rt (if id (search- tb id) (data- tb))]
+    (html
+      [:h1 (format "交通运输企业列表（%s 名）" (count rt))]
+      (result-html- rt '[所属省份 企业名称 企业类型 等级] [:province :name :type :grade]))))
   
 (defn en-analysis
   "service: 企业统计分析"
   []
-  (let [rt (ens-)
+  (let [rt (data- :en)
         rt1 (group-by :province rt)
         m (for [[p ls] rt1] [p (count ls)])
         m1 (sort-by #(- (second %)) m)]
@@ -355,6 +398,20 @@
       (barf (apply array-map (flatten m1)) {:x "省份" :y "一级企业数量"})
       (pief (apply array-map (flatten m1)) {})
       )))
+
+(defn stand-list
+  "service: 列出所有的达标标准"
+  []
+  (let []
+    (html
+      [:center [:h1 "达标标准考评（五大类16小类）"]]
+      (for [[k1 v1] dd-type]
+        (html 
+          [:h2 v1 "："]
+          (for [[k2 v2] (filter #(.startsWith (key %) k1) dd-type2)]
+            (eui-button {:href "/c/esp/stand" :target "_blank" :style "margin: 5px"} 
+                        v2)))
+      ))))
 
 (defn- get-stand-
   [tb]
@@ -398,38 +455,32 @@
         [:tr [:td {:colspan 5} [:h2 "注：打 “ <font color=red>★</font> ” 的为必备项，必须完全满足。"]]]]
        ] )))
 
+;;; 测试文件上传
+(defn upload
+  []
+  (html-body
+    [:form {:name "form1" :method "post" :ENCTYPE "multipart/form-data" :action "/c/esp/file"}
+     [:label "文件："]
+     [:input {:type "file" :name "myfile"}]
+     [:input {:type "submit"}] ] ))
+
+(import 'wr3.upload.FileUpload 'wr3.upload.File 'wr3.util.Charsetx)
+
+(defn file
+  [request]
+  (let [fu (doto (FileUpload.) (.initialize request) .upload)
+        myfile (.getFile (.getFiles fu) 0)
+        fname (.getFileName myfile)
+        fsize (.getSize myfile)]
+    (html-body
+      (when (not (.isMissing myfile))
+        (do
+          (.saveAs myfile (str "f:/temp/" fname)) 
+          [:h1 (format "文件名: %s (大小：%s)" fname fsize)]))
+      "文件上载完成" )))
+
 ;;;; test
-(def ens '(
-["大同交通运输执法局新荣区分局"	"李治"]
-["大同交通运输执法局阳高县分局"	"雷婷婷"]
-["朔州交通运输执法局平鲁区分局"	"张芳"]
-["朔州交通运输执法局应县分局"	"赵玉林"]
-["忻州交通运输执法局偏关县分局"	"魏胜"]
-["忻州交通运输执法局保德县分局"	"石立东方"]
-["忻州交通运输执法局神池县分局"	"兰春瑶"]
-["吕梁交通运输执法局中阳县分局"	"刘琦"]
-["吕梁交通运输执法局兴县分局"	"秦飞"]
-["吕梁交通运输执法局柳林县分局"	"孔宪超"]
-["吕梁交通运输执法局石楼县分局"	"李川"]
-["阳泉交通运输执法局"	"杜振科"]
-["阳泉交通运输执法局矿区分局"	"毋少娟"]
-["阳泉交通运输执法局郊区分局"	"王小娟"]
-["阳泉交通运输执法局平定县分局"	"杜莎"]
-["阳泉交通运输执法局盂县分局"	"宋璐璐"]
-["长治交通运输执法局长治县分局"	"刘少波"]
-["长治交通运输执法局沁源县分局"	"解世峰"]
-["长治交通运输执法局平顺县分局"	"郝智敏"]
-["长治交通运输执法局屯留县分局"	"霍鹏"]
-["晋城交通运输执法局阳城县分局"	"茹君丽"]
-["临汾交通运输执法局隰县分局"	"温健"]
-["临汾交通运输执法局吉县分局"	"吕毅"]
-["运城交通运输执法局芮城县分局"	"薛晋"]
-["运城交通运输执法局万荣县分局"	"陈泽新"]
-["运城交通运输执法局闻喜县分局"	"田昀"]
-            ))
-
-
 ;(with-mdb2 "esp"
-;  (let [rs (for [[k v] ens] {:name k :province "山西省"})]
-;    (mass-insert! :org rs) )
+;  (let [rs (for [[nam date n] ens] {:yyyy 2009 :name nam :date date :death n})]
+;    (mass-insert! :accident rs) )
 ;  )

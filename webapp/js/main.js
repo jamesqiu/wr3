@@ -2820,7 +2820,13 @@ function bank_onload() {
  * esp 点击搜索按钮后的动作
  */
 function esp_search(v, n) {
-	alert('\n搜索关键字：' + v + '\n搜索范围：' + n)
+	if (n=="range_pn") {
+		layout_load_center('/c/esp/pn-list/'+v)
+	} else if (n=="range_en") {
+		layout_load_center('/c/esp/en-list/'+v)
+	} else {
+		alert('\n搜索关键字：' + v + '\n搜索范围：' + n)
+	}
 }
 
 function esp_onload() {
@@ -2831,8 +2837,10 @@ function esp_onload() {
 			  '21-pn':'pn-input', '22-org':'org-input',
 			  '52-analysis':'en-analysis',
 			  // 左侧连接
-			  'pn-input':'pn-input',
-			  'org-input':'org-input', 'org-eval':'stand'}
+			  'pn-input':'pn-input', 'pn-list':'pn-list',
+			  'en-list':'en-list',
+			  'org-input':'org-input', 'org-list':'org-list', 'org-eval':'stand',
+			  'stand-list':'stand-list'}
 	$.each(m2, function(k, v) {
 		$('a#'+k).click(function() {
 			layout_load_center('/c/esp/'+v)
