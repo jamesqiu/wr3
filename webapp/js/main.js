@@ -2824,6 +2824,8 @@ function esp_search(v, n) {
 		layout_load_center('/c/esp/pn-list/'+v)
 	} else if (n=="range_en") {
 		layout_load_center('/c/esp/en-list/'+v)
+	} else if (n=="range_org") {
+		layout_load_center('/c/esp/org-list/'+v)
 	} else {
 		alert('\n搜索关键字：' + v + '\n搜索范围：' + n)
 	}
