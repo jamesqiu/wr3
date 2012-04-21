@@ -60,7 +60,7 @@
 
 ;;; ------------ query var map 处理
 (defn query-vars
-  "获得request的queryString中的key-value，以Map形式返回"
+  "获得request的queryString中的key-value，以hash-map形式返回"
   [^HttpSession request]
   (if (nil? request) {}
     (let [m (.getParameterMap request)]

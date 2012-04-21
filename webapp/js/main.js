@@ -2820,6 +2820,7 @@ function bank_onload() {
  * esp 点击搜索按钮后的动作
  */
 function esp_search(v, n) {
+	var v = encodeURI(v) // 这行代码是专门对付垃圾IE的
 	if (n=="range_pn") {
 		layout_load_center('/c/esp/pn-list/'+v)
 	} else if (n=="range_en") {
@@ -2833,14 +2834,17 @@ function esp_search(v, n) {
 
 function esp_onload() {
 
+	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
+	
 	app_linkbutton_css()
 	
 	var m2 = {'11-input':'en-input', '12-mng':'en-list',
 			  '21-pn':'pn-input', '22-org':'org-input',
 			  '52-analysis':'en-analysis',
 			  // 左侧连接
-			  'pn-input':'pn-input', 'pn-list':'pn-list',
-			  'en-list':'en-list',
+			  'pn-input':'pn-input', 'pn-list':'pn-list', 'pn-process':'pn-process','pn-learn':'pn-learn',
+			  'pn-olap':'pn-olap',
+			  'en-list':'en-list','en-input':'en-input','en-analysis':'en-analysis',
 			  'org-input':'org-input', 'org-list':'org-list', 'org-eval':'stand',
 			  'stand-list':'stand-list'}
 	$.each(m2, function(k, v) {
@@ -2849,6 +2853,13 @@ function esp_onload() {
 		})
 	})			
 
+}
+
+function esp_input_save(form) {
+	var url = '/c/esp/input-save/'+form +'?' + $("form").serialize() 
+	$.get(url, function(data) {
+		alert('提示：' + data)
+	})
 }
 
 

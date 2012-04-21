@@ -14,7 +14,7 @@ a:link,a:visited,a:hover {
 
 h1,h2 {
 	color: #006dba;
-	font-family: helvetica, 微软雅黑;
+	font-family: 微软雅黑,helvetica;
 	font-weight: bold;
 	margin: .8em 0 .3em 0;
 }

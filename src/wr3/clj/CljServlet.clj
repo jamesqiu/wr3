@@ -2,7 +2,9 @@
   可执行其他.clj文件函数的servlet，在web.xml中配置:
    1.支持xml、json、bin, 可以参考web.xml中mimi-type的配置，queryString格式如下：
      ?mime-type=text/xml&charset=gbk （不指定则缺省为text/html, utf-8）
-   2.使用命名空间中的auth函数来进行权限控制，auth函数第一个参数为request，第二个参数为fname（可选），最后带一个& args，
+   2.app应用如esp.clj使用命名空间中的auth函数来进行权限控制，
+     auth函数必须3个以上参数，第一个参数会传入request，第二个参数会传入fname（可选），第三个参数会传入ids；
+     如果根本不想使用这些参数，可以直接带一个 & args 避免调用出错，或者用1～2个参数，最后一个用 & args
      返回true表示通过，继续输出页面；返回 false 等则表示验证没有通过，跳转到/login.html;
    3.类似Play!，自动绑定querystring中的值和app/*.clj函数中的同名参数，例如 clj1/foo/01/012?name=james&age=30 对应函数为
      (defn foo [name age] ...) 
@@ -125,7 +127,7 @@
         ; 判断能否有权限执行本函数fn，无auth函数视为有权限
         need-reload (require+ ns (need-reload? context ns))
         auth (if-let [f (and (not= fn "auth") (fget ns "auth"))] 
-               (f request fn) 
+               (f request fn ids) 
                true) 
         rt (when (true? auth)
              (if (zero? (fargc ns fn)) 

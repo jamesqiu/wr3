@@ -14,6 +14,17 @@
   {"admin" {:name "管理员" :pwd "810016a5056c4f3f7dd74b3ff02b8f5e" :roles "root,user"} 
    "user" {:name "用户" :pwd "1a1dc91c907325c69271ddf0c944bc72" :roles "user"} ; 密码为"pass"        
    "guest" {:name "访客" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "guest"} ; 密码为""
+   ; esp 交通运输企业安全生产标准化管理系统需要的用户
+   "pn1" {:name "考评员1" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "pn"}
+   "pn2" {:name "考评员2" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "pn"}
+   "en1" {:name "企业1" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "en"}
+   "en2" {:name "企业2" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "en"}
+   "org1" {:name "考评机构1" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "org"}
+   "org2" {:name "考评机构2" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "org"}
+   "mot1" {:name "交通部用户1" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "mot"}
+   "mot2" {:name "交通部用户2" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "mot"}
+   "mct1" {:name "交通厅用户1" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "mct"}
+   "mct2" {:name "交通委用户2" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "mct"}
    })
 
 (defn- ok?
@@ -24,7 +35,7 @@
       (dissoc user :pwd))))
 
 (defn login
-  "service: 提供用户名和密码.
+  "service: 提供用户名和密码验证服务.
   成功则在session中写入用户名，roles等，并返回如：{:name '管理员', :roles 'root,user', :url '前往的页面url'}
   失败则返回'null'。"
   [id ids request uid pwd]
@@ -47,7 +58,7 @@
     "用户尚未登录.")) 
 
 (defn who
-  "service: 返回session中名为'wr3user'的当前用户的json对象{:uid .. :name .. :roles ..}，未登录则返回'null' "
+  "service: 返回session中名为'wr3user'的当前已登录用户的json对象{:uid .. :name .. :roles ..}，未登录则返回'null' "
   [request]
   (if-let [uid (wr3user request)]
     (let [user (users uid)]
@@ -58,10 +69,6 @@
   "service: 返回session的wr3url中记录的登录后前往的页面url，没有则返回'' "
   [request]
   (or (session request "wr3url") ""))
-
-(defn is-user
-  [request uid]
-  (= (:uid (who request)) uid))
   
 (defn index
   "app: 使用方法"
@@ -71,8 +78,6 @@
     (html-body
       (map #(html [:div (:name %) ": " [:br] "--- " (:doc %)]) docs))
     ))
-
-
 
 ;(ok? "user" "pass")
     

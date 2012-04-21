@@ -202,3 +202,17 @@
   [] (Datetime/date (Datetime/add 0 1 0))) 
 
 
+;; conj cons 函数对vector和list的行为不一致，很容易引起混乱，改造如下：
+(defn conj+ 
+  "conj 和 conj+ 的区别，(conj  [1 2] 3) -> [1 2 3] , (conj '(1 2) 3) -> '(3 1 2)
+  conj+统一增加元素在后，(conj+ [1 2] 3) -> [1 2 3] , (conj '(1 2) 3) -> '(1 2 3) 
+  todo: 多个参数的情况还是有点不对，需要调整"
+  ([coll x] (if (list? coll) (concat coll (list x)) (conj coll x)))
+  ([coll x & xs] (if xs
+                   (recur (conj+ coll x) (first xs) (next xs))
+                   (conj+ coll x))))
+
+(defn cons+
+  "cons 和 cons+ 的区别，(cons  1 '(2 3)) -> '(1 2 3), (cons  1 [2 3]) -> '(1 2 3), 类型由vector变为list；
+  cons+统一为和输入一致，(cons+ 1 '(2 3)) -> '(1 2 3), (cons+ 1 [2 3]) ->  [1 2 3]"
+  [x coll] (if (vector? coll) (into (vector x) coll) (cons x coll)))
