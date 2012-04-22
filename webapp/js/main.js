@@ -2843,7 +2843,7 @@ function esp_onload() {
 			  '52-analysis':'en-analysis',
 			  // 左侧连接
 			  'pn-input':'pn-input', 'pn-list':'pn-list', 'pn-process':'pn-process','pn-learn':'pn-learn',
-			  'pn-olap':'pn-olap',
+			  'pn-olap':'pn-olap','pn-renew':'pn-renew',
 			  'en-list':'en-list','en-input':'en-input','en-analysis':'en-analysis',
 			  'org-input':'org-input', 'org-list':'org-list', 'org-eval':'stand',
 			  'stand-list':'stand-list'}

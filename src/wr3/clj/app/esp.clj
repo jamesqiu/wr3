@@ -108,12 +108,14 @@
    :title "交通运输企业安全生产标准化——考评员在线申请系统（试行）"
    :nav [
          ["考评员" "icon-pen" ; title id
-          ["在线申请考评证书" "icon-list"    "pn-input"] ; title icon id 
-          ["在线申请进度查询" "icon-list"    "pn-process"] 
-          ["培训、考试情况查询" "icon-list"  "pn-learn"] 
+          ["申请考评证书" "icon-list"    "pn-input"] ; title icon id 
+          ["申请进度" "icon-list"    "pn-process"] 
+          ["培训、考试情况" "icon-list"  "pn-learn"] 
+          ["换证申请" "icon-list"  "pn-renew"] 
           ["使用帮助"          "icon-help"   "help_bt"]
           ]
-         ]  
+         ] 
+   :frame-main (html [:script "layout_load_center('/static/esp/about-pn.html')"])
    })
 
 (def frame-cfg-org
@@ -190,6 +192,10 @@
                    "mot" frame-cfg-mot
                    "not-found"))
     (index-all)))
+
+(defn main-pn
+  []
+  (html [:h1 "hello"]))
 
 ;;------------------- 
 ; 申请类别
@@ -276,77 +282,79 @@
 ; 考评员申请表
 (def cfg-apply-pn ; [name id {:t :title ..}] :t类型,不写时为text 
   [
-   ["姓名" "name" {:require true}]
-   ["性别" "sex" {:t ["男" "女"]}]
-   ["出生年月" "birth" {:t 'date :title "注意：年龄原则上不得超过65周岁；格式如1980-5"}]
-   ["籍贯" "from" {:require true}]
-   ["照片" "photo" {:t 'file}]
-   ["身份证号" "pid" {:t 'pid}]
-   ["工作单位" "org"]
-   ["职务/职称" "title"]
-   ["通讯地址" "address"]
-   ["邮  编" "pcode" {:t 'pcode}]
-   ["联系电话" "tel"]
-   ["传真号码" "fax"]
-   ["手机号码" "mobile"]
-   ["电子邮箱" "email" {:t 'email}]
-   ["文化程度" "edu"]
-   ["所学专业" "major" {:title "注意：必须具备交通运输相关专业大学专科以上学历"}]
-   ["现从事专业" "prof"]
-   ["申请专业" "type" {:t dd-type :title "考评员申请的专业类型不得多于二种"}] ; 最多两类
-   ["申请级别" "grade" {:t dd-en-grade}]
-   ["主要学习（培<br/>训）经历" "train" {:t 'textarea}]
-   ["主要工作简历" "resume" {:t 'textarea}]
-   ["专业工作业绩" "perf" {:t 'file}]
-   ["相关证明文件" "proof" {:t 'file :title "包括身份证明、学历证明以及其他资格证的电子文档等（pdf, doc或者jpg格式）"}]
+   ["姓名" :name {:require true}]
+   ["性别" :sex {:t ["男" "女"]}]
+   ["出生年月" :birth {:t 'date :title "注意：年龄原则上不得超过65周岁；格式如1980-5"}]
+   ["籍贯" :from {:require true}]
+   ["照片" :photo {:t 'file}]
+   ["身份证号" :pid {:t 'pid}]
+   ["工作单位" :org]
+   ["职务/职称" :title]
+   ["通讯地址" :address]
+   ["邮  编" :pcode {:t 'pcode}]
+   ["联系电话" :tel]
+   ["传真号码" :fax]
+   ["手机号码" :mobile]
+   ["电子邮箱" :email {:t 'email}]
+   ["文化程度" :edu]
+   ["所学专业" :major {:title "注意：必须具备交通运输相关专业大学专科以上学历"}]
+   ["现从事专业" :prof]
+   ["申请专业" :type {:t dd-type :v "s" :title "考评员申请的专业类型不得多于二种"}] ; 最多两类
+   ["申请级别" :grade {:t dd-en-grade}]
+   ["主要学习（培<br/>训）经历" :train {:t 'textarea}]
+   ["主要工作简历" :resume {:t 'textarea}]
+   ["专业工作业绩" :perf {:t 'file}]
+   ["相关证明文件" :proof {:t 'file :title "包括身份证明、学历证明以及其他资格证的电子文档等（pdf, doc或者jpg格式）"}]
    ])
 ; 考评机构申请表  
 (def cfg-apply-org 
-  [["评审机构名称" "name" {:require true :v "xxx"}]
-   ["评审机构资质" "qual" {:t dd-org-grade :v "甲类"}]
-   ["评审人员姓名" "person" {:require true :v "张三"}]
-   ["评审人员编码" "pcode" {:require true :v "007"}]
-   ["评审人员资质" "pqual" {:t '[A级 B级 C级] :v 'C级}]
+  [["评审机构名称" :name {:require true :v "xxx"}]
+   ["评审机构资质" :qual {:t dd-org-grade :v "甲类"}]
+   ["评审人员姓名" :person {:require true :v "张三"}]
+   ["评审人员编码" :pcode {:require true :v "007"}]
+   ["评审人员资质" :pqual {:t '[A级 B级 C级] :v 'C级}]
    ])
 ; 企业申请表
 (def cfg-apply-en ; en-input-form 
-  [["企业名称" "name" {:require true :v "xxx"}]
-   ["行政区划" "region" {:t '[东北 华北 华南 西南 西北 华中 华东] :v '西南}]
-   ["法人信息" "legel" {:t 'textarea :v "aaa\nbbbb\nccccc"}]
-   ["企业类型" "type" {:t dd-type :v "s"}]
-   ["企业具体分类" "type2" {:t dd-type2 :v "s1"}]
-   ["企业地址" "address" "" {:title "选择GIS坐标"}]
-   ["企业所在地描述" "belong" {:t 'textarea}]
-   ["安全生产标准化等级" "grade" {:t [:一级 :二级 :三级] :v :一级}]
-   ["联系人信息" "contact" ]
-   ["安全生产组织架构" "safe" {:t 'file}]
-   ["企业法人资格证件" "qual" {:t 'file}] 
-   ["经营许可证" "license" {:t 'file}]
+  [["企业名称" :name {:require true :v "xxx"}]
+   ["行政区划" :region {:t '[东北 华北 华南 西南 西北 华中 华东] :v '西南}]
+   ["法人信息" :legel {:t 'textarea :v "aaa\nbbbb\nccccc"}]
+   ["企业类型" :type {:t dd-type :v "s"}]
+   ["企业具体分类" :type2 {:t dd-type2 :v "s1"}]
+   ["企业地址" :address {:title "选择GIS坐标"}]
+   ["企业所在地描述" :belong {:t 'textarea}]
+   ["安全生产标准化等级" :grade {:t [:一级 :二级 :三级] :v :一级}]
+   ["联系人信息" :contact]
+   ["安全生产组织架构" :safe {:t 'file}]
+   ["企业法人资格证件" :qual {:t 'file}] 
+   ["经营许可证" :license {:t 'file}]
    ])
 
 (defn- input-form-
   "统一录入表单
   @cfg 表单录入项的配置
-  @m 含 {:title .. :form ..} 的其他定制化参数"
+  @m 含 {:title .. :form ..} 的其他定制化参数, :title为标题，:form 为区别标识如 'en', 'pn', 'org' "
   [cfg m]
   (let [css-label "font-family:微软雅黑; font-size:14px; vertical-align:center; height: 35px; border-bottom:1px dotted gray"]
     (html
       [:form {:method "POST" :action (format "/c/esp/input-save")}
-       [:table {:align "center"}
+       [:table {:align "left" :style "margin-left: 30px"}
         [:caption {:style "padding: 5px"} [:h1 (m :title)]]
         (for [[nam id {t :t v :v require :require title :title}] cfg]
-          [:tr 
-           [:td {:style css-label} [:label (str nam "：")]]
-           [:td {:style "border-bottom:1px dotted gray"}
-            (cond 
-              (true? require)       (eui-text {:id id :name id :required "true" :value v :title title})
-              (= t 'textarea)       (eui-textarea {:id id :name id} v)
-              (= t 'file)           (eui-text {:id id :name id :type "file"})
-              (= t 'email)          (eui-email {:id id :name id})
-              (map? t)              (eui-combo {:id id :name id :v v} t)
-              (vector? t)           (eui-combo {:id id :name id :v v} (apply array-map (flatten (for [e t] [e e]))))
-              :else                 (eui-text {:id id :name id :value v :title title}))
-            ]])
+          (let [sid (name id)
+                m {:id sid :name sid :value v :title title}]
+            [:tr 
+             [:td {:style css-label} [:label (str nam "：")]]
+             [:td {:style "border-bottom:1px dotted gray"}
+              (cond 
+                (true? require)  (eui-text     (into m {:required "true"}))
+                (= t 'textarea)  (eui-textarea m v)
+                (= t 'file)      (eui-text     (into m {:type "file"}))
+                (= t 'email)     (eui-email    m)
+                (map? t)         (eui-combo    m t)
+                (vector? t)      (eui-combo    m (apply array-map (flatten (for [e t] [e e]))))
+                :else            (eui-text     m))
+              ]]))
         [:tfoot [:tr [:td {:colspan 2 :align "center" :style "padding: 15px"} 
                       (eui-button {:onclick (format "esp_input_save('%s')" (m :form))} " 保 存 ") (space 5)
                       (eui-button {:onclick (format "esp_input_submit('%s')" (m :form))} "提交申请") (space 5)
@@ -489,7 +497,19 @@
   "service: 考评员培训、考试查询"
   []
   (html
-    [:h1 "尚无培训记录和考试成绩。"]))
+    [:h1 "尚无培训记录和考试成绩。"]
+    [:h2 "1、首次培训情况（时间不少于24个学时）；"]
+    [:h2 "2、年度继续教育情况（时间不少于8个学时）；"]
+    ))
+
+(defn pn-renew
+  "service: 换证申请"
+  []
+  (html
+    [:h1 "换证申请原因："]
+    [:h2 "1、考评员资格证5年有效期慢提前3个月申请换证"] (space 6) (eui-button {} "申请")
+    [:h2 "2、跨管辖范围流动申请换发新证书"] (space 6) (eui-button {} "申请")
+    ))
   
 (defn pn-olap
   "service: 考评员分析"
@@ -602,11 +622,14 @@
         ])
 
 ;;;; test
-;(with-mdb2 "esp"
-;  (let [rs (fetch :en-stand1 :where {:type2 "d2"})]
-;    (doseq [r rs]
+(with-mdb2 "esp"
+  (let [rs (fetch :pn :limit 100)
+        female (fn [s] (some #(has? s %) ["婷" "娟" "瑶" "莎" "璐璐" "丽"]))]
+    (doseq [r rs]
+      (let [m {:sex (if (female (:name r)) "女" "男")
+               :birth (str (+ 1950 (random 30)) "." (+ 1 (random 11)))}]
+        (println (into m {:name (:name r)}))
 ;      (update! :en-stand1 r (update-in r [:i] inc)))
-;    (mass-insert! :en-stand3 rs) 
-;    )
-;  )
+        )))
+  )
 ;(pn-olap)

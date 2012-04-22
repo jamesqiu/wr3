@@ -342,10 +342,10 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   
 (defn eui-combo
   "得到一个下拉选择列表，需要在js中初始化: $('#id1').combobox()，参数：
-  m: {:id 'id1' :v '02'} id是必须的, :v 缺省选中的value
+  m: {:id 'id1' :value '02'} id是必须的, :value 缺省选中的value
   options: 如'{01 java 02 ruby 03 python}"
   [m options]
-  (tags :select m nil (for [[k v] options] [:option (merge {:value k} (when (= k (:v m)) {:selected "true"})) v])))
+  (tags :select m nil (for [[k v] options] [:option (merge {:value k} (when (= k (:value m)) {:selected "true"})) v])))
 ;  (tags :select {:id id} nil (map #(vector :option {:value (key %)} (val %)) options)))
   
 (defn eui-text
@@ -550,9 +550,10 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   (eui-region 
     "center" 
     {:border "false" :style "padding: 10px"} 
-    [:h2 "主显示页面"] 
-    [:img {:src "/img/esp/en-input.jpg"}]
-    ))
+    (if-let [fmain (:frame-main cfg)]
+      fmain
+      (html
+        [:h2 "主显示页面"] ))))
 
 (defn frame-foot
   "layout.foot"
