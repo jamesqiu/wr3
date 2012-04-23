@@ -3,7 +3,7 @@
      wr3.clj.app.esp)
 
 (use 'hiccup.core)
-(use 'wr3.clj.web 'wr3.clj.tb 'wr3.clj.s 'wr3.clj.n 'wr3.clj.chart)
+(use 'wr3.clj.web 'wr3.clj.tb 'wr3.clj.s 'wr3.clj.n 'wr3.clj.chart 'wr3.clj.u)
 (use 'somnium.congomongo 'wr3.clj.nosql 'wr3.clj.chart)
 
 (require '[wr3.clj.app.auth :as au])
@@ -108,11 +108,10 @@
    :title "交通运输企业安全生产标准化——考评员在线申请系统（试行）"
    :nav [
          ["考评员" "icon-pen" ; title id
-          ["申请考评证书" "icon-list"    "pn-input"] ; title icon id 
-          ["申请进度" "icon-list"    "pn-process"] 
+          ["申请考评证书" "icon-list"    "pn-apply"] ; title icon id 
           ["培训、考试情况" "icon-list"  "pn-learn"] 
           ["换证申请" "icon-list"  "pn-renew"] 
-          ["使用帮助"          "icon-help"   "help_bt"]
+          ["使用帮助" "icon-help" "pn-help"]
           ]
          ] 
    :frame-main (html [:script "layout_load_center('/static/esp/about-pn.html')"])
@@ -300,7 +299,6 @@
    ["所学专业" :major {:title "注意：必须具备交通运输相关专业大学专科以上学历"}]
    ["现从事专业" :prof]
    ["申请专业" :type {:t dd-type :v "s" :title "考评员申请的专业类型不得多于二种"}] ; 最多两类
-   ["申请级别" :grade {:t dd-en-grade}]
    ["主要学习（培<br/>训）经历" :train {:t 'textarea}]
    ["主要工作简历" :resume {:t 'textarea}]
    ["专业工作业绩" :perf {:t 'file}]
@@ -347,13 +345,13 @@
              [:td {:style css-label} [:label (str nam "：")]]
              [:td {:style "border-bottom:1px dotted gray"}
               (cond 
-                (true? require)  (eui-text     (into m {:required "true"}))
+                (true? require)  (eui-text     (into m {:required "true" :style "width: 250px"}))
                 (= t 'textarea)  (eui-textarea m v)
                 (= t 'file)      (eui-text     (into m {:type "file"}))
                 (= t 'email)     (eui-email    m)
                 (map? t)         (eui-combo    m t)
                 (vector? t)      (eui-combo    m (apply array-map (flatten (for [e t] [e e]))))
-                :else            (eui-text     m))
+                :else            (eui-text     (into m {:style "width: 250px"})))
               ]]))
         [:tfoot [:tr [:td {:colspan 2 :align "center" :style "padding: 15px"} 
                       (eui-button {:onclick (format "esp_input_save('%s')" (m :form))} " 保 存 ") (space 5)
@@ -365,10 +363,38 @@
   []
   (input-form- cfg-apply-en {:form "en" :title "交通运输企业安全生产标准化<font color=blue>企业</font>申请表"}))
 
+(defn- pn-of-
+  [uid]
+  (with-mdb2 "esp"
+    (fetch-one :pn :where {:uid uid})))
+
+(defn- pn-apply-of-
+  [uid]
+  (with-mdb2 "esp"
+    (vec (fetch :pn-apply :where {:uid uid}))))
+
+(defn pn-apply
+  "service: 考评员申请导航页"
+  [request]
+  (let [uid (wr3user request)
+        r1 (pn-of- uid)
+        rs2 (pn-apply-of- uid)]
+    (html
+      [:h1 (format "录入过的申请信息 %s 条" (if r1 1 0))]
+      (if r1
+        (eui-button {:href "#" :onclick "layout_load_center('/c/esp/pn-input')"}  "查看已录入的申请信息")
+        (eui-button {:href "#" :onclick "layout_load_center('/c/esp/pn-input')"} "初次申请考评证书"))
+      (when rs2
+        [:h1 (format "已提交过%s次申请（时间：%s）" (count rs2) (join (map :date rs2) "，"))]) )))
+
 (defn pn-input
   "service：评审人员在线申请"
-  []
-  (input-form- cfg-apply-pn {:form "pn" :title "交通运输企业安全生产标准化<font color=blue>考评员</font>申请表"}))
+  [request]
+  (let [r (pn-by-uid (wr3user request))
+        cfg (if r
+              (for [[n id m] cfg-apply-pn] [n id (merge {:v (id r)} m)])
+              cfg-apply-pn)]
+    (input-form- cfg {:form "pn" :title "交通运输企业安全生产标准化<font color=blue>考评员</font>申请表"})))
 
 (defn org-input
   "service：评审机构在线申请"
@@ -397,14 +423,30 @@
   ([rt head cols] (result-html- rt head cols {})))
 
 (defn input-save
-  "service: 考评员申请表保存"
+  "service: 考评员，考评机构，企业申请表保存
+  @id form名称如'pn' 'en' 'org' "
   [id request]
   (let [vars (query-vars request)
-        uid (str id "1")
+        uid (wr3user request)
+        tb (keyword id)
         m (into {:uid uid} (for [[k v] vars :when (not (nullity? v))] [k v]))]
     (with-mdb "esp" 
-      (update! (keyword id) {:uid uid} m))
-    (str "已保存" (vars "name"))))
+      (update! tb {:uid uid} m))
+    (str "已保存 " (vars "name") " 的申请。")))
+
+(defn input-submit
+  "service: 考评员，考评机构，企业申请表提交"
+  [id request]
+  (let [vars (query-vars request)
+        uid (wr3user request)
+        tb1 (keyword id)
+        tb2 (keyword (str id "-apply"))
+        m (into {:uid uid} (for [[k v] vars :when (not (nullity? v))] [k v]))]
+    (with-mdb "esp" 
+      (update! tb1 {:uid uid} m) ; 保存到基本信息表
+      (insert! tb2 (into m {:date (datetime)}))) ; 保存到申请表
+    (str "已提交 " (vars "name") " 的申请。")))
+
 
 (defn- data-
   "取出数据表所有记录
@@ -467,7 +509,7 @@
          [:tfoot 
           [:tr {:align "center" :height "50px"} 
            [:td {:colspan 2 } (eui-button {:href "#" :onclick "window.close();"} "关闭")]]]] ))))
-
+  
 (defn pn-form
   "service: 查看指定考评员的记录表单"
   [id]
@@ -507,8 +549,10 @@
   []
   (html
     [:h1 "换证申请原因："]
-    [:h2 "1、考评员资格证5年有效期慢提前3个月申请换证"] (space 6) (eui-button {} "申请")
-    [:h2 "2、跨管辖范围流动申请换发新证书"] (space 6) (eui-button {} "申请")
+    [:h2 "1、考评员资格证5年有效期慢提前3个月申请换证"] (space 6) 
+    (eui-button {:href "#" :onclick "layout_load_center('/c/esp/pn-input')"} "申请")
+    [:h2 "2、跨管辖范围流动申请换发新证书"] (space 6) 
+    (eui-button {:href "#" :onclick "layout_load_center('/c/esp/pn-input')"} "申请")
     ))
   
 (defn pn-olap
@@ -621,15 +665,21 @@
 (def m '[
         ])
 
+(defn- t1
+  "造pn表的数据字段" []
+  (with-mdb2 "esp"
+    (let [rs (fetch :pn)
+          female (fn [s] (some #(has? s %) ["婷" "娟" "瑶" "莎" "璐璐" "丽"]))]
+      (doseq [r rs]
+        (let [m {:_id ""
+                 :name ""
+                 :sex (if (female (:name r)) "女" "男")
+                 :birth (format "%s.%02d" (+ 1950 (random 30)) (+ 1 (random 11)))
+                 :title (nth ["科员" "副科" "正科" "副处" "正处"] (random 4))
+                 :mobile (format "13%s" (apply str (random-n 9 9)))
+                 :edu (nth ["大专" "大专" "本科" "本科" "本科" "研究生"] (random 5))
+                 :type (nth (keys dd-type) (random (dec (count dd-type))))
+                 }]
+          (update! :pn r (into m r)) ))) ))
+  
 ;;;; test
-(with-mdb2 "esp"
-  (let [rs (fetch :pn :limit 100)
-        female (fn [s] (some #(has? s %) ["婷" "娟" "瑶" "莎" "璐璐" "丽"]))]
-    (doseq [r rs]
-      (let [m {:sex (if (female (:name r)) "女" "男")
-               :birth (str (+ 1950 (random 30)) "." (+ 1 (random 11)))}]
-        (println (into m {:name (:name r)}))
-;      (update! :en-stand1 r (update-in r [:i] inc)))
-        )))
-  )
-;(pn-olap)

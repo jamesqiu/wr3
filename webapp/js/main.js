@@ -2842,22 +2842,29 @@ function esp_onload() {
 			  '21-pn':'pn-input', '22-org':'org-input',
 			  '52-analysis':'en-analysis',
 			  // 左侧连接
-			  'pn-input':'pn-input', 'pn-list':'pn-list', 'pn-process':'pn-process','pn-learn':'pn-learn',
-			  'pn-olap':'pn-olap','pn-renew':'pn-renew',
+			  'pn-input':'pn-input', 'pn-list':'pn-list', 'pn-learn':'pn-learn',
+			  'pn-olap':'pn-olap','pn-renew':'pn-renew','pn-apply':'pn-apply','pn-help':'/static/esp/about-pn.html',
 			  'en-list':'en-list','en-input':'en-input','en-analysis':'en-analysis',
 			  'org-input':'org-input', 'org-list':'org-list', 'org-eval':'stand',
 			  'stand-list':'stand-list'}
 	$.each(m2, function(k, v) {
 		$('a#'+k).click(function() {
-			layout_load_center('/c/esp/'+v)
+			var url = (0 == v.indexOf('/static/')) ? v : ('/c/esp/'+v)
+			layout_load_center(url)
 		})
-	})			
-
+	})
 }
 
 function esp_input_save(form) {
 	var url = '/c/esp/input-save/'+form +'?' + $("form").serialize() 
-	$.get(url, function(data) {
+	$.post(url, function(data) {
+		alert('提示：' + data)
+	})
+}
+
+function esp_input_submit(form) {
+	var url = '/c/esp/input-submit/'+form +'?' + $("form").serialize() 
+	$.post(url, function(data) {
 		alert('提示：' + data)
 	})
 }
