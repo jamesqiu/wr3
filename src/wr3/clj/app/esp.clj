@@ -44,21 +44,33 @@
               ["考评人员搜索" "range_pn" "icon-ok"] ; label name icon
               ["考评机构搜索" "range_org" "icon-ok"]
               ["交通运输企业搜索" "range_en" "icon-tip"] ]
-   :nav [["考评员" "icon-pen" ; title id
+   :nav [
+         ["待办事宜" "icon-pen" ; title id
+          ["考评机构申请受理" "icon-list"    "pn-list"] ; title icon id 
+          ["考评机构变更备案受理" "icon-list"    "pn-list"] ; title icon id 
+          ["考评机构换证受理" "icon-list"    "pn-list"] ; title icon id 
+          ["企业初次申请受理" "icon-list"    "pn-olap"] ; title icon id 
+          ["企业考评结论审核" "icon-list"    "pn-olap"] ; title icon id 
+          ["企业换证申请受理" "icon-list"    "pn-olap"] ; title icon id 
+          ["企业变更申请受理" "icon-list"    "pn-olap"] ; title icon id 
+          ]
+         ["考评员" "icon-pen" ; title id
           ["考评员列表" "icon-list"    "pn-list"] ; title icon id 
           ["考评员管理"          "icon-list"    "pn-olap"] ; title icon id 
           ]
          ["考评机构" "icon-pen" ; title id
           ["考评机构列表" "icon-list"  "org-list"] ; title icon id 
-          ["达标考评" "icon-list"    "stand-list"] ; title icon id 
+          ["资格证书制发" "icon-list"    "org-input"] ; title icon id 
           ["资格撤销" "icon-list"    "org-input"] ; title icon id 
-          ["考评机构管理"          "icon-list"    "indic0_bt"] ; title icon id 
+          ["年度工作报告"          "icon-list"    "indic0_bt"] ; title icon id 
+          ["考评情况汇总表"          "icon-list"    "indic0_bt"] ; title icon id 
           ]
          ["交通运输企业"           "icon-pen" ; title id
           ["企业列表" "icon-list"  "en-list"] ; title icon id 
-          ["在线申请"          "icon-list"    "indic0_bt"] ; title icon id 
-          ["达标标准自评"          "icon-list"    "indic0_bt"] ; title icon id 
-          ["交通运输企业管理"          "icon-list"    "en-analysis"] ; title icon id 
+          ["资格证书制发" "icon-list"    "org-input"] ; title icon id 
+          ["附加考评" "icon-list"    "org-input"] ; title icon id 
+          ["资格撤销" "icon-list"    "org-input"] ; title icon id 
+          ["年度工作报告"          "icon-list"    "en-analysis"] ; title icon id 
           ]
          ["交通运输管理部门"           "icon-pen" ; title id
           ["统计分析"          "icon-list"    "indic0_bt"] ; title icon id 
@@ -68,7 +80,7 @@
           ["使用帮助"          "icon-help"   "help_bt"]
           ]
          ]   
-   :menu [["企业安全生产标准化申报系统" 
+   :menu_del [["企业安全生产标准化申报系统" 
            ["企业在线填报子系统"     "11-input"] 
            ["填报管理子系统"       "12-mng"]
            ]
@@ -122,22 +134,24 @@
    :style (map #(str % 1) ["layout_north" "layout_title"])  ; "" 或者 "1"
    :title "交通运输企业安全生产标准化——考评机构管理系统（试行）"
    :nav [
-         ["企业考评" "icon-pen" ; title id
-          ["企业考评受理" "icon-list" "en-input"] ; title icon id 
-          ["企业换证及附加考评" "icon-list" "en-eval"] 
-          ["考评企业查询统计" "icon-list" "en-stat"] 
-          ["考评情况汇总表" "icon-list" "en-report"] 
-          ]
-         ["考评员" "icon-pen" ; title id
-          ["在线申请考评证书" "icon-list"    "pn-input"] ; title icon id 
-          ["在线申请进度查询" "icon-list"    "pn-process"] 
-          ["考评员档案管理" "icon-list"    "pn-process"] 
-          ]
-         ["考评机构" "icon-pen" ; title id
-          ["申请考评机构资质证书" "icon-list"    "org-input"] ; title icon id 
-          ["申请考评机构变更备案" "icon-list"    "org-input"] ; title icon id 
-          ["在线申请进度查询" "icon-list"    "org-process"] 
+         ["&nbsp;考评机构" "icon-arrow" ; title id
+          ["申请资质证书" "icon-list"    "org-input"] ; title icon id 
+          ["申请变更备案" "icon-list"    "org-backup"] ; title icon id 
+          ["申请换证" "icon-list"    "org-renew"] 
+          ["已认定的资质证书" "icon-list"    "org-view"] 
+          ["年度工作报告" "icon-list" "org-report"] ; title icon id 
           ["使用帮助"          "icon-help"   "help_bt"]
+          ]
+         ["&nbsp;管理考评员" "icon-user" ; title id
+          ["本机构考评员列表" "icon-list"    "org-pn"] ; title icon id 
+          ["考评员档案管理" "icon-list"    "pn-archive"] 
+          ]
+         ["&nbsp;企业考评管理" "icon-pen" ; title id
+          ["企业考评待办工作" "icon-list" "en-input"] ; title icon id 
+          ["企业资格证书制发" "icon-list" "en-input"] ; title icon id 
+          ["工作进度查询" "icon-list" "org-stat"] 
+          ["考评企业档案管理" "icon-list" "en-archive"] 
+          ["考评情况汇总表" "icon-list" "en-report"] 
           ]
          ]   
    })
@@ -150,9 +164,11 @@
          ["企业申请" "icon-pen" ; title id
           ["1、在线填报" "icon-list"    "en-input"] ; title icon id 
           ["2、达标自评" "icon-list"    "stand-list"] ; title icon id 
-          ["3、选择考评机构" "icon-list"    "en-process"] 
-          ["企业年审" "icon-list"    "en-process"] 
-          ["变更申请" "icon-list"    "en-change"] 
+          ["3、选择考评机构" "icon-list" "org-list"] 
+          ["进度查询" "icon-list"    "en-input"] 
+          ["企业年度工作报告" "icon-list"    "en-input"] 
+          ["换证申请" "icon-list"    "en-input"] 
+          ["变更申请" "icon-list"    "en-backup"] 
           ]
          ]   
    })
@@ -206,21 +222,21 @@
    "j" "交通运输工程建设"})
 (def dd-type2 
   (array-map
-    "d1" "道路运输普通货运"
-    "d2" "机动车维修"
+    "d1" "道路旅客运输"
+    "d2" "道路危险货物运输"
     "d3" "汽车客运站"
-    "d4" "道路危险货物运输"
-    "d5" "道路旅客运输"
-    "d6" "道路货物运输场站"
-    "s1" "水路危险货物运输"
-    "s2" "水路散货运输"
-    "s3" "水路旅客运输"
-    "g1" "危险货物码头运输"
-    "g2" "港口客运（滚装、渡船渡口）码头"
+    "d4" "道路运输普通货运"
+    "d5" "道路货物运输场站"
+    "d6" "机动车维修"
+    "s1" "水路旅客运输"
+    "s2" "水路危险货物运输"
+    "s3" "水路散货运输"
+    "g1" "港口客运（滚装、渡船渡口）码头"
+    "g2" "危险货物码头运输"
     "g3" "港口散杂货（集装箱）码头"
-    "c1" "出租汽车"
-    "c2" "城市公共汽车客运"
-    "c3" "城市轨道交通运输"
+    "c1" "城市公共汽车客运"
+    "c2" "城市轨道交通运输"
+    "c3" "出租汽车"
     "j1" "交通运输建筑施工"
    ))
 ; 撤销考核员资格原因
@@ -276,7 +292,64 @@
    :yyyy "年份"
    :scroe "分数"
    :edu "学历"
+   :pcode "邮编"
+   :mobile "手机"
+   :pid "证件号"
+   :uid "用户ID"
    })
+(def dd-province
+  (let [ls (map str '(北京 上海 广东 江苏 陕西 山东 新疆 湖南 黑龙江 湖北 安徽 浙江 四川 贵州 甘肃 福建 辽宁 重庆 天津 广西 吉林 
+                         海南 河北 河南 内蒙古 山西 西藏 青海 江西 云南 宁夏))]
+    (apply array-map (flatten (for [e ls] [e e])))))
+
+(def dd-moc 
+ (array-map
+   0 "00-交通运输部"
+   1 "01-北京交委"
+   2 "02-天津公路局"
+   3 "03-天津交通局"
+   4 "04-河北交通厅"
+   5 "05-山西交通厅"
+   6 "06-内蒙古交通厅"
+   7 "07-辽宁交通厅"
+   8 "08-吉林交通厅 "
+   9 "09-黑龙江交通厅"
+   10 "10-上海交委"
+   11 "11-江苏交通厅"
+   12 "12-浙江交通厅"
+   13 "13-安徽交通厅"
+   14 "14-福建交通厅 "
+   15 "15-江西交通厅"
+   16 "16-山东交通厅"
+   17 "17-河南交通厅"
+   18 "18-湖北交通厅"
+   19 "19-湖南交通厅"
+   20 "20-广东交通厅 "
+   21 "21-广西交通厅"
+   22 "22-海南交通厅"
+   23 "23-重庆交委"
+   24 "24-四川交通厅"
+   25 "25-贵州交通厅"
+   26 "26-云南交通厅"
+   27 "27-西藏交通厅"
+   28 "28-陕西交通厅"
+   29 "29-甘肃交通厅"
+   30 "30-青海交通厅"
+   31 "31-宁夏交通厅"
+   32 "32-新疆交通厅"
+   33 "33-新疆兵团交通局"
+   34 "34-长江航务管理局"
+   35 "35-珠江航务管理局"             
+   ))
+
+(def dd-edu 
+  {
+  "中专" "中专" 
+  "大专" "大专" 
+  "本科" "本科" 
+  "研究生" "研究生" 
+  "博士生" "博士生" 
+  })
 
 ; 考评员申请表
 (def cfg-apply-pn ; [name id {:t :title ..}] :t类型,不写时为text 
@@ -284,48 +357,65 @@
    ["姓名" :name {:require true}]
    ["性别" :sex {:t ["男" "女"]}]
    ["出生年月" :birth {:t 'date :title "注意：年龄原则上不得超过65周岁；格式如1980-5"}]
-   ["籍贯" :from {:require true}]
-   ["照片" :photo {:t 'file}]
-   ["身份证号" :pid {:t 'pid}]
+   ["常住地" :from {:t dd-province}]
+   ["照片" :photo {:t 'file :title "照片要求：……"}]
+   ["身份证号" :pid {:t 'pid :title "15位或18位身份证"}]
    ["工作单位" :org]
-   ["职务/职称" :title]
+   ["职称" :title]
    ["通讯地址" :address]
    ["邮  编" :pcode {:t 'pcode}]
    ["联系电话" :tel]
    ["传真号码" :fax]
    ["手机号码" :mobile]
    ["电子邮箱" :email {:t 'email}]
-   ["文化程度" :edu]
+   ["文化程度" :edu {:t dd-edu :title "按国标（中专以上）"}]
    ["所学专业" :major {:title "注意：必须具备交通运输相关专业大学专科以上学历"}]
    ["现从事专业" :prof]
-   ["申请专业" :type {:t dd-type :v "s" :title "考评员申请的专业类型不得多于二种"}] ; 最多两类
+   ["相关专业从业时间" :begindate {:v 5}]   
+   ["申请类别" :type {:t dd-type :v "s" :title "考评员申请的专业类型不得多于二种"}] ; 最多两类
    ["主要学习（培<br/>训）经历" :train {:t 'textarea}]
    ["主要工作简历" :resume {:t 'textarea}]
    ["专业工作业绩" :perf {:t 'file}]
    ["相关证明文件" :proof {:t 'file :title "包括身份证明、学历证明以及其他资格证的电子文档等（pdf, doc或者jpg格式）"}]
+   ["主管机关" :apply-org {:t dd-moc :title "自选"}]
    ])
 ; 考评机构申请表  
 (def cfg-apply-org 
-  [["评审机构名称" :name {:require true :v "xxx"}]
+  [["单位名称" :name {:require true :v "" :title "一般为：学校/交通相关学会/协会/研究所"}]
+   ["法人代表" :orgfr {:require true}]
    ["评审机构资质" :qual {:t dd-org-grade :v "甲类"}]
-   ["评审人员姓名" :person {:require true :v "张三"}]
-   ["评审人员编码" :pcode {:require true :v "007"}]
-   ["评审人员资质" :pqual {:t '[A级 B级 C级] :v 'C级}]
+   ["专业范围" :type {:t dd-type :v "d"}]
+   ["专职考评员人数" :pnumber {:v 15}]
+   ["高级技术职称考评员人数" :pnumber {:v 6}]
+   ["开始从事相应业务年份" :start {:v 2005}]
+   ["主管机关" :province {:t dd-moc}]
+   ["办公地址" :address]
+   ["邮  编" :pcode {:t 'pcode}]
+   ["单位电话" :tel]
+   ["传真号码" :fax]
+   ["联系人" :contact]
+   ["联系人手机" :mobile]
+   ["联系人邮箱" :email]
+   ["单位相关证明材料" :met {:t 'file}]
+   ["考评员相关材料" :pns {:t 'file :title "文件10M以内大小"}]
    ])
 ; 企业申请表
 (def cfg-apply-en ; en-input-form 
-  [["企业名称" :name {:require true :v "xxx"}]
-   ["行政区划" :region {:t '[东北 华北 华南 西南 西北 华中 华东] :v '西南}]
-   ["法人信息" :legel {:t 'textarea :v "aaa\nbbbb\nccccc"}]
-   ["企业类型" :type {:t dd-type :v "s"}]
-   ["企业具体分类" :type2 {:t dd-type2 :v "s1"}]
-   ["企业地址" :address {:title "选择GIS坐标"}]
-   ["企业所在地描述" :belong {:t 'textarea}]
-   ["安全生产标准化等级" :grade {:t [:一级 :二级 :三级] :v :一级}]
-   ["联系人信息" :contact]
+  [
+   ["企业名称" :name {:require true :v "xxx"}]
+   ["申请等级" :grade {:t [:一级 :二级 :三级] :v :一级}]
+   ["法人代表" :legel]
+   ["生产经营类别" :type2 {:t dd-type2 :v "s1" :title "可多选"}]
+   ["主管机关" :moc {:t dd-moc :title "一级不用选（部）；二级选34个机构；三级选二级、三级机构；每个类型对应自己的主管机关"}]
+   ["企业办公地址" :address {:title "选择GIS坐标"}]
+   ["企业电话" :tel]
+   ["企业传真" :tax]
+   ["联系人" :contact]
+   ["联系电话" :contact-tel]
    ["安全生产组织架构" :safe {:t 'file}]
    ["企业法人资格证件" :qual {:t 'file}] 
    ["经营许可证" :license {:t 'file}]
+   ["企业安全生产工作报告" :report {:t 'file :title "Word文档"}]
    ])
 
 (defn- input-form-
@@ -385,7 +475,17 @@
         (eui-button {:href "#" :onclick "layout_load_center('/c/esp/pn-input')"}  "查看已录入的申请信息")
         (eui-button {:href "#" :onclick "layout_load_center('/c/esp/pn-input')"} "初次申请考评证书"))
       (when rs2
-        [:h1 (format "已提交过%s次申请（时间：%s）" (count rs2) (join (map :date rs2) "，"))]) )))
+        (html
+          [:h1 (format "已提交过%s次申请：" (count rs2))]
+          (for [r rs2] 
+            (html 
+              (eui-button {:href (format "/c/esp/pn-apply-view/%s" (:_id r)) :target "_blank"} (format "查看%s的申请" (:date r))) (space 5))))))))
+
+(defn pn-apply-view
+  "app: 查看申请记录
+  @id object-id"
+  [id]
+  (form- :pn-apply id "考评员"))
 
 (defn pn-input
   "service：评审人员在线申请"
@@ -472,12 +572,12 @@
       (result-html- rt '[姓名 单位 属地 详情] [:name :org :from :_id] {:form "pn-form"}))))
   
 (defn org-list
-  "service: 企业列表"
+  "service: 考评机构列表"
   [id]
   (let [tb :org
         rt (if id (search- tb id) (data- tb))]
     (html
-      [:h1 (format "交通运输企业列表（%s 名）" (count rt))]
+      [:h1 (format "考评机构列表（%s 名）" (count rt))]
       (result-html- rt '[机构名称 所属省份 详情] [:name :province :_id] {:form "org-form"}))))
   
 (defn en-list
@@ -564,6 +664,25 @@
     (barf rt {:title "考评员地域分布情况" :x "省份" :y "考评员人数"})
     ))
 
+(defn pn-archive
+  "service: 考评机构的考评员档案管理"
+  []
+  (html
+    [:h1 "考评员档案管理"]
+    (eui-button {:plain "true" :iconCls "icon-sum"} "安全生产标准化考评员汇总表、登记表") [:br]
+    (eui-button {:plain "true" :iconCls "icon-list"} "考评员学历和专业技术能力证明汇总表") [:br]
+    (eui-button {:plain "true" :iconCls "icon-file"} "考评员培训合格证书汇总表") [:br]
+    (eui-button {:plain "true" :iconCls "icon-file"} "考评员培训情况汇总表") [:br]
+    ))
+
+(defn en-backup
+  "service: 企业变更申请"
+  []
+  (html
+    [:h1 "管理办法规定："]
+    [:h2 "企业法人代表、名称、地址等变更的，应在变更后1个月内，向相应的主管机关提供有关材料，"
+     "申请对企业安全生产标准化达标证书的变更。"]
+    (eui-button {:href "#" :onclick "layout_load_center('/c/esp/en-input')"} "填写变更信息")))
 
 (defn en-analysis
   "service: 企业统计分析"
@@ -627,6 +746,7 @@
                         (f2 (first rt2i))] ; 产生后面2、3级指标的多个[:tr]html片段 
                        (for [r (rest rt2i)] (f2 r)))))
           ]
+      (html
       [:table.wr3table {:border 1}
        [:caption (format "%s企业安全生产达标标准" (dd-type2 type2))]
        [:thead 
@@ -635,7 +755,30 @@
         (for [r rt1] (f1 r))]
        [:tfoot
         [:tr [:td {:colspan 5} [:h2 "注：打 “ <font color=red>★</font> ” 的为必备项，必须完全满足。"]]]]
-       ] )))
+       ] 
+      [:br]
+      "自评总分：" [:input {:value 900}]
+      "自评报告："[:input {:type "file"}]))))
+
+(defn org-backup
+  "service: "
+  []
+  (html
+    [:h1 "申请变更备案"]
+    [:h2 "（一）法定代表人变更"]
+    [:h2 "（二）停业、破产或有其他原因终止业务"]
+    [:h2 "（三）考评员发生重大变化"]))
+  
+(defn org-pn
+  "service: 本考评机构机构的所有考评员"
+  [request]
+  (let [uid (wr3user request)
+        rt (with-mdb2 "esp"
+             (vec (fetch :pn :where {:belong uid})))]
+    (html
+      [:h1 (format "本机构当前专兼职考评人员 %s 名（改成：姓名、证书类别、证书编号、专兼职、已解聘）" (count rt))]
+      [:h2 "说明：在职的排在前面，解聘的放后面；详情中增加聘用、解聘时间"]
+      (result-html- rt '[姓名 单位 属地 详情] [:name :org :from :_id] {:form "pn-form"}))))
 
 ;;;------------------------ 测试文件上传
 (defn upload
@@ -662,8 +805,8 @@
       "文件上载完成" )))
 
 ;;-------- test
-(def m '[
-        ])
+(def m [
+])
 
 (defn- t1
   "造pn表的数据字段" []
@@ -683,3 +826,8 @@
           (update! :pn r (into m r)) ))) ))
   
 ;;;; test
+;(with-mdb2 "esp"
+;  (let [rs (fetch :pn :where {:from "山西"})]
+;    (doseq [r rs] 
+;      (update! :pn r (into r {:belong "org1"})))
+;    ))

@@ -46,10 +46,22 @@
 (def ^:dynamic ** pow)
 
 (defn sum
-  "Number序列相加"
-  [sequ]
-  (apply + sequ))
+  "Number序列相加，可多种结构，如:
+  (sum 1 2 3 4 5)
+  (sum [1 2 3 4])
+  (sum 1 2 [3 4 5] 6 '(7 8 9) 10) "
+  [& nn]
+  (apply + (flatten nn)))
 
+(defn avg
+  "Number序列平均值，可多种结构，如
+  (avg 1 2 3) ; 2
+  (avg [1 2 3]) ; 2
+  (avg 1 [2 3] 4) ; 5/2 "
+  [& nn]
+  (let [fnn (flatten nn)]
+    (/ (apply + fnn) (count fnn))))
+  
 (defn product
   "Number序列相乘"
   [sequ]

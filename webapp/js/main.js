@@ -2844,8 +2844,9 @@ function esp_onload() {
 			  // 左侧连接
 			  'pn-input':'pn-input', 'pn-list':'pn-list', 'pn-learn':'pn-learn',
 			  'pn-olap':'pn-olap','pn-renew':'pn-renew','pn-apply':'pn-apply','pn-help':'/static/esp/about-pn.html',
-			  'en-list':'en-list','en-input':'en-input','en-analysis':'en-analysis',
-			  'org-input':'org-input', 'org-list':'org-list', 'org-eval':'stand',
+			  'en-list':'en-list','en-input':'en-input','en-analysis':'en-analysis', 'en-backup':'en-backup',
+			  'org-input':'org-input', 'org-list':'org-list', 'org-eval':'stand','pn-archive':'pn-archive','org-backup':'org-backup',
+			  'org-pn':'org-pn',
 			  'stand-list':'stand-list'}
 	$.each(m2, function(k, v) {
 		$('a#'+k).click(function() {
