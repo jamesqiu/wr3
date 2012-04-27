@@ -302,6 +302,7 @@
                          海南 河北 河南 内蒙古 山西 西藏 青海 江西 云南 宁夏))]
     (apply array-map (flatten (for [e ls] [e e])))))
 
+; 上级主管部门列表
 (def dd-moc 
  (array-map
    0 "00-交通运输部"
@@ -382,7 +383,7 @@
 ; 考评机构申请表  
 (def cfg-apply-org 
   [["单位名称" :name {:require true :v "" :title "一般为：学校/交通相关学会/协会/研究所"}]
-   ["法人代表" :orgfr {:require true}]
+   ["法人代表" :legalp {:require true}]
    ["评审机构资质" :qual {:t dd-org-grade :v "甲类"}]
    ["专业范围" :type {:t dd-type :v "d"}]
    ["专职考评员人数" :pnumber {:v 15}]
@@ -425,7 +426,7 @@
   [cfg m]
   (let [css-label "font-family:微软雅黑; font-size:14px; vertical-align:center; height: 35px; border-bottom:1px dotted gray"]
     (html
-      [:form {:method "POST" :action (format "/c/esp/input-save")}
+      [:form {:method "POST" :action (format "/c/esp/input-save") :enctype "multipart/form-data"}
        [:table {:align "left" :style "margin-left: 30px"}
         [:caption {:style "padding: 5px"} [:h1 (m :title)]]
         (for [[nam id {t :t v :v require :require title :title}] cfg]
@@ -437,7 +438,9 @@
               (cond 
                 (true? require)  (eui-text     (into m {:required "true" :style "width: 250px"}))
                 (= t 'textarea)  (eui-textarea m v)
-                (= t 'file)      (eui-text     (into m {:type "file"}))
+                (= t 'file)      (html 
+                                   (eui-text m) (space 5) 
+                                   (eui-button {:onclick (format "fileupload('%s')" (str nam))} "上传文件"))
                 (= t 'email)     (eui-email    m)
                 (map? t)         (eui-combo    m t)
                 (vector? t)      (eui-combo    m (apply array-map (flatten (for [e t] [e e]))))
@@ -446,8 +449,22 @@
         [:tfoot [:tr [:td {:colspan 2 :align "center" :style "padding: 15px"} 
                       (eui-button {:onclick (format "esp_input_save('%s')" (m :form))} " 保 存 ") (space 5)
                       (eui-button {:onclick (format "esp_input_submit('%s')" (m :form))} "提交申请") (space 5)
-                      (eui-button {:onclick "$('form').get(0).reset()"} " 取 消 ") ]]]]] )))
+                      (eui-button {:onclick "$('form').get(0).reset()"} " 取 消 ") ]]]]]
+      (eui-dialog "fileupload" 
+                  {:closed "true" :href "/c/esp/fileupload"} 
+                  )
+      [:script "fileupload_bt()"]
+      )))
        
+(defn fileupload
+  ""
+  []
+  (html 
+    [:form {:name "fm_fileupload" :method "POST" :action (format "/c/esp/file") :enctype "multipart/form-data"}
+     (eui-text {:id "f_fileupload" :type "file"}) 
+     (eui-tip "选择好文件后请按确定进行上传")
+     ] ))
+  
 (defn en-input
   "service：企业在线填报"
   []
@@ -481,16 +498,10 @@
             (html 
               (eui-button {:href (format "/c/esp/pn-apply-view/%s" (:_id r)) :target "_blank"} (format "查看%s的申请" (:date r))) (space 5))))))))
 
-(defn pn-apply-view
-  "app: 查看申请记录
-  @id object-id"
-  [id]
-  (form- :pn-apply id "考评员"))
-
 (defn pn-input
   "service：评审人员在线申请"
   [request]
-  (let [r (pn-by-uid (wr3user request))
+  (let [r (pn-of- (wr3user request))
         cfg (if r
               (for [[n id m] cfg-apply-pn] [n id (merge {:v (id r)} m)])
               cfg-apply-pn)]
@@ -675,6 +686,12 @@
     (eui-button {:plain "true" :iconCls "icon-file"} "考评员培训情况汇总表") [:br]
     ))
 
+(defn pn-apply-view
+  "app: 查看申请记录
+  @id object-id"
+  [id]
+  (form- :pn-apply id "考评员"))
+
 (defn en-backup
   "service: 企业变更申请"
   []
@@ -809,25 +826,25 @@
 ])
 
 (defn- t1
-  "造pn表的数据字段" []
+  "造org表的数据字段" []
   (with-mdb2 "esp"
-    (let [rs (fetch :pn)
-          female (fn [s] (some #(has? s %) ["婷" "娟" "瑶" "莎" "璐璐" "丽"]))]
+    (let [rs (fetch :org)
+          f3x (str "王李张刘陈杨黄赵吴周徐孙马朱胡郭何高林罗郑梁谢宋唐许韩冯邓曹彭曾肖"
+                   "田董袁潘于蒋蔡余杜叶程苏魏吕丁任沈姚卢姜崔鍾谭陆汪范金石廖贾夏韦傅方白邹孟熊秦邱江尹薛闫段雷侯龙"
+                   "史陶黎贺顾毛郝龚邵万钱严覃武戴莫孔向汤")
+          name3 (fn [] (str (rand-nth f3x) (rand-nth f3x) (when (zero? (rand-int 2)) (rand-nth f3x))))
+          ]
       (doseq [r rs]
         (let [m {:_id ""
                  :name ""
-                 :sex (if (female (:name r)) "女" "男")
-                 :birth (format "%s.%02d" (+ 1950 (random 30)) (+ 1 (random 11)))
-                 :title (nth ["科员" "副科" "正科" "副处" "正处"] (random 4))
+                 :legelp (name3)
                  :mobile (format "13%s" (apply str (random-n 9 9)))
-                 :edu (nth ["大专" "大专" "本科" "本科" "本科" "研究生"] (random 5))
                  :type (nth (keys dd-type) (random (dec (count dd-type))))
                  }]
-          (update! :pn r (into m r)) ))) ))
+          (update! :org r (into m r)) ))) ))
   
 ;;;; test
 ;(with-mdb2 "esp"
-;  (let [rs (fetch :pn :where {:from "山西"})]
-;    (doseq [r rs] 
-;      (update! :pn r (into r {:belong "org1"})))
-;    ))
+;  (destroy! :org {:name #"分局"})
+;  (let [rs (fetch :org :where {:name #"分局"})]
+;    )

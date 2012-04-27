@@ -382,9 +382,9 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   
 (defn eui-dialog
   "显示一个对话框，参数：
-  id: 对话框id
-  m: 对话框属性
-  body: 对话框内容"
+  @id: 对话框id, 如myid1，对应按钮id为 '#myid1_ok', '#myid1_cancel'，需要自己写js响应click事件
+  @m: 对话框属性
+  @body: 对话框内容"
   [id m & body]
   (html
     (tags :div {:id id :class "easyui-dialog1" :title "对话框1" :resizable1 "true"

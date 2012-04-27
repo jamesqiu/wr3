@@ -2870,4 +2870,31 @@ function esp_input_submit(form) {
 	})
 }
 
+function fileupload(nam) {
+	var dlg = $('#fileupload')
+	var closed = dlg.dialog1('options').closed
+	if (!closed) {
+		alert('请先处理完已经打开的上传文件对话框！')
+	} else {
+		dlg.dialog1('open').dialog1('setTitle', '请选择本地'+nam+'文件进行上传：')
+			.dialog1('refresh', '/c/esp/fileupload')
+	}
+}
 
+function fileupload_bt() {
+	$('#fileupload_ok').click(function() {
+		var fname = $('#f_fileupload').val()
+		if (fname) {
+			alert('上传: '+fname)
+			// 真正提交上传，ajax完成后调用如下指令
+			$('#fileupload').dialog1('close')
+		} else {
+			alert('未选择文件')
+		}
+	})
+	$('#fileupload_cancel').click(function() {
+		if (confirm("确定要取消本次上传？")) {			
+			$('#fileupload').dialog1('close')
+		}
+	})	
+}
