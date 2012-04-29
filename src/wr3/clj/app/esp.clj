@@ -5,6 +5,7 @@
 (use 'hiccup.core)
 (use 'wr3.clj.web 'wr3.clj.tb 'wr3.clj.s 'wr3.clj.n 'wr3.clj.chart 'wr3.clj.u)
 (use 'somnium.congomongo 'wr3.clj.nosql 'wr3.clj.chart)
+(import 'wr3.upload.FileUpload 'wr3.upload.File 'wr3.util.Charsetx)
 
 (require '[wr3.clj.app.auth :as au])
 (defn auth
@@ -274,6 +275,7 @@
 (def dd-meta
   {:name "名称"
    :province "省份"
+   :from "地域"
    :type "类型"
    :type2 "细类"
    :grade "级别"
@@ -283,7 +285,6 @@
    :birth "出生日期"
    :title "职称"
    :major "专业"
-   :from "地域"
    :cid "证书号"
    :ctype "证书类型"
    :tel "电话"
@@ -296,6 +297,8 @@
    :mobile "手机"
    :pid "证件号"
    :uid "用户ID"
+   :admin "主管机关"
+   :legalp "法人代表"
    })
 (def dd-province
   (let [ls (map str '(北京 上海 广东 江苏 陕西 山东 新疆 湖南 黑龙江 湖北 安徽 浙江 四川 贵州 甘肃 福建 辽宁 重庆 天津 广西 吉林 
@@ -378,18 +381,18 @@
    ["主要工作简历" :resume {:t 'textarea}]
    ["专业工作业绩" :perf {:t 'file}]
    ["相关证明文件" :proof {:t 'file :title "包括身份证明、学历证明以及其他资格证的电子文档等（pdf, doc或者jpg格式）"}]
-   ["主管机关" :apply-org {:t dd-moc :title "自选"}]
+   ["主管机关" :admin {:t dd-moc :title "自选"}]
    ])
 ; 考评机构申请表  
 (def cfg-apply-org 
   [["单位名称" :name {:require true :v "" :title "一般为：学校/交通相关学会/协会/研究所"}]
    ["法人代表" :legalp {:require true}]
    ["评审机构资质" :qual {:t dd-org-grade :v "甲类"}]
-   ["专业范围" :type {:t dd-type :v "d"}]
+   ["专业范围" :type {:t dd-type :v "d" :title "todo: 改为可以多选，或者每个专业申请一次"}]
    ["专职考评员人数" :pnumber {:v 15}]
    ["高级技术职称考评员人数" :pnumber {:v 6}]
    ["开始从事相应业务年份" :start {:v 2005}]
-   ["主管机关" :province {:t dd-moc}]
+   ["主管机关" :admin {:t dd-moc}]
    ["办公地址" :address]
    ["邮  编" :pcode {:t 'pcode}]
    ["单位电话" :tel]
@@ -405,9 +408,9 @@
   [
    ["企业名称" :name {:require true :v "xxx"}]
    ["申请等级" :grade {:t [:一级 :二级 :三级] :v :一级}]
-   ["法人代表" :legel]
+   ["法人代表" :legalp]
    ["生产经营类别" :type2 {:t dd-type2 :v "s1" :title "可多选"}]
-   ["主管机关" :moc {:t dd-moc :title "一级不用选（部）；二级选34个机构；三级选二级、三级机构；每个类型对应自己的主管机关"}]
+   ["主管机关" :admin {:t dd-moc :title "一级不用选（部）；二级选34个机构；三级选二级、三级机构；每个类型对应自己的主管机关"}]
    ["企业办公地址" :address {:title "选择GIS坐标"}]
    ["企业电话" :tel]
    ["企业传真" :tax]
@@ -439,8 +442,11 @@
                 (true? require)  (eui-text     (into m {:required "true" :style "width: 250px"}))
                 (= t 'textarea)  (eui-textarea m v)
                 (= t 'file)      (html 
-                                   (eui-text m) (space 5) 
-                                   (eui-button {:onclick (format "fileupload('%s')" (str nam))} "上传文件"))
+                                   (eui-text (into m {:type "hidden" :value ""}))
+                                   [:span (when v (html
+                                                    [:a {:href v :target "_blank"} "查看"]
+                                                    (space 3)))]
+                                   (eui-button {:onclick (format "fileupload('%s', '%s')" (str nam) sid)} "上传文件"))
                 (= t 'email)     (eui-email    m)
                 (map? t)         (eui-combo    m t)
                 (vector? t)      (eui-combo    m (apply array-map (flatten (for [e t] [e e]))))
@@ -457,14 +463,35 @@
       )))
        
 (defn fileupload
-  ""
+  "文件上传弹出窗口的内容
+  @id 弹出窗口对应的父按钮前文件字段的id或者name"
   []
   (html 
-    [:form {:name "fm_fileupload" :method "POST" :action (format "/c/esp/file") :enctype "multipart/form-data"}
-     (eui-text {:id "f_fileupload" :type "file"}) 
+    [:form {:name "fm_fileupload" :id "fm_fileupload" :method "POST" :action (format "/c/esp/filesave") 
+            :enctype "multipart/form-data" :target "ifrm_fileupload"}
+     (eui-text {:name "f_fileupload" :id "f_fileupload" :type "file"}) 
      (eui-tip "选择好文件后请按确定进行上传")
-     ] ))
-  
+     ] 
+    [:iframe {:name "ifrm_fileupload" :style "display:none"}] ))
+   
+(defn filesave
+  "文件上传form提交后的处理：1、保存文件；2、保存文件后调用js函数"
+  [request]
+  (let [fu (doto (FileUpload.) (.initialize request) .upload)
+        myfile (.getFile (.getFiles fu) 0)
+        fname0 (.getFileName myfile)
+        fsize (.getSize myfile)
+        wr3user (wr3user request)
+        fname1 (format "/file/%s-%s.%s" wr3user (System/currentTimeMillis) (rightback fname0 "."))
+        ]
+    (when (not (.isMissing myfile))
+      (do
+        (.saveAs myfile (.getRealPath request fname1)) 
+        (html-body
+          [:h1 (format "文件名: %s (大小：%s)" fname0 fsize)]
+          "文件上载完成"
+          [:script (format "parent.fileupload_ok('%s')" fname1)])))))
+
 (defn en-input
   "service：企业在线填报"
   []
@@ -616,6 +643,7 @@
              [:td (case k
                    :type (or (dd-type v) v) 
                    :type2 (or (dd-type2 v) v) 
+                   :admin (or (dd-moc v) v)
                    v)]])]
          [:tfoot 
           [:tr {:align "center" :height "50px"} 
@@ -797,29 +825,13 @@
       [:h2 "说明：在职的排在前面，解聘的放后面；详情中增加聘用、解聘时间"]
       (result-html- rt '[姓名 单位 属地 详情] [:name :org :from :_id] {:form "pn-form"}))))
 
-;;;------------------------ 测试文件上传
-(defn upload
-  []
-  (html-body
-    [:form {:name "form1" :method "post" :ENCTYPE "multipart/form-data" :action "/c/esp/file"}
-     [:label "文件："]
-     [:input {:type "file" :name "myfile"}]
-     [:input {:type "submit"}] ] ))
-
-(import 'wr3.upload.FileUpload 'wr3.upload.File 'wr3.util.Charsetx)
-
-(defn file
+(defn t10
+  ""
   [request]
-  (let [fu (doto (FileUpload.) (.initialize request) .upload)
-        myfile (.getFile (.getFiles fu) 0)
-        fname (.getFileName myfile)
-        fsize (.getSize myfile)]
-    (html-body
-      (when (not (.isMissing myfile))
-        (do
-          (.saveAs myfile (str "f:/temp/" fname)) 
-          [:h1 (format "文件名: %s (大小：%s)" fname fsize)]))
-      "文件上载完成" )))
+;  (println "hello world") ; (.getRealPath request "/"))
+  (html
+    "hello"
+    [:pre (.getRealPath request (format "/file/%s.txt" (System/currentTimeMillis)))]))
 
 ;;-------- test
 (def m [
@@ -837,11 +849,12 @@
       (doseq [r rs]
         (let [m {:_id ""
                  :name ""
-                 :legelp (name3)
+                 :legalp (name3)
+                 :admin 13
                  :mobile (format "13%s" (apply str (random-n 9 9)))
-                 :type (nth (keys dd-type) (random (dec (count dd-type))))
                  }]
-          (update! :org r (into m r)) ))) ))
+          (update! :org r (dissoc (into m r) :legelp))
+          ))) ))
   
 ;;;; test
 ;(with-mdb2 "esp"

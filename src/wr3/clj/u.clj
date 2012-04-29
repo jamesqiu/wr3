@@ -178,6 +178,11 @@
   [s] `(filter #(>= (.indexOf (str %) (name '~s)) 0)
                (sort (keys (mapcat ns-publics (all-ns))))))
 
+;(use 'clojure.java.browse)
+(defmacro demo 
+  "打开 clojuredocs.org 查询 clojure.core 的函数使用样例"
+  [f]
+  `(clojure.java.browse/browse-url (format "http://clojuredocs.org/clojure_core/clojure.core/%s#examples" '~f)))
 
 ;;;------------- datetime
 (import wr3.util.Datetime)

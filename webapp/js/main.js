@@ -2870,7 +2870,16 @@ function esp_input_submit(form) {
 	})
 }
 
-function fileupload(nam) {
+/**
+ * 打开进行文件上传的一个dialog
+ * @param nam 字段中文名
+ * @param sid "字段id或name"
+ */
+function fileupload(nam, sid) {
+	// 标记当前字段的属性 uploading="1"
+	$('form input[uploading="1"]').attr('uploading', "0")
+	$('form input[name="'+sid+'"]').attr('uploading', '1')
+	// 弹出对话框
 	var dlg = $('#fileupload')
 	var closed = dlg.dialog1('options').closed
 	if (!closed) {
@@ -2881,13 +2890,14 @@ function fileupload(nam) {
 	}
 }
 
+/**
+ * 文件选择后上传动作或者取消动作
+ */
 function fileupload_bt() {
 	$('#fileupload_ok').click(function() {
 		var fname = $('#f_fileupload').val()
 		if (fname) {
-			alert('上传: '+fname)
-			// 真正提交上传，ajax完成后调用如下指令
-			$('#fileupload').dialog1('close')
+			$('#fm_fileupload').submit()
 		} else {
 			alert('未选择文件')
 		}
@@ -2897,4 +2907,14 @@ function fileupload_bt() {
 			$('#fileupload').dialog1('close')
 		}
 	})	
+}
+
+/**
+ * 文件上传完成后调用的函数
+ * @param fname
+ */
+function fileupload_ok(fname) {
+	$('#fileupload').dialog1('close')
+	$('form input[uploading="1"]').val(fname)
+	$('form input[uploading="1"]').next('span').html('<a href="'+ fname +'" target="_blank">查看</a> &nbsp; ')
 }
