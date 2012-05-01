@@ -540,9 +540,13 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
       (for [[title icon & nav2] (:nav cfg)]
         (eui-accord- 
           {:iconCls icon} title
-          (for [[title icon id] nav2]
-            (html
-              (eui-button {:id id :plain "true" :iconCls icon} title) [:br] ) ))) )))
+          (for [[title icon id url] nav2]
+            (let [url2 (if (and url (.startsWith url "/")) url
+                         (format "/c/%s/%s" (:name cfg) (or url id)))]
+              (html
+                (eui-button {:id id :plain "true" :iconCls icon :title url2
+                             :onclick (format "layout_load_center('%s')" url2) }
+                            title) [:br] ) ))) ))))
 
 (defn frame-main
   "layout.center"

@@ -23,8 +23,8 @@
    "org2" {:name "考评机构2" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "org"}
    "mot1" {:name "交通部用户1" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "mot"}
    "mot2" {:name "交通部用户2" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "mot"}
-   "mct1" {:name "交通厅用户1" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "mct"}
-   "mct2" {:name "交通委用户2" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "mct"}
+   "moc1" {:name "交通厅用户1" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "moc"}
+   "moc2" {:name "交通委用户2" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "moc"}
    })
 
 (defn- ok?

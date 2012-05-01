@@ -2833,27 +2833,8 @@ function esp_search(v, n) {
 }
 
 function esp_onload() {
-
 	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
-	
 	app_linkbutton_css()
-	
-	var m2 = {'11-input':'en-input', '12-mng':'en-list',
-			  '21-pn':'pn-input', '22-org':'org-input',
-			  '52-analysis':'en-analysis',
-			  // 左侧连接
-			  'pn-input':'pn-input', 'pn-list':'pn-list', 'pn-learn':'pn-learn',
-			  'pn-olap':'pn-olap','pn-renew':'pn-renew','pn-apply':'pn-apply','pn-help':'/static/esp/about-pn.html',
-			  'en-list':'en-list','en-input':'en-input','en-analysis':'en-analysis', 'en-backup':'en-backup',
-			  'org-input':'org-input', 'org-list':'org-list', 'org-eval':'stand','pn-archive':'pn-archive','org-backup':'org-backup',
-			  'org-pn':'org-pn',
-			  'stand-list':'stand-list'}
-	$.each(m2, function(k, v) {
-		$('a#'+k).click(function() {
-			var url = (0 == v.indexOf('/static/')) ? v : ('/c/esp/'+v)
-			layout_load_center(url)
-		})
-	})
 }
 
 function esp_input_save(form) {
@@ -2918,3 +2899,5 @@ function fileupload_ok(fname) {
 	$('form input[uploading="1"]').val(fname)
 	$('form input[uploading="1"]').next('span').html('<a href="'+ fname +'" target="_blank">查看</a> &nbsp; ')
 }
+
+

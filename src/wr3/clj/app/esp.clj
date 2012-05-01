@@ -21,7 +21,7 @@
         (and (= id "en") (= role "en")) true
         (and (= id "org") (= role "org")) true
         (and (= id "mot") (= role "mot")) true
-        (and (= id "mct") (= role "mct")) true
+        (and (= id "moc") (= role "moc")) true
         :else false)
       (cond ; 其他页面注册用户都能访问
         uid true
@@ -40,7 +40,7 @@
 (def frame-cfg-mot
   {:name "esp"
    :style (map #(str % "") ["layout_north" "layout_title"])  ; "" 或者 "1"
-   :title "交通运输企业安全生产标准化管理系统（试行）"
+   :title "交通运输企业安全生产标准化——交通部管理系统（试行）"
    :searcher ["张" ; default-value
               ["考评人员搜索" "range_pn" "icon-ok"] ; label name icon
               ["考评机构搜索" "range_org" "icon-ok"]
@@ -81,38 +81,53 @@
           ["使用帮助"          "icon-help"   "help_bt"]
           ]
          ]   
-   :menu_del [["企业安全生产标准化申报系统" 
-           ["企业在线填报子系统"     "11-input"] 
-           ["填报管理子系统"       "12-mng"]
-           ]
-          
-          ["评审机构及评审人员管理系统"
-           ["考评员在线申请子系统"   "21-pn"]     
-           ["考评机构在线申请子系统" "22-org"]     
-           ["评定管理子系统"   "23-mng"]     
-           ]     
-          
-          ["企业安全生产标准化评审系统"
-           ["申报信息查询子系统" "31-search"] 
-           ["评审过程管理子系统" "32-process"] 
-           ["评审记录管理子系统" "33-mng"]
-           ]
-          
-          ["重点企业跟踪监督管理系统"
-           ["信息报送子系统" "41-input"] 
-           ["信息复核子系统" "42-check"]
-           ]
-          
-          ["统计分析管理系统"
-           ["统计查询子系统" "51-search"] 
-           ["统计分析子系统" "52-analysis"]
-           ["报表管理子系统" "53-report"]
-           ]
-          
-          ["政策法规管理系统"]
-          
-          ["信息发布系统"]
-          ] 
+   })
+
+(def frame-cfg-moc
+  {:name "esp"
+   :style (map #(str % "") ["layout_north" "layout_title"])  ; "" 或者 "1"
+   :title "交通运输企业安全生产标准化——省级主管机关系统（试行）"
+   :searcher ["张" ; default-value
+              ["考评人员搜索" "range_pn" "icon-ok"] ; label name icon
+              ["考评机构搜索" "range_org" "icon-ok"]
+              ["交通运输企业搜索" "range_en" "icon-tip"] ]
+   :nav [
+         ["待办事宜" "icon-pen" ; title id
+          ["考评机构申请受理" "icon-list"    "pn-list"] ; title icon id 
+          ["考评机构变更备案受理" "icon-list"    "pn-list"] ; title icon id 
+          ["考评机构换证受理" "icon-list"    "pn-list"] ; title icon id 
+          ["企业初次申请受理" "icon-list"    "pn-olap"] ; title icon id 
+          ["企业考评结论审核" "icon-list"    "pn-olap"] ; title icon id 
+          ["企业换证申请受理" "icon-list"    "pn-olap"] ; title icon id 
+          ["企业变更申请受理" "icon-list"    "pn-olap"] ; title icon id 
+          ]
+         ["考评员" "icon-pen" ; title id
+          ["考评员资格证核发" "icon-list"    "pn-list"] ; title icon id 
+          ["考评员列表" "icon-list"    "pn-list"] ; title icon id 
+          ["考评员管理"          "icon-list"    "pn-olap"] ; title icon id 
+          ]
+         ["考评机构" "icon-pen" ; title id
+          ["考评机构列表" "icon-list"  "org-list"] ; title icon id 
+          ["资格证书制发" "icon-list"    "org-input"] ; title icon id 
+          ["资格撤销" "icon-list"    "org-input"] ; title icon id 
+          ["年度工作报告"          "icon-list"    "indic0_bt"] ; title icon id 
+          ["考评情况汇总表"          "icon-list"    "indic0_bt"] ; title icon id 
+          ]
+         ["交通运输企业"           "icon-pen" ; title id
+          ["企业列表" "icon-list"  "en-list"] ; title icon id 
+          ["资格证书制发" "icon-list"    "org-input"] ; title icon id 
+          ["附加考评" "icon-list"    "org-input"] ; title icon id 
+          ["资格撤销" "icon-list"    "org-input"] ; title icon id 
+          ["年度工作报告"          "icon-list"    "en-analysis"] ; title icon id 
+          ]
+         ["交通运输管理部门"           "icon-pen" ; title id
+          ["统计分析"          "icon-list"    "indic0_bt"] ; title icon id 
+          ]
+         ["系统管理及帮助"     "icon-search"
+          ["网站样式"          "icon-search" "site_bt"]
+          ["使用帮助"          "icon-help"   "help_bt"]
+          ]
+         ]   
    })
 
 (def frame-cfg-pn
@@ -121,10 +136,10 @@
    :title "交通运输企业安全生产标准化——考评员在线申请系统（试行）"
    :nav [
          ["考评员" "icon-pen" ; title id
-          ["申请考评证书" "icon-list"    "pn-apply"] ; title icon id 
+          ["申请考评证书" "icon-list"    "pn-apply"] ; title icon id url 
           ["培训、考试情况" "icon-list"  "pn-learn"] 
           ["换证申请" "icon-list"  "pn-renew"] 
-          ["使用帮助" "icon-help" "pn-help"]
+          ["使用帮助" "icon-help" "pn-help" "/static/esp/about-pn.html"]
           ]
          ] 
    :frame-main (html [:script "layout_load_center('/static/esp/about-pn.html')"])
@@ -181,7 +196,7 @@
    ["考评机构管理系统" "org" "考评机构在线申请、评定管理"]
    ["企业在线填报管理系统" "en" "企业在线填报管理"]
    ["交通部管理系统" "mot" "交通运算管理部门（交通部）内部管理"]
-   ["省级交通主管部门/长江、珠江航管局管理系统" "mot" "省级交通运输主管部门/长江航务管理局、珠江航务管理局内部管理"]
+   ["省级交通主管部门管理系统" "moc" "省级交通运输主管部门/长江航务管理局、珠江航务管理局内部管理"]
    ["<small>实名举报</small>" "hot" "任何单位和个人对考评机构的考评行为，有权向主管机关进行实名举报，主管机关会及时受理、组织调查处理，并为举报人保密。"]
    ])
 
@@ -206,6 +221,7 @@
                    "org" frame-cfg-org
                    "en" frame-cfg-en
                    "mot" frame-cfg-mot
+                   "moc" frame-cfg-moc
                    "not-found"))
     (index-all)))
 
