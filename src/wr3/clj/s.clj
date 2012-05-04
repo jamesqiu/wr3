@@ -6,6 +6,12 @@
   "判断字符串是否nil或者空"
   [s] (zero? (count s)))
 
+(defn not-nullity?
+  "判断字符串非空：不是nil，也不是空字符串
+  @see nullity?"
+  [s]
+  (not (nullity? s)))
+
 (defn include?
   "判断s是否含sub子字串，或者集合s是否含元素sub，参考 in? "
   [s sub]

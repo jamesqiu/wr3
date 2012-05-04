@@ -2900,4 +2900,10 @@ function fileupload_ok(fname) {
 	$('form input[uploading="1"]').next('span').html('<a href="'+ fname +'" target="_blank">查看</a> &nbsp; ')
 }
 
+function esp_save_org_backup() {
+	var url = '/c/esp/org-backup-save?' + $('#fm1').serialize()
+	$.post(url, function(data) {
+		alert(data)
+	})
+}
 

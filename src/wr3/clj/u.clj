@@ -201,11 +201,20 @@
 (defn month-prev 
   "1月前的那一天"
   [] (Datetime/date (Datetime/add 0 -1 0))) 
-
 (defn month-next 
   "1月后的那一天"
   [] (Datetime/date (Datetime/add 0 1 0))) 
-
+(defn date-parse
+  "日期解析
+  @s 格式如 2011-1-2 2011-12-03 
+  @return Calendar "
+  [s] (Datetime/parse s))
+(defn date-add 
+  "日期增减，从今天或者指定日期, (date-add '2013-4-05' 1 -1 10) ; '2014-3-15'
+  @from 日期String如 '2012-1-1'
+  @return 字符串如 2012-3-5 "
+  ([y m d] (Datetime/date (Datetime/add y m d)))
+  ([from y m d] (Datetime/date (Datetime/add (date-parse from) y m d))))
 
 ;; conj cons 函数对vector和list的行为不一致，很容易引起混乱，改造如下：
 (defn conj+ 
@@ -218,3 +227,5 @@
   "cons 和 cons+ 的区别，(cons  1 '(2 3)) -> '(1 2 3), (cons  1 [2 3]) -> '(1 2 3), 类型由vector变为list；
   cons+统一为和输入一致，(cons+ 1 '(2 3)) -> '(1 2 3), (cons+ 1 [2 3]) ->  [1 2 3]"
   [x coll] (if (vector? coll) (into (vector x) coll) (cons x coll)))
+
+
