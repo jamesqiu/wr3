@@ -1,0 +1,2 @@
+FilexTest测试文件内容
+-- 为了tortoisegit 修改文件名 “FilexTest 测试.txt”为“FilexTest.txt”
