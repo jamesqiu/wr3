@@ -3,12 +3,12 @@
 
 (defn to-int 
   "转换为整数, 可以给一个缺省值"
-  ([s] (Integer/parseInt s))
+  ([s] (if (number? s) (int s) (Integer/parseInt s)))
   ([s n0] (try (Integer/parseInt s) (catch Exception e n0))))
 
 (defn to-double
   "转换为整数, 可以给一个缺省值"
-  ([s] (Double/parseDouble s))
+  ([s] (if (number? s) (double s) (Double/parseDouble s)))
   ([s n0] (try (Double/parseDouble s) (catch Exception e n0))))
   
 (defn safe-index

@@ -49,23 +49,24 @@
               ["交通运输企业搜索" "range_en" "icon-tip"] ]
    :nav [
          ["待办事宜" "icon-pen" ; title icon
-          ["考评员申请受理（省级）" "icon-list"    "pn-list"] ; title icon id 
-          ["考评员换证申请受理（省级）" "icon-list"    "pn-list"] ; title icon id 
-          ["考评机构申请受理" "icon-list"    "pn-list"] ; title icon id 
-          ["考评机构变更备案受理" "icon-list"    "pn-list"] ; title icon id 
-          ["考评机构换证受理" "icon-list"    "pn-list"] ; title icon id 
-          ["企业初次申请受理" "icon-list"    "pn-olap"] ; title icon id 
-          ["企业考评结论审核" "icon-list"    "pn-olap"] ; title icon id 
-          ["企业换证申请受理" "icon-list"    "pn-olap"] ; title icon id 
-          ["企业变更申请受理" "icon-list"    "pn-olap"] ; title icon id 
-          ["投诉举报受理" "icon-list"    "pn-olap"] ; title icon id 
+          ["考评员申请受理" "icon-list"     "pn-apply-resp"] ; title icon id 
+          ["考评员换证申请受理" "icon-list" "pn-renew-resp"]  
+          ["考评机构申请受理" "icon-list"    "org-apply-resp"]  
+          ["考评机构变更备案受理" "icon-list" "pn-list"] 
+          ["考评机构换证受理" "icon-list"    "pn-list"] 
+          ["企业初次申请受理" "icon-list"    "en-apply-resp"]  
+          ["企业考评结论审核" "icon-list"    "en-review"]  
+          ["企业换证申请受理" "icon-list"    "pn-olap"]  
+          ["企业变更申请受理" "icon-list"    "pn-olap"]  
+          ["投诉举报受理" "icon-list"    "pn-olap"]  
           ]
          ["考评员" "icon-pen" ; title id
           ["考评员列表" "icon-list"    "pn-list"] ; title icon id 
           ["考评员统计查询"          "icon-list"    "pn-olap"] ; title icon id 
-          ["考评员培训（省级）"          "icon-list"    "pn-olap"] ; title icon id 
-          ["考评员考试（省级）"          "icon-list"    "pn-olap"] ; title icon id 
-          ["考评员资格撤销（省级）"          "icon-list"    "pn-olap"] ; title icon id 
+          ["资格证书制发" "icon-list"    "org-input"] ; title icon id 
+          ["考评员培训"          "icon-list"    "pn-train"] ; title icon id 
+          ["考评员考试"          "icon-list"    "pn-exam"] ; title icon id 
+          ["考评员资格撤销"      "icon-list"    "pn-cancel"] ; title icon id 
           ]
          ["考评机构" "icon-pen" ; title id
           ["考评机构列表" "icon-list"  "org-list"] ; title icon id 
@@ -370,6 +371,7 @@
    31 "0951" 32 "0991" 33 "032" 34 "033" 35 "034" })
 (def dd-pot 
  (array-map
+   "0"    "交通运输部"
    "010"  "北京交委"
    "020"  "广东交通厅 "
    "021"  "上海交委"
@@ -550,6 +552,11 @@
           "文件上载完成"
           [:script (format "parent.fileupload_ok('%s')" fname1)])))))
 
+(defmacro with-esp-
+  "查询出esp的序列化数据"
+  [fetch-op]
+  `(with-mdb2 "esp" (vec ~fetch-op)))
+
 (defn- with-uid-
   "数据表中指定uid的记录
   @tb 数据表如 :pn :pn-apply "
@@ -626,8 +633,9 @@
                                                  [:td (td-align v0) 
                                                   (case col
                                                     :_id [:a {:href (format "/c/esp/%s/%s" (:form m) v) :target "_blank"} "查看"]
-                                                    :type (or (dd-type v) v)
+                                                    :type (or (dd-type (to-int v0)) v)
                                                     :type2 (or (dd-type2 v) v)
+                                                    :grade (or (dd-en-grade v0) v)
                                                     :fulltime (if v0 "专职" "<font color=gray>兼职</font>")
                                                     :contract0 (format-date v)
                                                     :contract1 (if v0 (format-date v0) "<b>目前在职</b>")
@@ -716,13 +724,13 @@
             [:tr 
              [:th {:style "text-align: left"} (or (dd-meta k) k) "："] 
              [:td (case k
-                   :type (or (dd-type v) v) 
-                   :type2 (or (dd-type2 v) v) 
-                   :admin (or (dd-pot v) v)
+                   :type (or (dd-type (to-int v)) v) 
+                   :type2 (or (dd-type2 (to-int v)) v) 
+                   :grade (or (dd-en-grade (to-int v)) v)
                    :belong (str v (when-let [n ((get au/users v) :name)] (format " (%s)" n)))
                    :fulltime (if v "专职" "兼职")
                    :qual (or (dd-org-grade (to-int v)) v)
-                   :admin (or (dd-pot (to-int v)) v)
+                   :admin (or (dd-pot v) v)
                    v)]])]
          [:tfoot 
           [:tr {:align "center" :height "50px"} 
@@ -775,7 +783,9 @@
     (html
       [:h1 "换证申请原因："]
       [:h2 "1、考评员资格证5年有效期慢提前3个月申请换证。" 
-       (when cid (format "目前证书：<u>%s</u>，到期日：%s" cid (-> cid (subs 0 4) to-int (+ 5))))] (space 6)
+       (when cid (format "目前证书：<u>%s</u>，到期日：%s" 
+                         (html [:a {:href (str "/c/esp/pn-cert/" cid) :target "_blank"} cid])
+                         (-> cid (subs 0 4) to-int (+ 5))))] (space 6)
       (eui-button {:href "#" :onclick "layout_load_center('/c/esp/pn-input')"} "申请")
       [:h2 "2、跨管辖范围流动申请换发新证书"] (space 6) 
       (eui-button {:href "#" :onclick "layout_load_center('/c/esp/pn-input')"} "申请")
@@ -1003,15 +1013,78 @@
         (eui-tip "还没有考评工作记录。")
         (eui-button {} "查看考评工作记录……")))))
 
-(defn t10
-  ""
-  [request]
-;  (println "hello world") ; (.getRealPath request "/"))
+(defn pn-train
+  "省级交通主管部门管理的考评员培训"
+  []
   (html
-    "hello"
-    [:pre (.getRealPath request (format "/file/%s.txt" (System/currentTimeMillis)))]))
+    [:h1 "考评员培训工作"]
+    [:h2 "培训时间，培训学时（不少于24个学时），培训类别，培训合格证号"]
+    [:div "注：由省级交通运输主管部门、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作。"] ))
+  
+(defn pn-exam
+  "省级交通主管部门管理的考评员考试"
+  []
+  (html
+    [:h1 "考评员考试工作"]
+    [:h2 "考试时间，考试成绩，是否合格，考试类别，"]
+    [:div "注：交通运输部负责组织编写培训教材和考试大纲。"
+     "省级交通运输主管部门、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作"] ))
+  
+(defn pn-cancel
+  "省级交通主管部门管理的考评员资格撤销"
+  []
+  (html
+    [:h1 "考评员资格撤销工作"]
+    ))    
 
-;;-------- test
+(defn org-apply-resp
+  "交通主管部门考评机构受理处理"
+  []
+  (html
+    [:h1 "考评机构受理处理"]
+    [:h2 "主管机构考评机构受理处理：（同意/不同意）+意见"]
+    ))
+
+(defn en-apply-resp
+  "交通主管部门企业初次申请受理"
+  []
+  (html
+    [:h1 "企业初次申请受理"]
+    [:h2 "企业申请处理：（同意+指派考评机构）/（不同意+意见）"]
+    ))
+
+(defn en-review
+  "交通主管部门企业考评结论审核"
+  []
+  (html
+    [:h1 "企业初次申请受理"]
+    [:h2 "企业考评结论受理：" [:br]
+     "（同意并在本系统实时公示，7天到期自动通过可发证）" [:br]
+     "/（同意并在本系统实时公示，7天到期有举报且情况属实，退到考评机构）" [:br]
+     "/（不同意+意见退到考评机构和企业）"]
+    ))
+
+(defn pn-cert
+  "显示考评员证书"
+  [id]
+  (let [cid (or id "2011-2-0351-15442")
+        r (first (with-esp- (fetch :pn :where {:cid cid})))
+        [yyyy type admin sid] (split cid "-")]
+    (html-body
+      [:table.wr3table {:border 1 :style "width: 300px"}
+       [:caption (format "考评员资格证：<u>%s</u>" cid)]
+       [:tbody
+        [:tr [:td "考评员："] [:td (:name r)]]
+        [:tr [:td "发证年份："] [:td yyyy]]
+        [:tr [:td "类型："] [:td (dd-type (to-int type))]]
+        [:tr [:td "主管机构："] [:td (dd-pot admin)]]
+        ]
+       [:tfoot 
+        [:tr {:align "center" :height "50px"} 
+         [:td {:colspan 2 } (eui-button {:href "#" :onclick "window.close();"} "关闭")]]]] )))
+
+
+;;------------------------------------------------- test
 (def m [
 ])
 
@@ -1037,10 +1110,10 @@
 (defn- gen-pn-cid-
   "考评员证书号格式为：YYYY—C—NA—XXXXX。YYYY表示年份，C表示类别，NA表示发证机关, XXXXX表示编号"
   [type]
-  (format "2011-%s-%s-%04d" 
-          (upper type) 
-          (-> (rand-nth (vec dd-pot)) second (subs 0 2))
-          (rand-int 10000)))
+  (format "2011-%s-%s-%05d" 
+          type 
+          (-> (rand-nth (vec dd-pot)) first)
+          (rand-int 100000)))
 
 (defn- gen-org-cid-
   "考评员证书号格式为：YYYY—C—NA—甲XXXXX。YYYY表示年份，C表示类别，NA表示发证机关, XXXXX表示编号"
@@ -1049,7 +1122,7 @@
         c (if (has? nam "港") "G" "D")
         grade (rand-nth ["乙" "丙"])
         admin (:admin r)
-        admin (if (integer? admin) admin (to-int admin))
+        admin (to-int admin)
         na (subs (dd-pot admin) 0 2)]
     (format "2012-%s-%s-%s%04d" 
             c 
@@ -1068,10 +1141,14 @@
 
 ;;;; test
 ;(with-mdb2 "esp"
-;  (let [rs (fetch :org)]
-;    (doseq [r rs] 
-;      (update! :org r (into r {:cid (gen-org-cid- r) :cdate (date-add "2012-1-1" 0 (rand-int 5) (rand-int 27))})))))
-;  (destroy! :org {:name #"分局"})
-;  (let [rs (fetch :org :where {:name #"分局"})]
-;    )
-
+;  (let [r (fetch-one :pn :where {:name "雷婷婷"} )]
+;    (update! :pn r (into r {:type 1 :cid "2011-1-0351-51015"}))))
+;    (doseq [r rs]
+;      (let [t (:type r)
+;            t (if-let [t1 (dd-type-map t)] t1 "1")
+;            t2 (:type2 r)
+;            t2 (when t2 (str (dd-type-map (subs t2 0 1)) (subs t2 1)))
+;            g (:grade r)
+;            ]
+;        (update! :en r (into r {:type t :type2 t2 :grade (case g "一级" 1 "二级" 2 3) }
+;                       ))))))
