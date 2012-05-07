@@ -357,6 +357,12 @@
    :pnumber "专职考评员人数"
    :pnumber2 "高级技术职称考评员人数"   
    :qual "评审机构资质" 
+   :train-start "培训开始日期"
+   :train-end "培训结束日期"
+   :train-hour "培训学时"
+   :train-id "培训合格证"
+   :exam-date "考试日期"
+   :exam-score "考试分数"
    })
 (def dd-province
   (let [ls (map str '(北京 上海 广东 江苏 陕西 山东 新疆 湖南 黑龙江 湖北 安徽 浙江 四川 贵州 甘肃 福建 辽宁 重庆 天津 广西 吉林 
@@ -767,13 +773,24 @@
       "尚无申请记录" )))
 
 (defn pn-learn
-  "service: 考评员培训、考试查询"
-  []
-  (html
-    [:h1 "尚无培训记录和考试成绩。"]
-    [:h2 "1、首次培训情况（时间不少于24个学时）；"]
-    [:h2 "2、年度继续教育情况（时间不少于8个学时）；"]
-    ))
+  "service: 考评员培训、考试查询
+  @see pn-train 主管机构的考评员培训视图"
+  [request]
+  (let [uid (wr3user request)
+        oid (:_id (first (with-esp- (fetch :pn :where {:uid uid}))))
+        r (first (with-esp- (fetch :pn-train :where {:_id oid})))]
+    (html
+      [:h1 (if r (eui-button {:href (str "/c/esp/pn-learn-view/" oid) :target "_blank"} "培训和考试记录")
+             "尚无培训和考试记录。")]
+      [:h2 "1、首次培训情况（时间不少于24个学时）；"]
+      [:h2 "2、年度继续教育情况（时间不少于8个学时）；"]
+      )))
+
+(defn pn-learn-view
+  "app: 查看考评员培训考试记录
+  @id object-id"
+  [id]
+  (doc- :pn-train id "考评员培训考试记录"))
 
 (defn pn-renew
   "service: 换证申请"
@@ -985,36 +1002,51 @@
       [:h1 "申请换证"]
       (if (empty? rs)
         (eui-tip "还没有资质证书，具备证书后系统会自动提醒换证。")
+        (for [r rs] (html
+                      (eui-button 
+                        {:href (format "/c/esp/org-form/%s" (:_id r)) :target "_blank"} 
+                        (str "资质证书 " (:cid r))) (space 5)
+                      (format "发证时间：%s，换证时间：<u><b>%s</b></u>" (:cdate r) (date-add (:cdate r) 5 -3 0)) [:br]
+                      )
+          ) ))))
+
+(defn org-cert
+  "service: 考评机构目前证书"
+  [request]
+  (let [uid (wr3user request)
+        rs (with-esp- (fetch :org :where {:uid uid :cid {:$exists true}}))]
+    (html
+      [:h1 "考评机构资质证书"]
+      (if (empty? rs)
+        (eui-tip "还没有资质证书。")
         (html
           (for [r rs] (eui-button 
                         {:href (format "/c/esp/org-form/%s" (:_id r)) :target "_blank"} 
                         (str "资质证书 " (:cid r))))) ))))
 
-(defn org-cert
-  "service: 考评机构证书"
-  [request]
-  (let [uid (wr3user request)
-        rs (with-mdb2 "esp" (vec (fetch :org :where {:uid uid :certid {:$exists true}})))]
-    (html
-      [:h1 "资质证书"]
-      (if (empty? rs)
-        (eui-tip "还没有资质证书。")
-        (eui-button {} "查看资质证书……")))))
-
 (defn org-report
   "service: 考评机构年度工作报告"
   [request]
   (let [uid (wr3user request)
-        rs (with-mdb2 "esp" (vec (fetch :org :where {:uid uid :certid {:$exists true}})))]
+        rs (with-esp- (fetch :org-report :where {:uid uid :yyyy (year)}))]
     (html
       [:h1 (year) "年度工作报告"]
       [:h2 "上传年度工作报告"]
       (if (empty? rs)
-        (eui-tip "还没有考评工作记录。")
-        (eui-button {} "查看考评工作记录……")))))
+        (eui-tip "还没有本年度工作记录。")
+        (eui-button {} "查看本年度工作记录……")))))
+
+;(html 
+;                                   (eui-text (into m {:type "hidden" :value (or v "")}))
+;                                   [:span (when (not (nullity? v))
+;                                            (html
+;                                              [:a {:href v :target "_blank"} "查看"]
+;                                              (space 3)))]
+;                                   (eui-button {:onclick (format "fileupload('%s', '%s')" (str nam) sid)} "上传文件"))
 
 (defn pn-train
-  "省级交通主管部门管理的考评员培训"
+  "省级交通主管部门管理的考评员培训
+  @see pn-learn 考评员自己的培训视图"
   []
   (html
     [:h1 "考评员培训工作"]
@@ -1123,8 +1155,22 @@
   
 ;;;; test
 ;(with-mdb2 "esp"
-;  (let [rs (fetch :pn-apply )]
+;  (let [rs (fetch :pn)
+;        i (atom 0)]
 ;    (doseq [r rs]
-;      (update! :pn-apply r (into r {:type (dd-type-map (:type r))})))))
-
-
+;      (let [cid (:cid r)
+;            type (:type r)
+;            from (subs (:from r) 0 2)
+;            admin (key (find-first (fn [[k v]] (has? v from)) dd-pot))
+;            t0  (str (join (take 2 (split cid "-")) "-") "-1")
+;            t1 (date-add t0 0 -2 (- (rand-int 30)))
+;            t2 (date-add t1 0 0 5)
+;            train-id (format "%s-%s-%05d" (subs t2 0 4) admin @i)
+;            t3 (date-add t2 0 0 3)
+;            ]
+;        (swap! i inc)
+;        (insert! :pn-train (into (select-keys r [:type :name :_id])
+;                                 {:train-start t1 :train-end t2 :train-hour 24 :train-id train-id
+;                                  :exam-date t3 :exam-score (+ 60 (rand-int 41))
+;                                  :admin admin})
+;                 )))))

@@ -11,7 +11,7 @@
   "app: 本地mongodb的管理界面"
   []
   (with-mdb2 "test"
-    (let [dbs (databases)
+    (let [dbs (sort (databases))
           f (fn [dbname] (format "<b>%s</b> (%s)"
                                  (html [:a.db {:href "#"} dbname])
                                  (with-db dbname (count (collections)))))]
@@ -34,11 +34,11 @@
           db0 (or id "locale")
           db (if (in? db0 dbs) db0 "local")
           dbc (into {} (for [c (collections)] [c (fetch-count (keyword c))]))
-          dbc2 (sort-by (comp - val) dbc)
+          dbc2 (sort-by key dbc)
           f (fn [c] (for [[k v] c] (format "<b>%s</b> (%s)"
                                            (html [:a.coll {:href "#" :onclick (format "mdb_data('%s','%s');" db k)} k]) v)))]
       (html
-        [:h2 (format "[%s]的集合表: " db)]
+        [:h2 (format "[%s] 的集合表: " db)]
         [:div (join (f dbc2) " &nbsp;|&nbsp; ")]) )))
 
 (defn data
