@@ -633,7 +633,7 @@
                                                  [:td (td-align v0) 
                                                   (case col
                                                     :_id [:a {:href (format "/c/esp/%s/%s" (:form m) v) :target "_blank"} "查看"]
-                                                    :type (or (dd-type (to-int v0)) v)
+                                                    :type (or (dd-type v0) v)
                                                     :type2 (or (dd-type2 v) v)
                                                     :grade (or (dd-en-grade v0) v)
                                                     :fulltime (if v0 "专职" "<font color=gray>兼职</font>")
@@ -1083,21 +1083,16 @@
         [:tr {:align "center" :height "50px"} 
          [:td {:colspan 2 } (eui-button {:href "#" :onclick "window.close();"} "关闭")]]]] )))
 
-
 ;;------------------------------------------------- test
-(def m [
-])
+(def m [])
+(require 'wr3.clj.datagen)
 
 (defn- t1
   "造org表的数据字段" 
   []
   (with-mdb2 "esp"
     (let [rs (fetch :org)
-          f3x (str "王李张刘陈杨黄赵吴周徐孙马朱胡郭何高林罗郑梁谢宋唐许韩冯邓曹彭曾肖"
-                   "田董袁潘于蒋蔡余杜叶程苏魏吕丁任沈姚卢姜崔鍾谭陆汪范金石廖贾夏韦傅方白邹孟熊秦邱江尹薛闫段雷侯龙"
-                   "史陶黎贺顾毛郝龚邵万钱严覃武戴莫孔向汤")
-          name3 (fn [] (str (rand-nth f3x) (rand-nth f3x) (when (zero? (rand-int 2)) (rand-nth f3x))))
-          ]
+          name3 (wr3.clj.datagen/rand-name) ]
       (doseq [r rs]
         (let [m {:_id ""
                  :name ""
@@ -1124,31 +1119,12 @@
         admin (:admin r)
         admin (to-int admin)
         na (subs (dd-pot admin) 0 2)]
-    (format "2012-%s-%s-%s%04d" 
-            c 
-            na
-            grade
-            (rand-int 10000))))
+    (format "2012-%s-%s-%s%04d" c na grade (rand-int 10000))))
   
-(defn- t2 
-  "造pn表的数据字段"
-  []
-  (with-mdb2 "esp"
-    (let [rt (fetch :pn)]
-      (doseq [r rt]
-        (let [cid (gen-pn-cid- (or (:type r) (first (rand-nth (vec dd-type)))))]
-          (update! :pn r (into r {:cid cid})) )))))
-
 ;;;; test
 ;(with-mdb2 "esp"
-;  (let [r (fetch-one :pn :where {:name "雷婷婷"} )]
-;    (update! :pn r (into r {:type 1 :cid "2011-1-0351-51015"}))))
+;  (let [rs (fetch :pn-apply )]
 ;    (doseq [r rs]
-;      (let [t (:type r)
-;            t (if-let [t1 (dd-type-map t)] t1 "1")
-;            t2 (:type2 r)
-;            t2 (when t2 (str (dd-type-map (subs t2 0 1)) (subs t2 1)))
-;            g (:grade r)
-;            ]
-;        (update! :en r (into r {:type t :type2 t2 :grade (case g "一级" 1 "二级" 2 3) }
-;                       ))))))
+;      (update! :pn-apply r (into r {:type (dd-type-map (:type r))})))))
+
+

@@ -15,12 +15,13 @@
         (table-html (wr3-table (.loan dg))
                     {:id "t01" :style "color:blue"}) ))))
 
+; 百家姓
 (def fxs (str "王李张刘陈杨黄赵吴周徐孙马朱胡郭何高林罗郑梁谢宋唐许韩冯邓曹彭曾肖田董袁潘于蒋蔡余杜叶程苏魏吕丁任沈"
               "姚卢姜崔鍾谭陆汪范金石廖贾夏韦傅方白邹孟熊秦邱江尹薛闫段雷侯龙史陶黎贺顾毛郝龚邵万钱严覃武戴莫孔向汤"))
 
 (defn rand-name
-   "生成由形式组成的随机姓名"
+   "生成由百家姓组成的随机姓名，2位或者3位"
    []
-   (str (rand-nth fxs) 
-        (rand-nth fxs) 
+   (str (rand-nth fxs) (rand-nth fxs)
         (when (zero? (rand-int 2)) (rand-nth fxs))))
+

@@ -82,5 +82,10 @@
         <extension>kml</extension>
         <mime-type>application/vnd.google-earth.kml+xml</mime-type>
 	</mime-mapping>
+	
+	<!-- session超时时间，单位为分钟，缺省值为30；注意：filter.listener,servlet,and servlet-mapping等元素要在session-config之前 -->
+	<session-config> 
+		<session-timeout>600</session-timeout> 
+	</session-config>
 
 </web-app>
