@@ -719,10 +719,11 @@
   "显示指定表中指定object-id的记录内容。
   @tb 表名如 :pn :en :org 
   @id object-id字符串如 '4f8ad8ef75e0ae9283368075' "
-  [tb id title]
+  [tb id title & body]
   (with-mdb2 "esp"
     (let [rt (fetch-by-id tb (object-id id))]
       (html-body
+        body
         [:table.wr3table {:border 1}
          [:caption (format "%s <u>%s</u>" title (if-let [n (:name rt)] n ""))]
          [:tbody
@@ -969,10 +970,43 @@
              (vec (fetch :pn :sort {:contract1 1 :fulltime -1} :where {:belong uid} )))]
     (html
       [:h1 (format "本机构当前专兼职考评人员 %s 名" (count rt))]
-      (eui-button {:style "margin: 10px" :title "通过录入考评员资质证书号查询，添加"} "聘用考评员")
+      [:div#hire {:style "margin:15px"}
+       (eui-tip "请输入想要招聘的考评员资质证书号，然后点击“查询”按钮，之后可进行聘用操作。")
+       [:label "考评员资质证书号："]
+       (eui-text {:id "cid"}) (space 3)
+       (eui-button {:onclick "esp_org_hire()"} "查询聘用") ]
       (result-html- rt '[姓名 证书类别 证书编号 专兼职 聘用日期 解聘日期 详情] 
                     [:name :type :cid :fulltime :contract0 :contract1 :_id] {:form "pn-form"}))))
 ;      (result-html- rt '[姓名 单位 属地 详情] [:name :org :from :_id] {:form "pn-form"}))))
+
+(defn org-hire
+  "app: 考评员情况，能否聘用"
+  [id]
+  (let [cid (or id "2011-2-0471-07959")
+        r (first (with-esp- (fetch :pn :where {:cid cid})))
+        oid (:_id r)
+        c0 (:contract0 r)
+        c1 (:contract1 r)
+        belong (:belong r)]
+    (if r
+      (doc- :pn (str (:_id r)) "要聘用的考评员" 
+            (if (and c0 (not c1)) 
+              (eui-tip (format "该考评员目前已经受聘于<u>%s</u>，不能聘用" (:name (get au/users belong))))
+              (html (eui-combo {:id "fulltime" :value 1} {1 "专职" 0 "兼职"} ) (space 5)
+                    (eui-button {:onclick (format "esp_hire('%s')" cid)} (str "聘用考评员" (:name r))) [:br][:br])))
+      "无效证书号")))
+
+(defn hire
+  "service: 后台聘用该考评员"
+  [id fulltime request]
+  (let [cid id
+        ft (if (= fulltime "1") true false)
+        uid (wr3user request) ]
+    (with-mdb2 "esp"
+      (let [r (fetch-one :pn :where {:cid cid})]
+        (do
+          (update! :pn r (into r {:fulltime ft :contract0 (date) :belong uid}))
+          "聘用成功"))))
 
 (defn org-apply
   "service: 考评机构申请导航"
@@ -1025,24 +1059,22 @@
                         (str "资质证书 " (:cid r))))) ))))
 
 (defn org-report
-  "service: 考评机构年度工作报告"
+  "service: 考评机构年度工作报告；
+  @todo 还没有真正保存……"
   [request]
   (let [uid (wr3user request)
         rs (with-esp- (fetch :org-report :where {:uid uid :yyyy (year)}))]
     (html
       [:h1 (year) "年度工作报告"]
-      [:h2 "上传年度工作报告"]
+      (eui-text {:type "hidden" :name "report" :id "report"})
+      (when (not (empty? rs))
+        [:span [:a {:href "#" :target "_blank"} "查看"] (space 3)])
+      (eui-button {:onclick (format "fileupload('%s', '%s')" "年度工作报告" "report")} "上传文件")
       (if (empty? rs)
         (eui-tip "还没有本年度工作记录。")
-        (eui-button {} "查看本年度工作记录……")))))
-
-;(html 
-;                                   (eui-text (into m {:type "hidden" :value (or v "")}))
-;                                   [:span (when (not (nullity? v))
-;                                            (html
-;                                              [:a {:href v :target "_blank"} "查看"]
-;                                              (space 3)))]
-;                                   (eui-button {:onclick (format "fileupload('%s', '%s')" (str nam) sid)} "上传文件"))
+        (eui-button {} "查看本年度工作记录……"))
+      (eui-dialog "fileupload" {:closed "true" :href "/c/esp/fileupload"})
+      [:script "fileupload_bt()"])))
 
 (defn pn-train
   "省级交通主管部门管理的考评员培训
@@ -1155,7 +1187,8 @@
   
 ;;;; test
 ;(with-mdb2 "esp"
-;  (let [rs (fetch :pn)
+;  (let [r (fetch-one :pn :where {:name nil})]
+;    (destroy! :pn r)))
 ;        i (atom 0)]
 ;    (doseq [r rs]
 ;      (let [cid (:cid r)

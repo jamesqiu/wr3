@@ -2907,3 +2907,18 @@ function esp_save_org_backup() {
 	})
 }
 
+function esp_org_hire() {
+	var v = $('#cid').val()
+	if (v=="") {
+		$.messager.alert('提示', '请输入资质证书号如：<br/> 2011-2-0471-07959', 'warning')								
+	} else {
+		window.open('/c/esp/org-hire/'+v, "_blank")
+	}
+}
+
+function esp_hire(cid) {
+	var fulltime = $('#fulltime').val()
+	$.get('/c/esp/hire/'+cid+'?fulltime='+fulltime, function(data) {
+		alert(data)
+	})
+}
