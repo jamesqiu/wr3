@@ -168,7 +168,7 @@
           ]
          ["&nbsp;管理考评员" "icon-user" ; title id
           ["本机构考评员列表" "icon-list"    "org-pn"] ; title icon id 
-          ["考评员培训情况管理" "icon-list"    "pn-archive"] 
+          ["考评员培训情况管理" "icon-list"    "org-pn-train"] 
           ["考评员档案管理" "icon-list"    "pn-archive"] 
           ]
          ["&nbsp;企业考评管理" "icon-pen" ; title id
@@ -187,9 +187,9 @@
    :title "交通运输企业安全生产标准化——企业在线填报管理系统（试行）"
    :nav [
          ["企业申请" "icon-pen" ; title id
-          ["1、在线填报" "icon-list"    "en-input"] ; title icon id 
+          ["1、在线填报" "icon-list"    "en-apply"] ; title icon id 
           ["2、达标自评" "icon-list"    "stand-list"] ; title icon id 
-          ["3、选择考评机构" "icon-list" "org-list"] 
+          ["3、选择考评机构" "icon-list" "en-select-org"] 
           ["进度查询" "icon-list"    "en-input"] 
           ["企业年度工作报告（上传文档）" "icon-list"    "en-input"] 
           ["换证申请" "icon-list"    "en-input"] 
@@ -475,7 +475,7 @@
 (def cfg-apply-en ; en-input-form 
   [
    ["企业名称" :name {:require true :v "xxx"}]
-   ["申请等级" :grade {:t [:一级 :二级 :三级] :v :一级}]
+   ["申请等级" :grade {:t dd-en-grade :v 1}]
    ["法人代表" :legalp]
    ["生产经营类别" :type2 {:t dd-type2 :v "s1" :title "可多选"}]
    ["主管机关" :admin {:t dd-pot :title "一级不用选（部）；二级选34个机构；三级选二级、三级机构；每个类型对应自己的主管机关"}]
@@ -570,23 +570,40 @@
   (with-mdb2 "esp"
     (vec (fetch tb :where {:uid uid}))))
 
+(defn- apply-nav-
+  "证书申请导航页
+  @type :pn :en :org "
+  [type request]
+  [request]
+  (let [uid (wr3user request)
+        tb type
+        tb-apply (-> tb name (str "-apply") keyword)
+        r1 (first (with-uid- tb uid))
+        rs2 (with-uid- tb-apply uid)]
+    (html
+      [:h1 (format "录入过的申请信息 %s 条" (if r1 1 0))]
+      (eui-button {:href "#" :onclick (format "layout_load_center('/c/esp/%s-input')" (name type))}  
+                  (if r1 "查看已录入的申请信息" "初次申请考评证书"))
+      (when rs2
+        (html [:h1 (format "已提交过%s次申请：" (count rs2))]
+              (for [r rs2] 
+                (html (eui-button {:href (format "/c/esp/%s-apply-view/%s" (name type) (:_id r)) :target "_blank"}
+                                  (format "查看%s的申请" (:date r))) (space 5))))))))
+
 (defn pn-apply
   "service: 考评员申请导航页"
   [request]
-  (let [uid (wr3user request)
-        r1 (first (with-uid- :pn uid))
-        rs2 (with-uid- :pn-apply uid)]
-    (html
-      [:h1 (format "录入过的申请信息 %s 条" (if r1 1 0))]
-      (if r1
-        (eui-button {:href "#" :onclick "layout_load_center('/c/esp/pn-input')"}  "查看已录入的申请信息")
-        (eui-button {:href "#" :onclick "layout_load_center('/c/esp/pn-input')"} "初次申请考评证书"))
-      (when rs2
-        (html
-          [:h1 (format "已提交过%s次申请：" (count rs2))]
-          (for [r rs2] 
-            (html 
-              (eui-button {:href (format "/c/esp/pn-apply-view/%s" (:_id r)) :target "_blank"} (format "查看%s的申请" (:date r))) (space 5))))))))
+  (apply-nav- :pn request))
+
+(defn en-apply
+  "service: 企业申请导航页"
+  [request]
+  (apply-nav- :en request))
+  
+(defn org-apply
+  "service: 考评机构申请导航"
+  [request]
+  (apply-nav- :org request))
 
 (defn- apply-input-
   "pn-input, org-input, en-input的录入表单
@@ -689,7 +706,8 @@
     (vec (fetch tb :limit 100 :where {:name (re-pattern (or s ""))}))))
   
 (defn pn-list
-  "service: 考评员列表"
+  "service: 考评员列表
+  @id name的pattern如'张' "
   [id]
   (let [tb :pn
         rt (if id (search- tb id) (data- tb))]
@@ -698,7 +716,8 @@
       (result-html- rt '[姓名 单位 属地 详情] [:name :org :from :_id] {:form "pn-form"}))))
   
 (defn org-list
-  "service: 考评机构列表"
+  "service: 考评机构列表
+  @id name的pattern如'学校' "
   [id]
   (let [tb :org
         rt (if id (search- tb id) (data- tb))]
@@ -707,7 +726,8 @@
       (result-html- rt '[机构名称 所属省份 详情] [:name :province :_id] {:form "org-form"}))))
   
 (defn en-list
-  "service: 企业列表"
+  "service: 企业列表
+  @id name的pattern如'安徽' "
   [id]
   (let [tb :en
         rt (if id (search- tb id) (data- tb))]
@@ -718,12 +738,13 @@
 (defn- doc-
   "显示指定表中指定object-id的记录内容。
   @tb 表名如 :pn :en :org 
-  @id object-id字符串如 '4f8ad8ef75e0ae9283368075' "
-  [tb id title & body]
+  @id object-id字符串如 '4f8ad8ef75e0ae9283368075' 
+  @m 定制化，参数 {:befor .. :after ..} :befor 在前面的html内容，:after 在后面的html内容 "
+  [tb id title m]
   (with-mdb2 "esp"
     (let [rt (fetch-by-id tb (object-id id))]
       (html-body
-        body
+        (when-let [before (:before m)] before)
         [:table.wr3table {:border 1}
          [:caption (format "%s <u>%s</u>" title (if-let [n (:name rt)] n ""))]
          [:tbody
@@ -741,7 +762,8 @@
                    v)]])]
          [:tfoot 
           [:tr {:align "center" :height "50px"} 
-           [:td {:colspan 2 } (eui-button {:href "#" :onclick "window.close();"} "关闭")]]]] ))))
+           [:td {:colspan 2 } (eui-button {:href "#" :onclick "window.close();"} "关闭")]]]] 
+        (when-let [after (:before m)] after)))))
   
 (defn pn-form
   "service: 查看指定考评员的记录表单"
@@ -834,6 +856,12 @@
   [id]
   (doc- :pn-apply id "考评员"))
 
+(defn en-apply-view
+  "app: 查看申请记录
+  @id object-id"
+  [id]
+  (doc- :en-apply id "企业"))
+
 (defn org-apply-view
   "app: 查看申请记录
   @id object-id"
@@ -868,17 +896,17 @@
   (let []
     (html
       [:center [:h1 "达标标准考评（五大类16小类）"]]
+      (eui-tip "注意：目前只有前两个即“<b>道路旅客运输</b>”和“<b>道路危险货物运输</b>”的标准，最新版尚未录入！")
       (for [[k1 v1] dd-type]
         (html 
           [:h2 v1 "："]
-          (for [[k2 v2] (filter #(.startsWith (key %) k1) dd-type2)]
+          (for [[k2 v2] (filter #(= (int (/ (key %) 10)) k1) dd-type2)]
             (eui-button {:href (str "/c/esp/stand/" k2) :target "_blank" :style "margin: 5px"} 
-                        v2)))
-      ))))
+                        v2))) ))))
 
 (defn- get-stand-
   "@tb 'en-stand1' 'en-stand2' 
-  @type2 'd1' 'd2' "
+  @type2 11 12 "
   [tb type2]
   (with-mdb2 "esp"
     (vec (fetch (keyword tb) :where {:type2 type2} :sort {:i 1 :j 1 :k 1}))))  
@@ -887,7 +915,7 @@
   "app: 企业安全生产达标标准——自评，机构考评"
   [id]
   (html-body
-    (let [type2 (or id "d1")
+    (let [type2 (to-int (or id 11))
           [rt1 rt2 rt3] (map #(get-stand- (str "en-stand" %) type2) [1 2 3])
           f3 (fn [r] ; r:  某个2级考核指标，如“1.安全工作方针与目标”
                (let [s1 (html [:td {:style "width: 800px"} (:name r)] 
@@ -969,7 +997,7 @@
         rt (with-mdb2 "esp"
              (vec (fetch :pn :sort {:contract1 1 :fulltime -1} :where {:belong uid} )))]
     (html
-      [:h1 (format "本机构当前专兼职考评人员 %s 名" (count rt))]
+      [:h1 (format "本机构当前在职考评人员 %s 名" (count (filter #(nil? (:contract1 %)) rt)))]
       [:div#hire {:style "margin:15px"}
        (eui-tip "请输入想要招聘的考评员资质证书号，然后点击“查询”按钮，之后可进行聘用操作。")
        [:label "考评员资质证书号："]
@@ -990,10 +1018,10 @@
         belong (:belong r)]
     (if r
       (doc- :pn (str (:_id r)) "要聘用的考评员" 
-            (if (and c0 (not c1)) 
-              (eui-tip (format "该考评员目前已经受聘于<u>%s</u>，不能聘用" (:name (get au/users belong))))
-              (html (eui-combo {:id "fulltime" :value 1} {1 "专职" 0 "兼职"} ) (space 5)
-                    (eui-button {:onclick (format "esp_hire('%s')" cid)} (str "聘用考评员" (:name r))) [:br][:br])))
+            {:before (if (and c0 (not c1)) 
+                       (eui-tip (format "该考评员目前已经受聘于<u>%s</u>，不能聘用" (:name (get au/users belong))))
+                       (html (eui-combo {:id "fulltime" :value 1} {1 "专职" 0 "兼职"} ) (space 5)
+                             (eui-button {:onclick (format "esp_hire('%s')" cid)} (str "聘用考评员" (:name r))) [:br][:br]))})
       "无效证书号")))
 
 (defn hire
@@ -1006,26 +1034,24 @@
       (let [r (fetch-one :pn :where {:cid cid})]
         (do
           (update! :pn r (into r {:fulltime ft :contract0 (date) :belong uid}))
-          "聘用成功"))))
+          "聘用成功")))))
 
-(defn org-apply
-  "service: 考评机构申请导航"
+(defn org-pn-train
+  "省级交通主管部门管理的考评员培训
+  @see pn-learn 考评员自己的培训视图"
   [request]
   (let [uid (wr3user request)
-        r1 (with-uid- :org uid)
-        rs2 (with-uid- :org-apply uid)]
+        rt (with-esp- (fetch :pn :only ["_id"] :where {:belong uid :contract1 nil} ))
+        ids (vec (map #(-> % :_id str) rt))
+        rt2 (with-esp- (fetch :pn-train :where {:_id {:$in (map object-id ids)}}))]
     (html
-      [:h1 (format "录入过的申请信息 %s 条" (if r1 1 0))]
-      (if r1
-        (eui-button {:href "#" :onclick "layout_load_center('/c/esp/org-input')"}  "查看已录入的申请信息")
-        (eui-button {:href "#" :onclick "layout_load_center('/c/esp/org-input')"} "初次申请考评证书"))
-      (when rs2
-        (html
-          [:h1 (format "已提交过%s次申请：" (count rs2))]
-          (for [r rs2] 
-            (html 
-              (eui-button {:href (format "/c/esp/org-apply-view/%s" (:_id r)) :target "_blank"} 
-                          (format "查看%s的申请" (:date r))) (space 5))))))))
+      [:h1 "考评员培训工作"]
+      [:h2 "培训时间，培训学时（不少于24个学时），培训类别，培训合格证号"]
+      [:div "注：由省级交通运输主管部门、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作。"]
+      [:br]
+      (result-html- rt2 
+                    ["姓名" "培训合格证" "开始日期" "结束日期" "学时" "类型"] 
+                    [:name :train-id :train-start :train-end :train-hour :type]))))
 
 (defn org-renew
   "service: 考评机构申请换证"
@@ -1084,7 +1110,7 @@
     [:h1 "考评员培训工作"]
     [:h2 "培训时间，培训学时（不少于24个学时），培训类别，培训合格证号"]
     [:div "注：由省级交通运输主管部门、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作。"] ))
-  
+
 (defn pn-exam
   "省级交通主管部门管理的考评员考试"
   []
@@ -1147,6 +1173,16 @@
         [:tr {:align "center" :height "50px"} 
          [:td {:colspan 2 } (eui-button {:href "#" :onclick "window.close();"} "关闭")]]]] )))
 
+(defn en-select-org
+  "app: 企业选择考评机构"
+  [request]
+  (let [uid (wr3user request)
+        admin (:admin (first (with-uid- :en uid)))
+        rs (with-esp- (fetch :org :where {:admin admin}))] 
+    (html
+      [:h1 (format "%s主管的考评机构（%s 名）" (dd-pot admin) (count rs))]
+      (result-html- rs '[机构名称 所属省份 详情] [:name :province :_id] {:form "org-form"}))))
+  
 ;;------------------------------------------------- test
 (def m [])
 (require 'wr3.clj.datagen)
@@ -1187,7 +1223,9 @@
   
 ;;;; test
 ;(with-mdb2 "esp"
-;  (let [r (fetch-one :pn :where {:name nil})]
+;  (let [rs (fetch :org :where {:province "山西省"})]
+;    (doseq [r rs]
+;      (update! :org r (into r {:admin "0351"})))))
 ;    (destroy! :pn r)))
 ;        i (atom 0)]
 ;    (doseq [r rs]
@@ -1207,3 +1245,4 @@
 ;                                  :exam-date t3 :exam-score (+ 60 (rand-int 41))
 ;                                  :admin admin})
 ;                 )))))
+;

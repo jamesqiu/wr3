@@ -26,15 +26,15 @@ public class ExcelTest {
 		
 		String filename = args[0];
 		Excel o = new Excel();
-		o.open(filename, true);
+		o.open(filename, false);
 		for (int i = 0; i < o.sheets(); i++) {
 			int[] range = o.range(i);
 			System.out.printf("sheet%d: %d, %d\n", (i+1), range[0], range[1]);			
 		}
 		o.sheet(1); // 使用第2个sheet
 		o.value("A1", "Value", ""+Numberx.random());
-		o.value("A2", "Formula", "=A1*2");
-		o.value(position(5, 3), "Value", "this is c5");
+		o.value("A2", "Formula", "=A1*10");
+		o.value(position(5, 3), "Value", "this is c9");
 		o.color(position(5, 3), WHITE, BLACK);
 		sleep(1000);
 		System.out.println(o.value("A2"));
