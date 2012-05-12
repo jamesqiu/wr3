@@ -2441,13 +2441,13 @@ function ems_layout2() {
  * @param url
  */
 function layout_load_center(url, func) {
-	$('div [region="center"]')
-	.html('<img src="/img/loading3.gif" />')
-	.load(url, function(data) {
-		$.parser.parse()
-		if (func) { func(data) }
-	})
-	.css('padding', '20px')				
+	var div1 = $('div [region="center"]')
+	div1.html('<img src="/img/loading3.gif" />')
+	  	.load(url, function(data) {
+	  		$.parser.parse(div1) // easyui仅重绘ajax装载的内容
+	  		if (func) { func(data) }
+	  	})
+	  	.css('padding', '20px')				
 }
 
 /**
@@ -2851,6 +2851,14 @@ function esp_input_submit(form) {
 	})
 }
 
+function esp_report_save(form) {
+	var url = '/c/esp/report-save/'+form +'?' + $("form").serialize() 
+	$.post(url, function(data) {
+		alert('提示：' + data)
+	})
+}
+
+//------------------------ 文件上传
 /**
  * 打开进行文件上传的一个dialog
  * @param nam 字段中文名
@@ -2899,6 +2907,7 @@ function fileupload_ok(fname) {
 	$('form input[uploading="1"]').val(fname)
 	$('form input[uploading="1"]').next('span').html('<a href="'+ fname +'" target="_blank">查看</a> &nbsp; ')
 }
+//------------------------ 文件上传</end>
 
 function esp_save_org_backup() {
 	var url = '/c/esp/org-backup-save?' + $('#fm1').serialize()
@@ -2922,3 +2931,30 @@ function esp_hire(cid) {
 		alert(data)
 	})
 }
+
+function esp_en_select_org() {
+	var sids = ""
+	var sum = 0
+	$('input[type="checkbox"]').each(function(i,e) {
+		if ($(e).prop('checked')==true) {
+			sids += $(e).attr('sid') + " "
+			sum++;			
+		}
+	})
+	if (sum==2) {
+		$.get('/c/esp/en-select-org-save/'+sids, function(data) {
+			alert(data)
+		})
+	} else {		
+		alert('已选'+sum+'个'+sids+'，请选2个。')
+	}
+}
+
+function esp_en_selected(sid) {
+	$('input[type="checkbox"]').each(function(i,e) {
+		if (sid.indexOf($(e).attr('sid')) != -1) {
+			$(e).prop('checked', true)
+		}
+	})
+}
+

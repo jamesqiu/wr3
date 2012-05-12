@@ -1,6 +1,7 @@
 (ns ^{:doc "企业安全生产标准化管理系统 Enterprise Safety Production Standardization。 
   pn：考评员person，en：企业enterprise，org：考评机构organization，mot：交通部Ministry Of Transport
-  pot：省级交通厅/委/局 Pronvince department Of Transport"
+  pot：省级交通厅/委/局 Pronvince department Of Transport
+  暂定的企业达标证书格式：2012-type-grade-admin-%05d "
       :todo ""} 
      wr3.clj.app.esp)
 
@@ -176,7 +177,7 @@
           ["企业达标等级证书制发" "icon-list" "en-input"] ; title icon id 
           ["工作进度查询" "icon-list" "org-stat"] 
           ["考评企业档案管理" "icon-list" "en-archive"] 
-          ["考评情况汇总表" "icon-list" "en-report"] 
+          ["考评情况汇总表" "icon-list" "org-en-report"] 
           ]
          ]   
    })
@@ -190,10 +191,10 @@
           ["1、在线填报" "icon-list"    "en-apply"] ; title icon id 
           ["2、达标自评" "icon-list"    "stand-list"] ; title icon id 
           ["3、选择考评机构" "icon-list" "en-select-org"] 
-          ["进度查询" "icon-list"    "en-input"] 
-          ["企业年度工作报告（上传文档）" "icon-list"    "en-input"] 
-          ["换证申请" "icon-list"    "en-input"] 
-          ["变更申请" "icon-list"    "en-backup"] 
+          ["进度查询" "icon-list"    "en-process"] 
+          ["企业年度工作报告" "icon-list"  "en-report"] 
+          ["申请变更" "icon-list"    "en-backup"] 
+          ["申请换证" "icon-list"    "en-renew"] 
           ]
          ]   
    })
@@ -363,6 +364,8 @@
    :train-id "培训合格证"
    :exam-date "考试日期"
    :exam-score "考试分数"
+   :safe "安全生产组织架构"
+   :sid "选择的2个考评机构"
    })
 (def dd-province
   (let [ls (map str '(北京 上海 广东 江苏 陕西 山东 新疆 湖南 黑龙江 湖北 安徽 浙江 四川 贵州 甘肃 福建 辽宁 重庆 天津 广西 吉林 
@@ -512,9 +515,7 @@
                 (= t 'file)      (html 
                                    (eui-text (into m {:type "hidden" :value (or v "")}))
                                    [:span (when (not (nullity? v))
-                                            (html
-                                              [:a {:href v :target "_blank"} "查看"]
-                                              (space 3)))]
+                                            (html [:a {:href v :target "_blank"} "查看"] (space 3)))]
                                    (eui-button {:onclick (format "fileupload('%s', '%s')" (str nam) sid)} "上传文件"))
                 (= t 'email)     (eui-email    m)
                 (map? t)         (eui-combo    m t)
@@ -527,7 +528,10 @@
                       (eui-button {:onclick "$('form').get(0).reset()"} " 取 消 ") ]]]]]
       (eui-dialog "fileupload" {:closed "true" :href "/c/esp/fileupload"})
       [:script "fileupload_bt()"] )))
-       
+
+;;; 文件上传的设计：
+;;;   js函数fileupload(name,sid)弹出对话框（传入input hidden字段中文名及对应id或name），
+;;;   保存在 /file 下文件名为 uid-timestamp.xx ，把该文件名传给hidden
 (defn fileupload
   "文件上传弹出窗口的内容
   @id 弹出窗口对应的父按钮前文件字段的id或者name"
@@ -651,18 +655,20 @@
                      :f-row (fn [row-index row]
                               [:tr (bgcolor-css row-index)
                                [:td {:align "right" :style "color: lightgray"} row-index]
-                               (for [col cols] (let [v0 (-> col row)
-                                                     v (-> v0 str trim) ]
-                                                 [:td (td-align v0) 
-                                                  (case col
-                                                    :_id [:a {:href (format "/c/esp/%s/%s" (:form m) v) :target "_blank"} "查看"]
-                                                    :type (or (dd-type v0) v)
-                                                    :type2 (or (dd-type2 v) v)
-                                                    :grade (or (dd-en-grade v0) v)
-                                                    :fulltime (if v0 "专职" "<font color=gray>兼职</font>")
-                                                    :contract0 (format-date v)
-                                                    :contract1 (if v0 (format-date v0) "<b>目前在职</b>")
-                                                    v)])) ]) } ))
+                               (for [col cols] 
+                                 (let [v0 (-> col row)
+                                       v (-> v0 str trim) ]
+                                   [:td (td-align v0) 
+                                    (case col
+                                      :_id [:a {:href (format "/c/esp/%s/%s" (:form m) v) :target "_blank"} "查看"]
+                                      :_select [:input {:type "checkbox" :group "select" :sid (:_id row)}]
+                                      :type (or (dd-type v0) v)
+                                      :type2 (or (dd-type2 v) v)
+                                      :grade (or (dd-en-grade v0) v)
+                                      :fulltime (if v0 "专职" "<font color=gray>兼职</font>")
+                                      :contract0 (format-date v)
+                                      :contract1 (if v0 (format-date v0) "<b>目前在职</b>")
+                                      v)])) ]) } ))
   ([rt head cols] (result-html- rt head cols {})))
 
 (defn input-save
@@ -677,6 +683,20 @@
       (update! tb {:uid uid} m))
     (str "已保存 " (vars "name") " 的申请。")))
 
+(defn report-save
+  "service: 考评机构，企业年度报告保存
+  @id form名称如 'en' 'org' "
+  [id request]
+  (let [vars (query-vars request)
+        uid (wr3user request)
+        tb (keyword id) ; :en-report :org-report
+        yyyy (year)
+        m (into vars {:uid uid :year yyyy :date (date)})]
+    (println m)
+    (with-mdb "esp" 
+      (update! tb {:uid uid :year yyyy} m))
+    (str "已保存 " yyyy " 年度报告。")))
+
 (defn input-submit
   "service: 考评员，考评机构，企业申请表提交"
   [id request]
@@ -689,7 +709,6 @@
       (update! tb1 {:uid uid} m) ; 保存到基本信息表
       (insert! tb2 (into m {:date (datetime)}))) ; 保存到申请表
     (str "已提交 " (vars "name") " 的申请。")))
-
 
 (defn- data-
   "取出数据表所有记录
@@ -740,30 +759,31 @@
   @tb 表名如 :pn :en :org 
   @id object-id字符串如 '4f8ad8ef75e0ae9283368075' 
   @m 定制化，参数 {:befor .. :after ..} :befor 在前面的html内容，:after 在后面的html内容 "
-  [tb id title m]
-  (with-mdb2 "esp"
-    (let [rt (fetch-by-id tb (object-id id))]
-      (html-body
-        (when-let [before (:before m)] before)
-        [:table.wr3table {:border 1}
-         [:caption (format "%s <u>%s</u>" title (if-let [n (:name rt)] n ""))]
-         [:tbody
-          (for [[k v] (dissoc rt :_id)]
-            [:tr 
-             [:th {:style "text-align: left"} (or (dd-meta k) k) "："] 
-             [:td (case k
-                   :type (or (dd-type (to-int v)) v) 
-                   :type2 (or (dd-type2 (to-int v)) v) 
-                   :grade (or (dd-en-grade (to-int v)) v)
-                   :belong (str v (when-let [n ((get au/users v) :name)] (format " (%s)" n)))
-                   :fulltime (if v "专职" "兼职")
-                   :qual (or (dd-org-grade (to-int v)) v)
-                   :admin (or (dd-pot v) v)
+  ([tb id title m]
+    (with-mdb2 "esp"
+      (let [rt (fetch-by-id tb (object-id id))]
+        (html-body
+          (when-let [before (:before m)] before)
+          [:table.wr3table {:border 1}
+           [:caption (format "%s <u>%s</u>" title (if-let [n (:name rt)] n ""))]
+           [:tbody
+            (for [[k v] (dissoc rt :_id)]
+              [:tr 
+               [:th {:style "text-align: left"} (or (dd-meta k) k) "："] 
+               [:td (case k
+                      :type (or (dd-type (to-int v)) v) 
+                      :type2 (or (dd-type2 (to-int v)) v) 
+                      :grade (or (dd-en-grade (to-int v)) v)
+                      :belong (str v (when-let [n ((get au/users v) :name)] (format " (%s)" n)))
+                      :fulltime (if v "专职" "兼职")
+                      :qual (or (dd-org-grade (to-int v)) v)
+                      :admin (or (dd-pot v) v)
                    v)]])]
-         [:tfoot 
-          [:tr {:align "center" :height "50px"} 
-           [:td {:colspan 2 } (eui-button {:href "#" :onclick "window.close();"} "关闭")]]]] 
-        (when-let [after (:before m)] after)))))
+           [:tfoot 
+            [:tr {:align "center" :height "50px"} 
+             [:td {:colspan 2 } (eui-button {:href "#" :onclick "window.close();"} "关闭")]]]] 
+          (when-let [after (:before m)] after)))))
+  ([tb id title] (doc- tb id title {})))
   
 (defn pn-form
   "service: 查看指定考评员的记录表单"
@@ -869,7 +889,8 @@
   (doc- :org-apply id "考评机构"))
 
 (defn en-backup
-  "service: 企业变更申请"
+  "service: 企业变更申请
+  @todo 照着 org-backup 去做"
   []
   (html
     [:h1 "管理办法规定："]
@@ -1053,22 +1074,32 @@
                     ["姓名" "培训合格证" "开始日期" "结束日期" "学时" "类型"] 
                     [:name :train-id :train-start :train-end :train-hour :type]))))
 
-(defn org-renew
-  "service: 考评机构申请换证"
-  [request]
+(defn- cert-renew-
+  "证书换证"
+  [tb request]
   (let [uid (wr3user request)
-        rs (with-mdb2 "esp" (vec (fetch :org :where {:uid uid :cid {:$exists true}})))]
+        rs (with-mdb2 "esp" (vec (fetch tb :where {:uid uid :cid {:$exists true}})))
+        y (case tb :org 5 :en 3 1)
+        cname (case tb :org "考评机构资质" :en "企业达标" "未知")]
     (html
       [:h1 "申请换证"]
       (if (empty? rs)
-        (eui-tip "还没有资质证书，具备证书后系统会自动提醒换证。")
-        (for [r rs] (html
-                      (eui-button 
-                        {:href (format "/c/esp/org-form/%s" (:_id r)) :target "_blank"} 
-                        (str "资质证书 " (:cid r))) (space 5)
-                      (format "发证时间：%s，换证时间：<u><b>%s</b></u>" (:cdate r) (date-add (:cdate r) 5 -3 0)) [:br]
-                      )
-          ) ))))
+        (eui-tip (format "还没有%s证书，具备证书后系统会自动提醒换证（%s年到期前3个月）。" cname y))
+        (for [r rs] 
+          (html (eui-button {:href (format "/c/esp/%s-form/%s" (name tb) (:_id r)) :target "_blank"}
+                            (format "%s证书：%s" cname (:cid r))) (space 5)
+                (format "发证时间：%s，换证时间：<u><b>%s</b></u>" (:cdate r) (date-add (:cdate r) y -3 0)) 
+                [:br] ))))))
+
+(defn org-renew
+  "service: 考评机构申请换证"
+  [request]
+  (cert-renew- :org request))
+
+(defn en-renew
+  "service: 考评机构申请换证 "
+  [request]
+  (cert-renew- :en request))
 
 (defn org-cert
   "service: 考评机构目前证书"
@@ -1084,23 +1115,39 @@
                         {:href (format "/c/esp/org-form/%s" (:_id r)) :target "_blank"} 
                         (str "资质证书 " (:cid r))))) ))))
 
-(defn org-report
-  "service: 考评机构年度工作报告；
+(defn- year-report-
+  "service: 年度工作报告；
+  @type 类型 :org :en
   @todo 还没有真正保存……"
-  [request]
+  [type request]
   (let [uid (wr3user request)
-        rs (with-esp- (fetch :org-report :where {:uid uid :yyyy (year)}))]
+        tb-report (-> type name (str "-report")) ; "org-report"  "en-report"
+        r (first (with-esp- (fetch (keyword tb-report) :where {:uid uid :year (year)})))
+        sid "freport"]
     (html
+      (when-not r (eui-tip "还没有本年度工作记录。"))
       [:h1 (year) "年度工作报告"]
-      (eui-text {:type "hidden" :name "report" :id "report"})
-      (when (not (empty? rs))
-        [:span [:a {:href "#" :target "_blank"} "查看"] (space 3)])
-      (eui-button {:onclick (format "fileupload('%s', '%s')" "年度工作报告" "report")} "上传文件")
-      (if (empty? rs)
-        (eui-tip "还没有本年度工作记录。")
-        (eui-button {} "查看本年度工作记录……"))
+      
+      [:form {:method "POST" :action (format "/c/esp/report-save") :enctype "multipart/form-data"}
+       [:label "年度报告："]
+       (eui-text {:type "hidden" :name sid :id sid})
+       [:span (when r
+                (html [:a {:href (:freport r) :target "_blank"} "查看"] (space 3)))]      
+       (eui-button {:onclick (format "fileupload('%s', '%s')" "年度工作报告" sid)} "上传文件") [:br][:br]
+       (eui-button {:onclick (format "esp_report_save('%s')" tb-report)} "保 存") (space 5) ]
+      
       (eui-dialog "fileupload" {:closed "true" :href "/c/esp/fileupload"})
       [:script "fileupload_bt()"])))
+
+(defn org-report
+  "service: 培训机构年度工作报告"
+  [request]
+  (year-report- :org request))
+  
+(defn en-report
+  "service: 企业年度工作报告"
+  [request]
+  (year-report- :en request))
 
 (defn pn-train
   "省级交通主管部门管理的考评员培训
@@ -1178,11 +1225,41 @@
   [request]
   (let [uid (wr3user request)
         admin (:admin (first (with-uid- :en uid)))
-        rs (with-esp- (fetch :org :where {:admin admin}))] 
+        rs (with-esp- (fetch :org :where {:admin admin}))
+        r (first (with-esp- (fetch :en-apply :where {:uid uid} :sort {:date -1}))) ; 第一条申请
+        ] 
     (html
       [:h1 (format "%s主管的考评机构（%s 名）" (dd-pot admin) (count rs))]
-      (result-html- rs '[机构名称 所属省份 详情] [:name :province :_id] {:form "org-form"}))))
+      (eui-tip "请在如下的考评机构列表中自行选择两个。")
+      (result-html- rs '[机构名称 所属省份 详情 选择] [:name :province :_id :_select] {:form "org-form"}) [:br]
+      (eui-button {:onclick "esp_en_select_org()"} "提 交")
+      [:script (format "esp_en_selected('%s')" (join (:sid r) ","))]
+      )))
+
+(defn en-select-org-save
+  "service: 保存企业所选2个考评机构的object-id "
+  [id request]
+  (with-mdb2 "esp"
+    (let [sid (vec (split id " "))
+          uid (wr3user request)
+          rs (fetch :en-apply :where {:uid uid})]
+      (doseq [r rs]
+        (update! :en-apply r (into r {:sid sid})))
+      "已保存" )))
   
+(defn en-process
+  "service: 企业申请进度查询"
+  [request]
+  (let [uid (wr3user request)
+        rs (with-uid- :en-apply uid)]
+    (html
+      [:h1 "申请进度查询"]
+      (when rs
+        (html [:h2 (format "已提交过%s次申请：" (count rs))]
+              (for [r rs] 
+                (html (eui-button {:href (format "/c/esp/en-apply-view/%s" (:_id r)) :target "_blank"}
+                                  (format "查看%s的申请" (:date r))) (space 5))))))))
+
 ;;------------------------------------------------- test
 (def m [])
 (require 'wr3.clj.datagen)
@@ -1223,8 +1300,12 @@
   
 ;;;; test
 ;(with-mdb2 "esp"
-;  (let [rs (fetch :org :where {:province "山西省"})]
+;  (let [rs (fetch :en )]
 ;    (doseq [r rs]
+;      (let [cdate (format "2012-%s-%s" (inc (rand-int 12)) (inc (rand-int 28)))]
+;        (update! :en r (into r {:cdate cdate}))
+;        ))))
+
 ;      (update! :org r (into r {:admin "0351"})))))
 ;    (destroy! :pn r)))
 ;        i (atom 0)]
