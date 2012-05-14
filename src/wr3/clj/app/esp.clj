@@ -43,7 +43,7 @@
 (def cfg-frame-mot
   {:name "esp"
    :style (map #(str % "") ["layout_north" "layout_title"])  ; "" 或者 "1"
-   :title "交通运输企业安全生产标准化——交通运输部管理系统（试行）"
+   :title "交通运输企业安全生产标准化——主管部门管理系统（试行）"
    :searcher ["张" ; default-value
               ["考评人员搜索" "range_pn" "icon-ok"] ; label name icon
               ["考评机构搜索" "range_org" "icon-ok"]
@@ -53,26 +53,26 @@
           ["考评员申请受理" "icon-list"     "pn-apply-resp"] ; title icon id 
           ["考评员换证申请受理" "icon-list" "pn-renew-resp"]  
           ["考评机构申请受理" "icon-list"    "org-apply-resp"]  
-          ["考评机构变更备案受理" "icon-list" "pn-list"] 
-          ["考评机构换证受理" "icon-list"    "pn-list"] 
+          ["考评机构变更备案受理" "icon-list" "org-backup-resp"] 
+          ["考评机构换证受理" "icon-list"    "org-renew-resp"] 
           ["企业初次申请受理" "icon-list"    "en-apply-resp"]  
           ["企业考评结论审核" "icon-list"    "en-review"]  
-          ["企业换证申请受理" "icon-list"    "pn-olap"]  
-          ["企业变更申请受理" "icon-list"    "pn-olap"]  
-          ["投诉举报受理" "icon-list"    "pn-olap"]  
+          ["企业换证申请受理" "icon-list"    "en-renew-resp"]  
+          ["企业变更申请受理" "icon-list"    "en-backup-resp"]  
+          ["投诉举报受理" "icon-list"    "hot-resp"]  
           ]
          ["考评员" "icon-pen" ; title id
           ["考评员列表" "icon-list"    "pn-list"] ; title icon id 
           ["考评员统计查询"          "icon-list"    "pn-olap"] ; title icon id 
-          ["资格证书制发" "icon-list"    "org-input"] ; title icon id 
-          ["考评员培训"          "icon-list"    "pn-train"] ; title icon id 
+          ["资格证书制发" "icon-list"    "pn-cert-resp"] ; title icon id 
+          ["考评员培训"          "icon-list"    "pn-train-view"] ; title icon id 
           ["考评员考试"          "icon-list"    "pn-exam"] ; title icon id 
           ["考评员资格撤销"      "icon-list"    "pn-cancel"] ; title icon id 
           ]
          ["考评机构" "icon-pen" ; title id
           ["考评机构列表" "icon-list"  "org-list"] ; title icon id 
-          ["资质证书制发" "icon-list"    "org-input"] ; title icon id 
-          ["资质撤销" "icon-list"    "org-input"] ; title icon id 
+          ["资质证书制发" "icon-list"    "org-cert-resp"] ; title icon id 
+          ["资质撤销" "icon-list"    "org-cancel"] ; title icon id 
           ["年度工作报告"          "icon-list"    "indic0_bt"] ; title icon id 
           ["考评情况汇总表"          "icon-list"    "indic0_bt"] ; title icon id 
           ]
@@ -83,53 +83,6 @@
           ["年度工作报告"          "icon-list"    "en-analysis"] ; title icon id 
           ]
          ["下级机构管理"           "icon-pen" ; title id
-          ["统计分析"          "icon-list"    "indic0_bt"] ; title icon id 
-          ]
-         ["系统管理及帮助"     "icon-search"
-          ["网站样式"          "icon-search" "site_bt"]
-          ["使用帮助"          "icon-help"   "help_bt"]
-          ]
-         ]   
-   })
-
-(def cfg-frame-pot
-  {:name "esp"
-   :style (map #(str % "") ["layout_north" "layout_title"])  ; "" 或者 "1"
-   :title "交通运输企业安全生产标准化——厅委局管理系统（试行）"
-   :searcher ["张" ; default-value
-              ["考评人员搜索" "range_pn" "icon-ok"] ; label name icon
-              ["考评机构搜索" "range_org" "icon-ok"]
-              ["交通运输企业搜索" "range_en" "icon-tip"] ]
-   :nav [
-         ["待办事宜" "icon-pen" ; title id
-          ["考评机构申请受理" "icon-list"    "pn-list"] ; title icon id 
-          ["考评机构变更备案受理" "icon-list"    "pn-list"] ; title icon id 
-          ["考评机构换证受理" "icon-list"    "pn-list"] ; title icon id 
-          ["企业初次申请受理" "icon-list"    "pn-olap"] ; title icon id 
-          ["企业考评结论审核" "icon-list"    "pn-olap"] ; title icon id 
-          ["企业换证申请受理" "icon-list"    "pn-olap"] ; title icon id 
-          ["企业变更申请受理" "icon-list"    "pn-olap"] ; title icon id 
-          ]
-         ["考评员" "icon-pen" ; title id
-          ["考评员资格证核发" "icon-list"    "pn-list"] ; title icon id 
-          ["考评员列表" "icon-list"    "pn-list"] ; title icon id 
-          ["考评员管理"          "icon-list"    "pn-olap"] ; title icon id 
-          ]
-         ["考评机构" "icon-pen" ; title id
-          ["考评机构列表" "icon-list"  "org-list"] ; title icon id 
-          ["资格证书制发" "icon-list"    "org-input"] ; title icon id 
-          ["资格撤销" "icon-list"    "org-input"] ; title icon id 
-          ["年度工作报告"          "icon-list"    "indic0_bt"] ; title icon id 
-          ["考评情况汇总表"          "icon-list"    "indic0_bt"] ; title icon id 
-          ]
-         ["交通运输企业"           "icon-pen" ; title id
-          ["企业列表" "icon-list"  "en-list"] ; title icon id 
-          ["资格证书制发" "icon-list"    "org-input"] ; title icon id 
-          ["附加考评" "icon-list"    "org-input"] ; title icon id 
-          ["资格撤销" "icon-list"    "org-input"] ; title icon id 
-          ["年度工作报告"          "icon-list"    "en-analysis"] ; title icon id 
-          ]
-         ["交通运输管理部门"           "icon-pen" ; title id
           ["统计分析"          "icon-list"    "indic0_bt"] ; title icon id 
           ]
          ["系统管理及帮助"     "icon-search"
@@ -205,8 +158,9 @@
    ["考评员管理系统" "pn" "考评人员在线申请"]
    ["考评机构管理系统" "org" "考评机构在线申请、评定管理"]
    ["企业在线填报管理系统" "en" "企业在线填报管理"]
-   ["交通运输部管理系统" "mot" "交通运输管理部门（交通部）内部管理"]
-   ["省级交通运输主管部门管理系统" "pot" "省级交通运输主管部门/长江航务管理局、珠江航务管理局内部管理"]
+   ["交通运输主管部门管理系统" "mot" "交通运输管理部门（交通部、厅委局）内部管理"]
+;   ["交通运输部管理系统" "mot" "交通运输管理部门（交通部）内部管理"]
+;   ["省级交通运输主管部门管理系统" "pot" "省级交通运输主管部门/长江航务管理局、珠江航务管理局内部管理"]
    ["<small>实名举报</small>" "hot" "任何单位和个人对考评机构的考评行为，有权向主管机关进行实名举报，主管机关会及时受理、组织调查处理，并为举报人保密。"]
    ])
 
@@ -365,7 +319,7 @@
    :exam-date "考试日期"
    :exam-score "考试分数"
    :safe "安全生产组织架构"
-   :sid "选择的2个考评机构"
+   :orgid "选择的2个考评机构"
    })
 (def dd-province
   (let [ls (map str '(北京 上海 广东 江苏 陕西 山东 新疆 湖南 黑龙江 湖北 安徽 浙江 四川 贵州 甘肃 福建 辽宁 重庆 天津 广西 吉林 
@@ -662,12 +616,13 @@
                                     (case col
                                       :_id [:a {:href (format "/c/esp/%s/%s" (:form m) v) :target "_blank"} "查看"]
                                       :_select [:input {:type "checkbox" :group "select" :sid (:_id row)}]
-                                      :type (or (dd-type v0) v)
-                                      :type2 (or (dd-type2 v) v)
+                                      :type (or (dd-type (to-int v0)) v)
+                                      :type2 (or (dd-type2 (to-int v0)) v)
                                       :grade (or (dd-en-grade v0) v)
                                       :fulltime (if v0 "专职" "<font color=gray>兼职</font>")
                                       :contract0 (format-date v)
                                       :contract1 (if v0 (format-date v0) "<b>目前在职</b>")
+                                      :uid (:name (au/users v0))
                                       v)])) ]) } ))
   ([rt head cols] (result-html- rt head cols {})))
 
@@ -717,19 +672,32 @@
   (with-mdb2 "esp" 
     (vec (fetch tb :limit 5000))))
 
+(defn- search-field-
+  "@tb :pn | :en | :org 等等
+  @f 字段
+  @s 字符串模式"
+  [tb f s]
+  (with-esp- (fetch tb :limit 1000 :where {f (re-pattern (or s ""))})))
+
 (defn- search-
   "@tb :pn | :en | :org
   @s 名字字符串"
   [tb s]
-  (with-mdb2 "esp" 
-    (vec (fetch tb :limit 100 :where {:name (re-pattern (or s ""))}))))
-  
+  (search-field- tb :name s))
+
+(defn- search-auto-
+  "根据输入值是否带中文来搜名称或者证书号，为空则搜出全部"
+  [tb id]
+  (cond (nullity? id) (data- tb)
+        (wr3.util.Charsetx/hasChinese id) (search- tb id) 
+        :else (search-field- tb :cid id) ))
+
 (defn pn-list
   "service: 考评员列表
   @id name的pattern如'张' "
   [id]
   (let [tb :pn
-        rt (if id (search- tb id) (data- tb))]
+        rt (search-auto- tb id)]
     (html
       [:h1 (format "考评人员列表（%s 名）" (count rt))]
       (result-html- rt '[姓名 单位 属地 详情] [:name :org :from :_id] {:form "pn-form"}))))
@@ -739,7 +707,7 @@
   @id name的pattern如'学校' "
   [id]
   (let [tb :org
-        rt (if id (search- tb id) (data- tb))]
+        rt (search-auto- tb id)]
     (html
       [:h1 (format "考评机构列表（%s 名）" (count rt))]
       (result-html- rt '[机构名称 所属省份 详情] [:name :province :_id] {:form "org-form"}))))
@@ -749,10 +717,18 @@
   @id name的pattern如'安徽' "
   [id]
   (let [tb :en
-        rt (if id (search- tb id) (data- tb))]
+        rt (search-auto- tb id)]
     (html
       [:h1 (format "交通运输企业列表（%s 名）" (count rt))]
       (result-html- rt '[所属省份 企业名称 企业类型 等级 详情] [:province :name :type :grade :_id] {:form "en-form"}))))
+
+  
+(defn- with-orgid-
+  "orgid数组对应的机构名称
+  @orgid 企业申请时自己选择的2个考评机构的id数组，如 ['4f8ae98475e0ae92833680cd' '4f8ae98475e0ae92833680d0'] "
+  [orgid]
+  (let [rs (with-esp- (fetch :org :only [:name] :where {:_id {:$in (map object-id orgid)}}))]
+    (map :name rs)))
 
 (defn- doc-
   "显示指定表中指定object-id的记录内容。
@@ -777,12 +753,13 @@
                       :belong (str v (when-let [n ((get au/users v) :name)] (format " (%s)" n)))
                       :fulltime (if v "专职" "兼职")
                       :qual (or (dd-org-grade (to-int v)) v)
-                      :admin (or (dd-pot v) v)
+                      :admin (or (dd-pot (str v)) v)
+                      :orgid (eui-combo {:id "orgid" :name "orgid"} (zipmap v (with-orgid- v)))
                    v)]])]
            [:tfoot 
             [:tr {:align "center" :height "50px"} 
              [:td {:colspan 2 } (eui-button {:href "#" :onclick "window.close();"} "关闭")]]]] 
-          (when-let [after (:before m)] after)))))
+          (when-let [after (:after m)] after)))))
   ([tb id title] (doc- tb id title {})))
   
 (defn pn-form
@@ -856,9 +833,16 @@
   []
   (let [rs (data- :pn)
         region (for [r rs] (-> r :from (subs 0 2)))
-        rt (apply array-map (flatten (for [[v vv] (group-by #(str %) region)] [v (count vv)])))]
-    (barf rt {:title "考评员地域分布情况" :x "省份" :y "考评员人数"})
-    ))
+        rt (apply array-map (flatten (for [[v vv] (group-by #(str %) region)] [v (count vv)])))
+        rt1 (frequencies (map :type (with-esp- (fetch :pn :only [:type] :sort {:type 1}))))
+        rt2 (into {} (for [[k v] rt1] [(dd-type k) v]))
+        rt3 (frequencies (map :edu (with-esp- (fetch :pn :only [:edu] :sort {:edu 1}))))]
+    (html
+      (eui-tip "提示：可点击右上角搜索框，按考评员姓名或者证书号模糊查询。")
+      (barf rt {:title "考评员地域分布情况" :x "省份" :y "考评员人数"})
+      (pief rt2 {:title "各专业类型考评员统计" :x "专业类型" :y "考评员人数"}) 
+      (linef rt3 {:title "考评员学历统计" :x "学历" :y "考评员人数"}) 
+      )))
 
 (defn pn-archive
   "service: 考评机构的考评员档案管理"
@@ -1117,8 +1101,7 @@
 
 (defn- year-report-
   "service: 年度工作报告；
-  @type 类型 :org :en
-  @todo 还没有真正保存……"
+  @type 类型 :org :en "
   [type request]
   (let [uid (wr3user request)
         tb-report (-> type name (str "-report")) ; "org-report"  "en-report"
@@ -1148,58 +1131,6 @@
   "service: 企业年度工作报告"
   [request]
   (year-report- :en request))
-
-(defn pn-train
-  "省级交通主管部门管理的考评员培训
-  @see pn-learn 考评员自己的培训视图"
-  []
-  (html
-    [:h1 "考评员培训工作"]
-    [:h2 "培训时间，培训学时（不少于24个学时），培训类别，培训合格证号"]
-    [:div "注：由省级交通运输主管部门、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作。"] ))
-
-(defn pn-exam
-  "省级交通主管部门管理的考评员考试"
-  []
-  (html
-    [:h1 "考评员考试工作"]
-    [:h2 "考试时间，考试成绩，是否合格，考试类别，"]
-    [:div "注：交通运输部负责组织编写培训教材和考试大纲。"
-     "省级交通运输主管部门、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作"] ))
-  
-(defn pn-cancel
-  "省级交通主管部门管理的考评员资格撤销"
-  []
-  (html
-    [:h1 "考评员资格撤销工作"]
-    ))    
-
-(defn org-apply-resp
-  "交通主管部门考评机构受理处理"
-  []
-  (html
-    [:h1 "考评机构受理处理"]
-    [:h2 "主管机构考评机构受理处理：（同意/不同意）+意见"]
-    ))
-
-(defn en-apply-resp
-  "交通主管部门企业初次申请受理"
-  []
-  (html
-    [:h1 "企业初次申请受理"]
-    [:h2 "企业申请处理：（同意+指派考评机构）/（不同意+意见）"]
-    ))
-
-(defn en-review
-  "交通主管部门企业考评结论审核"
-  []
-  (html
-    [:h1 "企业初次申请受理"]
-    [:h2 "企业考评结论受理：" [:br]
-     "（同意并在本系统实时公示，7天到期自动通过可发证）" [:br]
-     "/（同意并在本系统实时公示，7天到期有举报且情况属实，退到考评机构）" [:br]
-     "/（不同意+意见退到考评机构和企业）"]
-    ))
 
 (defn pn-cert
   "显示考评员证书"
@@ -1233,7 +1164,7 @@
       (eui-tip "请在如下的考评机构列表中自行选择两个。")
       (result-html- rs '[机构名称 所属省份 详情 选择] [:name :province :_id :_select] {:form "org-form"}) [:br]
       (eui-button {:onclick "esp_en_select_org()"} "提 交")
-      [:script (format "esp_en_selected('%s')" (join (:sid r) ","))]
+      [:script (format "esp_en_selected('%s')" (join (:orgid r) ","))]
       )))
 
 (defn en-select-org-save
@@ -1244,7 +1175,7 @@
           uid (wr3user request)
           rs (fetch :en-apply :where {:uid uid})]
       (doseq [r rs]
-        (update! :en-apply r (into r {:sid sid})))
+        (update! :en-apply r (into r {:orgid sid})))
       "已保存" )))
   
 (defn en-process
@@ -1259,6 +1190,247 @@
               (for [r rs] 
                 (html (eui-button {:href (format "/c/esp/en-apply-view/%s" (:_id r)) :target "_blank"}
                                   (format "查看%s的申请" (:date r))) (space 5))))))))
+
+(defn pn-apply-resp
+  "service: 交管-考评员申请受理. 
+  @todo: 需要真正进行数据处理"
+  []
+  (let [rs (with-esp- (fetch :pn-apply ))]
+    (html
+      [:h1 "考评员资格证书申请"]
+      (result-html- 
+        rs ["姓名" "申请类型" "申请时间" "详细" "选择"]
+        [:name :type :date :_id :_select] 
+        {:form "pn-apply-view"}) [:br]
+      (eui-button {:onclick "esp_pn_apply_resp()"} "资格证书制发") )))
+
+(defn pn-renew-resp
+  "service: 交管-考评员换证申请受理"
+  []
+  (pn-apply-resp))
+
+(defn org-apply-resp
+  "交通主管部门考评机构申请受理"
+  []
+  (let [rs (with-esp- (fetch :org-apply ))]
+    (html
+      [:h1 "考评机构申请受理"]
+      (eui-tip "主管机构处理：（同意/不同意）+意见")
+      (result-html- 
+        rs ["姓名" "申请类型" "申请时间" "受理"]
+        [:name :type :date :_id] 
+        {:form "org-apply-resp-doc"}) [:br] )))
+
+(defn org-apply-resp-doc
+  "app: 受理考评机构申请记录
+  @id object-id
+  @todo 保存数据"
+  [id]
+  (doc- :org-apply id "考评机构" 
+        {:after (html
+                  [:br] [:label "处理意见："] (eui-textarea {} ) [:br][:br]
+                  (eui-button {} "同意") (space 3)
+                  (eui-button {} "不同意") )}))
+
+(defn org-backup-resp
+  "交通主管部门考评机构变更备案受理"
+  []
+  (let [rs (with-esp- (fetch :org-backup ))]
+    (html
+      [:h1 "考评机构变更备案受理"]
+      (eui-tip "主管机构处理：（同意/不同意）+意见")
+      (result-html- 
+        rs ["考评机构名称" "法定代表人变更" "考评员发生重大变化" "终止业务" "申请时间" "受理"]
+        [:uid :legalp :pn :stop :date :_id] 
+        {:form "org-backup-resp-doc"}) [:br] )))
+
+(defn org-backup-resp-doc
+  "app: 受理考评机构变更记录
+  @id object-id
+  @todo 保存数据"
+  [id]
+  (doc- :org-backup id "考评机构变更" 
+        {:after (html
+                  [:br] [:label "处理意见："] (eui-textarea {} ) [:br][:br]
+                  (eui-button {} "提交") )}))
+
+(defn org-renew-resp
+  "app: 主管部门受理考评机构换证"
+  []
+  (html
+    [:h1 "考评机构换证申请受理"]
+    (eui-tip "暂无换证申请")))
+
+(defn en-apply-resp
+  "交通主管部门企业初次申请受理"
+  []
+  (let [rs (with-esp- (fetch :en-apply ))]
+    (html
+      [:h1 "企业初次申请受理"]
+      (eui-tip "企业申请处理：（同意+指派考评机构）/（不同意+意见）")
+      (result-html- 
+        rs ["企业名称" "申请类型" "申请时间" "受理"]
+        [:name :type2 :date :_id] 
+        {:form "en-apply-resp-doc"}) [:br] )))
+
+(defn en-apply-resp-doc
+  "app: 受理企业申请记录
+  @id object-id
+  @todo 保存数据"
+  [id]
+  (doc- :en-apply id "交通运输企业" 
+        {:after (html
+                  [:br]
+                  (eui-button {} "同意（并指派考评机构）") (space 3) [:br][:br]
+                  [:br] (eui-button {} "不同意（并填写意见）") (space 3) (eui-textarea {} ) [:br][:br] )}))
+
+(defn en-review
+  "交通主管部门企业考评结论审核"
+  []
+  (let [rs (with-esp- (fetch :en-apply ))]
+    (html
+      [:h1 "企业考评结论审核"]
+      (eui-tip (str "企业考评结论受理：" 
+                    "（同意并在本系统实时公示，7天到期自动通过可发证）" 
+                    "/（同意并在本系统实时公示，7天到期有举报且情况属实，退到考评机构）" 
+                    "/（不同意+意见退到考评机构和企业）"))
+      (result-html- 
+        rs ["企业名称" "申请类型" "申请时间" "详细" "选择"]
+        [:name :type2 :date :_id :_select] 
+        {:form "en-review-doc"}) [:br]
+      (eui-button {:onclick "esp_en_apply_resp()"} "同意发证") )))
+
+(defn en-review-doc
+  "app: 受理企业考评结论审核
+  @id object-id
+  @todo 保存数据"
+  [id]
+  (doc- :en-apply id "交通运输企业考评结论审核" 
+        {:after (html
+                  [:br]
+                  (eui-button {} "同意发证") (space 3) [:br][:br]
+                  [:br] (eui-button {} "不同意（并填写意见）") (space 3) (eui-textarea {} ) [:br][:br] )}))
+
+(defn en-renew-resp
+  "service: 主管部门受理企业换证"
+  []
+  (html
+    [:h1 "企业换证申请受理"]
+    (eui-tip "暂无换证申请")))
+
+(defn en-backup-resp
+  "service: 主管部门受理企业变更备案"
+  []
+  (html
+    [:h1 "企业变更备案申请受理"]
+    (eui-tip "暂无换证申请")))
+
+(defn hot-resp
+  "service: 主管部门受理实名投诉举报"
+  []
+  (html
+    [:h1 "实名投诉举报申请受理"]
+    (eui-tip "暂无投诉举报")))
+
+(defn- cert-resp
+  "service: 主管部门制发资格证"
+  [title]
+  (html
+    [:h1 title]
+    (eui-tip "暂无需要制发的资格证")))
+
+(defn pn-cert-resp
+  "service: 主管部门制发考评员资格证"
+  []
+  (cert-resp "考评员资格证书制发"))
+
+(defn pn-train
+  "省级交通主管部门管理的考评员培训
+  @deprecated: 好像没用到了。
+  @see pn-learn 考评员自己的培训视图"
+  []
+  (html
+    [:h1 "考评员培训工作"]
+    [:h2 "培训时间，培训学时（不少于24个学时），培训类别，培训合格证号"]
+    [:div "注：由省级交通运输主管部门、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作。"] ))
+  
+(defn pn-train-view
+  "省级交通主管部门管理的考评员培训
+  @see pn-learn 考评员自己的培训视图"
+  [request]
+  (let [rt2 (with-esp- (fetch :pn-train :sort {:train-start 1}))
+        yyyymm (frequencies (map #(-> % :train-start (leftback "-")) rt2))]
+    (html
+      [:h1 "考评员培训工作"]
+      [:h2 "培训时间，培训学时（不少于24个学时），培训类别，培训合格证号"]
+      [:div "注：由省级交通运输主管部门、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作。"]
+      [:br]
+      (barf yyyymm {:title "各月份培训的考评员数量" :x "月份" :y "考评员人数"}) 
+      (result-html- rt2 
+                    ["姓名" "培训合格证" "开始日期" "结束日期" "学时" "类型"] 
+                    [:name :train-id :train-start :train-end :train-hour :type]))))
+
+(defn pn-exam
+  "省级交通主管部门管理的考评员考试"
+  []
+  (let [rt2 (with-esp- (fetch :pn-train :only [:exam-score] :sort {:exam-score 1}))
+        scores (into (sorted-map) (frequencies (map :exam-score rt2)))]
+    (html
+      [:h1 "考评员考试工作"]
+      [:h2 "考试时间，考试成绩，是否合格，考试类别，"]
+      [:div "注：交通运输部负责组织编写培训教材和考试大纲。"
+       "省级交通运输主管部门、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作"] [:br]
+      (linef scores {:title "各分数值的考评员数量" :x "分数" :y "考评员人数"} 1000) )))
+  
+;;--- 资格撤销 <begin>
+(defn- cert-cancel-
+  "省级交通主管部门管理的资格撤销
+  @type :pn :org "
+  [type]
+  (let [nam (type {:pn "考评员" :org "考评机构"})]
+    (html
+      [:h1 (format "%s资格撤销工作" nam)]
+      [:form {:id "fm1" :action (format "/c/esp/%s-cancel-resp" (name type)) :method "get" :target "_blank"}
+       [:label (format "请输入要撤销资质的%s证书号：" nam)]
+       (eui-text {:id "cid" :name "cid" :value "2011-2-022-20789"}) (space 3) 
+       (eui-button {:onclick "$('#fm1').submit()"} "查询")] )))
+
+(defn- cert-cancel-resp-
+  "查询指定证书号的考评员，显示信息并撤销
+  @type :pn :org "
+  [type cid]
+  (let [tb type
+        nam (type {:pn "考评员" :org "考评机构"})
+        r (first (with-esp- (fetch tb :where {:cid cid})))
+        id (str (:_id r))]
+    (if r
+      (doc- tb id (format "取消%s资格证" nam) 
+            {:after (html
+                      [:br] (eui-button {} "撤销（并填写意见）") (space 3) (eui-textarea {} ) [:br][:br] )})
+      (html-body (eui-tip "未找到该证书号！" )) )))
+
+(defn pn-cancel
+  "省级交通主管部门管理的考评员资格撤销"
+  []
+  (cert-cancel- :pn))    
+
+(defn pn-cancel-resp
+  "查询指定证书号的考评员，显示信息并撤销"
+  [cid]
+  (cert-cancel-resp- :pn cid))
+
+(defn org-cancel
+  "省级交通主管部门管理的考评机构资格撤销"
+  []
+  (cert-cancel- :org))    
+
+(defn org-cancel-resp
+  "查询指定证书号的考评机构，显示信息并撤销"
+  [cid]
+  (cert-cancel-resp- :org cid))
+
+;;--- 资格撤销 </end>
+  
 
 ;;------------------------------------------------- test
 (def m [])
@@ -1299,31 +1471,14 @@
     (format "2012-%s-%s-%s%04d" c na grade (rand-int 10000))))
   
 ;;;; test
+;(with-orgid- ["4f8ae98475e0ae92833680cd" "4f8ae98475e0ae92833680d0"])
 ;(with-mdb2 "esp"
-;  (let [rs (fetch :en )]
+;  (let [rs (fetch :en-apply )]
 ;    (doseq [r rs]
+;      (println (fetch :org  :only [:name] :where {:_id {:$in (map object-id (:orgid r))}})))))
+;      (update! tb r (dissoc r :sid)))))
 ;      (let [cdate (format "2012-%s-%s" (inc (rand-int 12)) (inc (rand-int 28)))]
 ;        (update! :en r (into r {:cdate cdate}))
 ;        ))))
-
 ;      (update! :org r (into r {:admin "0351"})))))
-;    (destroy! :pn r)))
-;        i (atom 0)]
-;    (doseq [r rs]
-;      (let [cid (:cid r)
-;            type (:type r)
-;            from (subs (:from r) 0 2)
-;            admin (key (find-first (fn [[k v]] (has? v from)) dd-pot))
-;            t0  (str (join (take 2 (split cid "-")) "-") "-1")
-;            t1 (date-add t0 0 -2 (- (rand-int 30)))
-;            t2 (date-add t1 0 0 5)
-;            train-id (format "%s-%s-%05d" (subs t2 0 4) admin @i)
-;            t3 (date-add t2 0 0 3)
-;            ]
-;        (swap! i inc)
-;        (insert! :pn-train (into (select-keys r [:type :name :_id])
-;                                 {:train-start t1 :train-end t2 :train-hour 24 :train-id train-id
-;                                  :exam-date t3 :exam-score (+ 60 (rand-int 41))
-;                                  :admin admin})
-;                 )))))
-;
+

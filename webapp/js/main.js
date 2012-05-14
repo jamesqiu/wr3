@@ -2958,3 +2958,21 @@ function esp_en_selected(sid) {
 	})
 }
 
+function esp_pn_apply_resp() {
+	var sum = 0
+	$('input[type="checkbox"]').each(function(i,e) {
+		if ($(e).prop('checked')==true) {
+			sum++
+		}
+	})
+	if(sum==0) {
+		$.messager.alert('提示', '请打勾选择企业。', 'warning');
+	} else {
+		$.messager.confirm('确认发证', '是否为所选'+sum+'个考评员制发资格证?', function(r){
+			if (r) $.messager.alert('通知', '已提交', 'info');
+		});		
+	}
+}
+
+
+
