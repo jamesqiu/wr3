@@ -189,7 +189,6 @@
                    "org" cfg-frame-org
                    "en" cfg-frame-en
                    "mot" cfg-frame-mot
-                   "pot" cfg-frame-pot
                    "not-found"))
     (index-all)))
 
@@ -1376,6 +1375,11 @@
   "service: 主管部门制发考评员资格证"
   []
   (cert-resp "考评员资格证书制发"))
+
+(defn org-cert-resp
+  "service: 主管部门制发考评机构证书"
+  []
+  (cert-resp "考评机构资质证书制发"))
 
 (defn en-cert-resp
   "service: 考评机构制发企业证书"
