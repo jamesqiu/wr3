@@ -2974,5 +2974,10 @@ function esp_pn_apply_resp() {
 	}
 }
 
+function esp_hot_submit() {
+	$.messager.confirm('请确认', '举报信息属实，进行提交？', function(r){
+		if (r) $('#fm1').submit();
+	});	
+}
 
 
