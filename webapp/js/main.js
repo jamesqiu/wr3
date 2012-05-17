@@ -2815,9 +2815,9 @@ function bank_onload() {
 	$('a#11-cust').click()	
 }
 
-
+//------------------------------------ esp: 交通运输企业安全生产标准化系统
 /**
- * esp 点击搜索按钮后的动作
+ * esp 右上角点击搜索按钮后的动作
  */
 function esp_search(v, n) {
 	var v = encodeURI(v) // 这行代码是专门对付垃圾IE的
@@ -2834,7 +2834,7 @@ function esp_search(v, n) {
 
 function esp_onload() {
 	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
-	app_linkbutton_css()
+	app_linkbutton_css() // 所有link按钮点击后字变红色
 }
 
 function esp_input_save(form) {
@@ -2858,19 +2858,19 @@ function esp_report_save(form) {
 	})
 }
 
-//------------------------ 文件上传
+//------------------------ 3个通用函数：文件上传。@see esp.clj/fileupload, esp.clj/filesave
 /**
  * 打开进行文件上传的一个dialog
  * @param nam 字段中文名
- * @param sid "字段id或name"
+ * @param sid "hidden字段id或name"
  */
 function fileupload(nam, sid) {
-	// 标记当前字段的属性 uploading="1"
+	// 标记hidden字段的属性 uploading="1"，第一次增加该属性，之后改变；一个页面有多个上传按钮时还可标记识别
 	$('form input[uploading="1"]').attr('uploading', "0")
 	$('form input[name="'+sid+'"]').attr('uploading', '1')
 	// 弹出对话框
 	var dlg = $('#fileupload')
-	var closed = dlg.dialog1('options').closed
+	var closed = dlg.dialog1('options').closed 
 	if (!closed) {
 		alert('请先处理完已经打开的上传文件对话框！')
 	} else {
@@ -2880,7 +2880,7 @@ function fileupload(nam, sid) {
 }
 
 /**
- * 文件选择后上传动作或者取消动作
+ * 文件选择后上传提交动作或者取消动作
  */
 function fileupload_bt() {
 	$('#fileupload_ok').click(function() {
@@ -2899,7 +2899,7 @@ function fileupload_bt() {
 }
 
 /**
- * 文件上传完成后调用的函数
+ * 文件上传完成后调用的函数，显示已上传文件的连接
  * @param fname
  */
 function fileupload_ok(fname) {
@@ -2909,6 +2909,9 @@ function fileupload_ok(fname) {
 }
 //------------------------ 文件上传</end>
 
+/**
+ * 机构变更申请保存
+ */
 function esp_save_org_backup() {
 	var url = '/c/esp/org-backup-save?' + $('#fm1').serialize()
 	$.post(url, function(data) {
@@ -2916,6 +2919,9 @@ function esp_save_org_backup() {
 	})
 }
 
+/**
+ * 考评机构通过证书号查询要聘用的考评员情况
+ */
 function esp_org_hire() {
 	var v = $('#cid').val()
 	if (v=="") {
@@ -2925,6 +2931,10 @@ function esp_org_hire() {
 	}
 }
 
+/**
+ * 
+ * @param cid
+ */
 function esp_hire(cid) {
 	var fulltime = $('#fulltime').val()
 	$.get('/c/esp/hire/'+cid+'?fulltime='+fulltime, function(data) {
