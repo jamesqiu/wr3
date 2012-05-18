@@ -96,6 +96,33 @@
       (eui-dialog "fileupload" {:closed "true" :href "/c/esp/fileupload"})
       [:script "fileupload_bt()"] )))
 
+(defn- input-save-submit-
+  "service: 共用函数，考评员、考评机构、企业申请表提交保存或更新
+  被 input-form- 进行ajax调用
+  @id form名称如'pn' 'en' 'org' "
+  [id request submit?]
+  (let [vars (query-vars request)
+        uid (wr3user request)
+        tb1 (keyword id)
+        tb2 (keyword (str id "-apply"))
+        m (into {:uid uid} (for [[k v] vars :when (not (nullity? v))] [k v]))]
+    (with-mdb "esp" 
+      (update! tb1 {:uid uid} m) ; 保存到基本信息表
+      (when submit?  ; 保存到申请表 
+        (insert! tb2 (into m {:date (datetime)})))
+      )
+    (format "已%s %s 的申请表。" (if submit? "提交" "保存") (vars "name") )))
+
+(defn input-save
+  "service: 考评员，考评机构，企业申请表保存；"
+  [id request]
+  (input-save-submit- id request false))
+
+(defn input-submit
+  "service: 共用函数，考评员、考评机构、企业申请表提交保存"
+  [id request]
+  (input-save-submit- id request true))
+
 ;;; 文件上传的设计：
 ;;;   js函数fileupload(name,sid)弹出对话框（传入input hidden字段中文名及对应id或name），
 ;;;   保存在 /file 下文件名为 uid-timestamp.xx ，把该文件名传给hidden
@@ -130,19 +157,36 @@
           [:script (format "parent.fileupload_ok('%s')" fname1)])))))
 
 (defmacro with-esp-
-  "查询出esp的序列化数据"
+  "共用函数：查询出esp的序列化数据"
   [fetch-op]
   `(with-mdb2 "esp" (vec ~fetch-op)))
 
 (defn- with-uid-
-  "数据表中指定uid的记录
+  "共用函数：得到序列化的数据表中指定uid的记录
   @tb 数据表如 :pn :pn-apply "
   [tb uid]
   (with-mdb2 "esp"
     (vec (fetch tb :where {:uid uid}))))
 
+(defn- data-
+  "取出数据表所有记录并持久化。
+  @tb :pn | :en | :org"
+  [tb]
+  (with-mdb2 "esp" 
+    (vec (fetch tb :limit 5000))))
+
+(defn- update-
+  "共用函数：更新保存记录到esp的tb表中。
+  @tb 要更新的表，如 :hot
+  @where 查询要更新记录的条件，如 {:_id (object-id '..')}  
+  @f 带一个r记录参数的函数，如 (fn [r] {:date (date)}) "
+  [tb where f]
+  (with-mdb2 "esp"
+    (let [rs (fetch tb :where where)]
+      (doseq [r rs] (update! tb r (into r (f r)))))))
+
 (defn- apply-nav-
-  "证书申请导航页
+  "共用函数：各种证书申请导航页
   @type :pn :en :org "
   [type request]
   [request]
@@ -177,7 +221,7 @@
   (apply-nav- :org request))
 
 (defn- apply-input-
-  "pn-input, org-input, en-input的录入表单
+  "共用函数：pn-input, org-input, en-input的录入表单
   @type :pn :en :org "
   [request type]
   (let [uid (wr3user request)
@@ -205,14 +249,14 @@
   [request]
   (apply-input- request :en))
 
-(defn- format-date 
-  "格式化日期：2011-5-4 -> 2011-05-04 "
+(defn- format-date-
+  "共用函数：格式化日期，2011-5-4 -> 2011-05-04 "
   [s]
   (let [[yyyy m d] (split s "-")]
     (format "%s-%02d-%02d" yyyy (to-int m) (to-int d))))
 
 (defn- result-html-
-  "对没有特殊要求的结果进行列表展示
+  "共用函数：对没有特殊要求的结果进行列表展示
   @rt Clojure.sql结果集 [{:c1 v :c2 v ..} ..]
   @head 表头名称 [活期余额 业务类型 币种 日期] 
   @cols 列名称 [:ye :yw_type :bz :_created] 
@@ -233,8 +277,8 @@
                                       :type2 (or (dd-type2 (to-int v0)) v)
                                       :grade (or (dd-en-grade v0) v)
                                       :fulltime (if v0 "专职" "<font color=gray>兼职</font>")
-                                      :contract0 (format-date v)
-                                      :contract1 (if v0 (format-date v0) "<b>目前在职</b>")
+                                      :contract0 (format-date- v)
+                                      :contract1 (if v0 (format-date- v0) "<b>目前在职</b>")
                                       :uid (:name (au/users v0))
                                       :freport [:a {:href v0 :target "_blank"} "查看"]
                                       :info (replace-all v "\r\n" "<br/>")
@@ -242,108 +286,54 @@
                                       v)])) ]) } ))
   ([rt head cols] (result-html- rt head cols {})))
 
-(defn input-save
-  "service: 考评员，考评机构，企业申请表保存
-  @id form名称如'pn' 'en' 'org' "
-  [id request]
-  (let [vars (query-vars request)
-        uid (wr3user request)
-        tb (keyword id)
-        m (into {:uid uid} (for [[k v] vars :when (not (nullity? v))] [k v]))]
-    (with-mdb "esp" 
-      (update! tb {:uid uid} m))
-    (str "已保存 " (vars "name") " 的申请。")))
-
-(defn report-save
-  "service: 考评机构，企业年度报告保存
-  @id form名称如 'en' 'org' "
-  [id request]
-  (let [vars (query-vars request)
-        uid (wr3user request)
-        tb (keyword id) ; :en-report :org-report
-        yyyy (year)
-        m (into vars {:uid uid :year yyyy :date (date)})]
-    (println m)
-    (with-mdb "esp" 
-      (update! tb {:uid uid :year yyyy} m))
-    (str "已保存 " yyyy " 年度报告。")))
-
-(defn input-submit
-  "service: 考评员，考评机构，企业申请表提交"
-  [id request]
-  (let [vars (query-vars request)
-        uid (wr3user request)
-        tb1 (keyword id)
-        tb2 (keyword (str id "-apply"))
-        m (into {:uid uid} (for [[k v] vars :when (not (nullity? v))] [k v]))]
-    (with-mdb "esp" 
-      (update! tb1 {:uid uid} m) ; 保存到基本信息表
-      (insert! tb2 (into m {:date (datetime)}))) ; 保存到申请表
-    (str "已提交 " (vars "name") " 的申请。")))
-
-(defn- data-
-  "取出数据表所有记录
-  @tb :pn | :en | :org"
-  [tb]
-  (with-mdb2 "esp" 
-    (vec (fetch tb :limit 5000))))
-
 (defn- search-field-
   "@tb :pn | :en | :org 等等
-  @f 字段
+  @f 字段 :name 中文名称或 :cid 证书号 
   @s 字符串模式"
   [tb f s]
   (with-esp- (fetch tb :limit 1000 :where {f (re-pattern (or s ""))})))
-
-(defn- search-
-  "@tb :pn | :en | :org
-  @s 名字字符串"
-  [tb s]
-  (search-field- tb :name s))
 
 (defn- search-auto-
   "根据输入值是否带中文来搜名称或者证书号，为空则搜出全部"
   [tb id]
   (cond (nullity? id) (data- tb)
-        (wr3.util.Charsetx/hasChinese id) (search- tb id) 
+        (wr3.util.Charsetx/hasChinese id) (search-field- tb :name id) 
         :else (search-field- tb :cid id) ))
+
+(defn- list-
+  "共用函数：列表显示pn、org、en
+  @id name的pattern如'张' 
+  @tb :pn :org :en "
+  [id tb col-names col-ids]
+  (let [nam (tb {:pn "考评人员" :org "考评机构" :en "交通运输企业"})
+        rt (search-auto- tb id)]
+    (html
+      [:h1 (format "%s 列表（%s 名）" nam (count rt))]
+      (result-html- rt col-names col-ids {:form (str (name tb) "-form")}))))
 
 (defn pn-list
   "service: 考评员列表
   @id name的pattern如'张' "
   [id]
-  (let [tb :pn
-        rt (search-auto- tb id)]
-    (html
-      [:h1 (format "考评人员列表（%s 名）" (count rt))]
-      (result-html- rt '[姓名 单位 属地 详情] [:name :org :from :_id] {:form "pn-form"}))))
+  (list- id :pn '[姓名 单位 属地 详情] [:name :org :from :_id]))
   
 (defn org-list
   "service: 考评机构列表
   @id name的pattern如'学校' "
   [id]
-  (let [tb :org
-        rt (search-auto- tb id)]
-    (html
-      [:h1 (format "考评机构列表（%s 名）" (count rt))]
-      (result-html- rt '[机构名称 所属省份 详情] [:name :province :_id] {:form "org-form"}))))
+  (list- id :org '[机构名称 所属省份 详情] [:name :province :_id]))
   
 (defn en-list
   "service: 企业列表
   @id name的pattern如'安徽' "
   [id]
-  (let [tb :en
-        rt (search-auto- tb id)]
-    (html
-      [:h1 (format "交通运输企业列表（%s 名）" (count rt))]
-      (result-html- rt '[所属省份 企业名称 企业类型 等级 详情] [:province :name :type :grade :_id] {:form "en-form"}))))
-
+  (list- id :en '[所属省份 企业名称 企业类型 等级 详情] [:province :name :type :grade :_id]))
   
 (defn- with-orgid-
   "orgid数组对应的机构名称
   @orgid 企业申请时自己选择的2个考评机构的id数组，如 ['4f8ae98475e0ae92833680cd' '4f8ae98475e0ae92833680d0'] "
   [orgid]
-  (let [oids (map #(object-id %) orgid)
+  (let [oids (map #(object-id %) orgid) ; 注意：直接 (map object-id orgid) 会报错，原因不明
         rs (with-esp- (fetch :org :only [:name] :where {:_id {:$in oids}}))]
     (map :name rs)))
 
@@ -401,6 +391,8 @@
   [id]
   (doc- :org-backup id "考评机构申请变更项"))
   
+;; todo: refactoring following... 
+
 (defn pn-process
   "service: 申请进度查询"
   [request]
@@ -741,6 +733,19 @@
       (eui-dialog "fileupload" {:closed "true" :href "/c/esp/fileupload"})
       [:script "fileupload_bt()"])))
 
+(defn report-save
+  "service: 共用函数，org、en年度报告保存，被 year-report- 函数ajax调用
+  @id form名称如 'en' 'org' "
+  [id request]
+  (let [vars (query-vars request)
+        uid (wr3user request)
+        tb (keyword id) ; :en-report :org-report
+        yyyy (year)
+        m (into vars {:uid uid :year yyyy :date (date)})]
+    (with-mdb "esp" 
+      (update! tb {:uid uid :year yyyy} m))
+    (str "已保存 " yyyy " 年度报告。")))
+
 (defn org-report
   "service: 培训机构年度工作报告"
   [request]
@@ -983,7 +988,7 @@
                      [:p [:label "处理意见："] (eui-textarea {:name "advice"})]
                      [:p [:label "转发至主管部门："] (eui-combo {:id "admin" :name "admin" :value (:admin r)} dd-pot)]
                      [:p (eui-button {:onclick "$('#fm1').submit()"} "提 交")]] )})))
-
+  
 (defn mot-hot-resp
   "app: 主管机构保存处理后的举报意见"
   [request]
@@ -1257,3 +1262,5 @@
 ;        rs (fetch tb)]
 ;    (doseq [r rs]
 ;      (update! tb r (into r {:admin "0"})))))
+
+;(update- :hot {:admin "0871"} (fn [r] {:info "姓 名：张山" :content "举报内容……" :date (datetime)}))
