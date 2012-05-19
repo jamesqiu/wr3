@@ -170,7 +170,8 @@
 
 (defn- data-
   "取出数据表所有记录并持久化。
-  @tb :pn | :en | :org"
+  @tb :pn | :en | :org
+  @todo 超过100条增加分页 "
   [tb]
   (with-mdb2 "esp" 
     (vec (fetch tb :limit 5000))))
@@ -201,9 +202,8 @@
                   (if r1 "查看已录入的申请信息" "初次申请考评证书"))
       (when rs2
         (html [:h1 (format "已提交过%s次申请：" (count rs2))]
-              (for [r rs2] 
-                (html (eui-button {:href (format "/c/esp/%s-apply-view/%s" (name type) (:_id r)) :target "_blank"}
-                                  (format "查看%s的申请" (:date r))) (space 5))))))))
+              (result-html- rs2 '[申请时间 处理状态 查看] [:date :respdate :_id] 
+                            {:form (str (name type) "-apply-view")}) )))))
 
 (defn pn-apply
   "service: 考评员申请导航页"
@@ -283,6 +283,8 @@
                                       :freport [:a {:href v0 :target "_blank"} "查看"]
                                       :info (replace-all v "\r\n" "<br/>")
                                       :admin (or (dd-pot v) v)
+                                      :respdate (if (nil? v0) "尚未处理" (format "已于%s处理"))
+                                      :cstate (if (nil? v0) "正常" "撤销") ; 考评机构证书状态
                                       v)])) ]) } ))
   ([rt head cols] (result-html- rt head cols {})))
 
@@ -409,13 +411,16 @@
   [request]
   (let [uid (wr3user request)
         oid (:_id (first (with-esp- (fetch :pn :where {:uid uid}))))
-        r (first (with-esp- (fetch :pn-train :where {:_id oid})))]
+        rs (with-esp- (fetch :pn-train :where {:_id oid}))]
     (html
-      [:h1 (if r (eui-button {:href (str "/c/esp/pn-learn-view/" oid) :target "_blank"} "培训和考试记录")
-             "尚无培训和考试记录。")]
-      [:h2 "1、首次培训情况（时间不少于24个学时）；"]
-      [:h2 "2、年度继续教育情况（时间不少于8个学时）；"]
-      )))
+      [:h1 "考评员培训、考试情况"]
+      (eui-tip "1、首次培训时间不少于24个学时；2、年度继续教育时间不少于8个学时；")
+      (if (empty? rs) 
+        [:h3 "尚无培训和考试记录。"]
+        (html
+          [:h3 (format "有 %s 次培训和考试记录" (count rs))]
+          (result-html- rs '["培训证书" "培训类型" "培训日期" "培训学时" "考试日期" "考试分数" "查看"]
+                        [:train-id :type :train-start :train-hour :exam-date :exam-score :_id] {:form "pn-learn-view"})) ) )))
 
 (defn pn-learn-view
   "app: 查看考评员培训考试记录
@@ -433,11 +438,9 @@
       [:h2 "1、考评员资格证5年有效期慢提前3个月申请换证。" 
        (when cid (format "目前证书：<u>%s</u>，到期日：%s" 
                          (html [:a {:href (str "/c/esp/pn-cert/" cid) :target "_blank"} cid])
-                         (-> cid (subs 0 4) to-int (+ 5))))] (space 6)
-      (eui-button {:href "#" :onclick "layout_load_center('/c/esp/pn-input')"} "申请")
-      [:h2 "2、跨管辖范围流动申请换发新证书"] (space 6) 
-      (eui-button {:href "#" :onclick "layout_load_center('/c/esp/pn-input')"} "申请")
-      )))
+                         (-> cid (subs 0 4) to-int (+ 5))))] 
+      [:h2 "2、跨管辖范围流动申请换发新证书"] [:br]  
+      (eui-button {:href "#" :onclick "layout_load_center('/c/esp/pn-input')"} "申请换证") )))
   
 (defn pn-olap
   "service: 考评员分析"
@@ -467,7 +470,8 @@
 
 (defn pn-apply-view
   "app: 查看申请记录
-  @id object-id"
+  @id object-id
+  @todo 根据字段确定申请状态 "
   [id]
   (doc- :pn-apply id "考评员"))
 
@@ -607,7 +611,8 @@
         "提交完毕！"))))
 
 (defn org-pn
-  "service: 本考评机构机构的所有考评员"
+  "service: 本考评机构机构的所有考评员
+  @todo 增加解聘操作 "
   [request]
   (let [uid (wr3user request)
         rt (with-mdb2 "esp"
@@ -618,7 +623,8 @@
        (eui-tip "请输入想要招聘的考评员资质证书号，然后点击“查询”按钮，之后可进行聘用操作。")
        [:label "考评员资质证书号："]
        (eui-text {:id "cid"}) (space 3)
-       (eui-button {:onclick "esp_org_hire()"} "查询聘用") ]
+       (eui-button {:onclick "esp_org_hire()"} "查询聘用") (space 5)
+       (eui-button {:onclick "alert('解聘……')"} "查询解聘") ]
       (result-html- rt '[姓名 证书类别 证书编号 专兼职 聘用日期 解聘日期 详情] 
                     [:name :type :cid :fulltime :contract0 :contract1 :_id] {:form "pn-form"}))))
 ;      (result-html- rt '[姓名 单位 属地 详情] [:name :org :from :_id] {:form "pn-form"}))))
@@ -670,7 +676,8 @@
                     [:name :train-id :train-start :train-end :train-hour :type]))))
 
 (defn- cert-renew-
-  "证书换证"
+  "证书换证
+  @todo pn、org、en 都会有多个不同类型证书 "
   [tb request]
   (let [uid (wr3user request)
         rs (with-mdb2 "esp" (vec (fetch tb :where {:uid uid :cid {:$exists true}})))
@@ -706,9 +713,8 @@
       (if (empty? rs)
         (eui-tip "还没有资质证书。")
         (html
-          (for [r rs] (eui-button 
-                        {:href (format "/c/esp/org-form/%s" (:_id r)) :target "_blank"} 
-                        (str "资质证书 " (:cid r))))) ))))
+          (result-html- rs '["证书号" "证书类型" "发证日期" "证书状态" "查看"] 
+                        [:cid :type :cdate :cstate :_id] {:form "org-form"}))))))
 
 (defn- year-report-
   "service: 年度工作报告；

@@ -4,7 +4,7 @@
 (defn- line-filter-enc
   "按enc读入文件的每行，对行进行处理。
   fname: 文件路径及名称;
-  func:  处理行的函数，带一个参数为当前行"
+  func:  处理行的函数，带一个参数为当前行，如： (fn [l] (println l)) "
   [fname func enc]
   (with-open [rdr (clojure.java.io/reader fname :encoding enc)]
     (doseq [line (line-seq rdr)] (func line))))

@@ -181,6 +181,12 @@
    6 "（六）资格证逾期不申请换证的；"
    7 "（七）其他不能胜任考评工作的。" 
    })
+; 考评员换证原因
+(def dd-renew
+  {
+   1 "1、考评员资格证书到期"
+   2 "2、户籍所在地或常住地发生省际间变更"
+   })
 ; 对企业附加考评的原因
 (def dd-recheck 
   {
@@ -354,20 +360,24 @@
    ["所学专业" :major {:title "注意：必须具备交通运输相关专业大学专科以上学历"}]
    ["现从事专业" :prof]
    ["相关专业从业时间" :begindate {:v 5}]   
-   ["申请类别" :type {:t dd-type :v "s" :title "考评员申请的专业类型不得多于二种"}] ; 最多两类
+   ["申请类别" :type {:t dd-type :v 1 :title "考评员申请的专业类型不得多于二种"}] ; 最多两类
    ["主要学习（培<br/>训）经历" :train {:t 'textarea}]
    ["主要工作简历" :resume {:t 'textarea}]
    ["专业工作业绩" :perf {:t 'file}]
    ["相关证明文件" :proof {:t 'file :title "包括身份证明、学历证明以及其他资格证的电子文档等（pdf, doc或者jpg格式）"}]
-   ["主管机关" :admin {:t dd-pot :title "自选"}]
+   ["主管机关" :admin {:t (dissoc dd-pot "0") :title "自选"}]
+   ["换证原因<b>（仅换证申请）</b>" :renew {:t dd-renew}]
+   ["继续教育证明<b>（仅换证申请）</b>" :edu2 {:t 'file}]
+   ["工作业绩证明<b>（仅换证申请）</b>" :orgproof {:t 'file :title "由所在考评机构出具的工作业绩证明。"}]
    ])
 ; 考评机构申请表  
 (def cfg-apply-org 
   [
    ["单位名称" :name {:require true :v "" :title "一般为：学校/交通相关学会/协会/研究所"}]
+   ["组织机构代码" :orgcode {:require true}]
    ["法人代表" :legalp {:require true}]
    ["评审机构资质" :qual {:t dd-org-grade :v "甲类"}]
-   ["专业范围" :type {:t dd-type :v "d" :title "todo: 改为可以多选，或者每个专业申请一次"}]
+   ["专业范围" :type {:t dd-type :v 1 :title "todo: 改为可以多选，或者每个专业申请一次"}]
    ["专职考评员人数" :pnumber {:v 15}]
    ["高级技术职称考评员人数" :pnumber2 {:v 6}]
    ["开始从事相应业务年份" :start {:v 2005}]
