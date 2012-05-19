@@ -620,34 +620,43 @@
     (html
       [:h1 (format "本机构当前在职考评人员 %s 名" (count (filter #(nil? (:contract1 %)) rt)))]
       [:div#hire {:style "margin:15px"}
-       (eui-tip "请输入想要招聘的考评员资质证书号，然后点击“查询”按钮，之后可进行聘用操作。")
-       [:label "考评员资质证书号："]
+       (eui-tip "已聘用的考评员可以点击详情查看后进行解聘。")
+       [:label "聘用考评员，请输入资质证书号："]
        (eui-text {:id "cid"}) (space 3)
-       (eui-button {:onclick "esp_org_hire()"} "查询聘用") (space 5)
-       (eui-button {:onclick "alert('解聘……')"} "查询解聘") ]
+       (eui-button {:onclick "esp_org_hire()"} "查询聘用") ]
       (result-html- rt '[姓名 证书类别 证书编号 专兼职 聘用日期 解聘日期 详情] 
-                    [:name :type :cid :fulltime :contract0 :contract1 :_id] {:form "pn-form"}))))
-;      (result-html- rt '[姓名 单位 属地 详情] [:name :org :from :_id] {:form "pn-form"}))))
+                    [:name :type :cid :fulltime :contract0 :contract1 :_id] {:form "org-hire-view"}))))
 
-(defn org-hire
-  "app: 考评员情况，能否聘用"
-  [id]
-  (let [cid (or id "2011-2-0471-07959")
-        r (first (with-esp- (fetch :pn :where {:cid cid})))
+(defn org-hire-view
+  "app: 考评员情况，能否聘用
+  @如果有id，如果有cid，先通过cid查出文档:_id"
+  [id cid]
+  (let [;cid (or cid "2011-2-0471-07959")
+        ;r (first (with-esp- (fetch :pn :where {:cid cid})))
+        r (if id 
+            (with-mdb2 "esp" (fetch-by-id :pn (object-id id)))
+            (first (with-esp- (fetch :pn :where {:cid cid}))))
         oid (:_id r)
+        cid (:cid r)
         c0 (:contract0 r)
         c1 (:contract1 r)
         belong (:belong r)]
     (if r
-      (doc- :pn (str (:_id r)) "要聘用的考评员" 
+      (doc- :pn (str oid) "要聘用/解聘的考评员" 
             {:before (if (and c0 (not c1)) 
-                       (eui-tip (format "该考评员目前已经受聘于<u>%s</u>，不能聘用" (:name (get au/users belong))))
+                       (html
+                         (eui-tip "该考评员目前已经聘用。") [:br]
+                         (eui-button {:onclick (format "esp_fire('%s')" cid)} 
+                                     (str "解聘考评员" (:name r))) [:br][:br])
                        (html (eui-combo {:id "fulltime" :value 1} {1 "专职" 0 "兼职"} ) (space 5)
-                             (eui-button {:onclick (format "esp_hire('%s')" cid)} (str "聘用考评员" (:name r))) [:br][:br]))})
+                             (eui-button {:onclick (format "esp_hire('%s')" cid)} 
+                                         (str "聘用考评员" (:name r))) [:br][:br]))})
       "无效证书号")))
 
 (defn hire
-  "service: 后台聘用该考评员"
+  "service: 后台聘用指定证书号的考评员
+  @id 证书号cid
+  @fulltime 专职'1'或兼职 "
   [id fulltime request]
   (let [cid id
         ft (if (= fulltime "1") true false)
@@ -655,8 +664,17 @@
     (with-mdb2 "esp"
       (let [r (fetch-one :pn :where {:cid cid})]
         (do
-          (update! :pn r (into r {:fulltime ft :contract0 (date) :belong uid}))
+          (update! :pn r (into r {:fulltime ft :contract0 (date) :contract1 nil :belong uid}))
           "聘用成功")))))
+
+(defn fire
+  "service: 后台解聘指定证书号的考评员
+  @id 证书号cid "
+  [id request]
+  (let [cid id]
+    (do
+      (update- :pn {:cid cid} (fn [r] {:contract1 (date)}))
+      "已解聘")))
 
 (defn org-pn-train
   "省级交通主管部门管理的考评员培训
