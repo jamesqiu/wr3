@@ -60,6 +60,7 @@
           ["统计分析"          "icon-list"    "mot-olap"] ; title icon id 
           ]
          ["系统管理及帮助"     "icon-search"
+          ["装载更新配置"     "icon-search" "reload" "/c/console/reload/app.espconf"]
           ["网站样式"          "icon-search" "site_bt"]
           ["使用帮助"          "icon-help"   "help_bt"]
           ]

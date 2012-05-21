@@ -176,6 +176,45 @@
   (with-mdb2 "esp" 
     (vec (fetch tb :limit 5000))))
 
+(defn- format-date-
+  "共用函数：格式化日期，2011-5-4 -> 2011-05-04 "
+  [s]
+  (let [[yyyy m d] (split s "-")]
+    (format "%s-%02d-%02d" yyyy (to-int m) (to-int d))))
+
+(defn- result-html-
+  "共用函数：对没有特殊要求的结果进行列表展示
+  @rt Clojure.sql结果集 [{:c1 v :c2 v ..} ..]
+  @head 表头名称 [活期余额 业务类型 币种 日期] 
+  @cols 列名称 [:ye :yw_type :bz :_created] 
+  @m 客户化定制 {} 设置 :form 表示文档显示所使用的form"
+  ([rt head cols m]
+    (result-html rt {:f-head (fn [thead] (for [th (cons "序号" head)] [:th th]))
+                     :f-row (fn [row-index row]
+                              [:tr (bgcolor-css row-index)
+                               [:td {:align "right" :style "color: lightgray"} row-index]
+                               (for [col cols] 
+                                 (let [v0 (-> col row)
+                                       v (-> v0 str trim) ]
+                                   [:td (td-align v0) 
+                                    (case col
+                                      :_id [:a {:href (format "/c/esp/%s/%s" (:form m) v) :target "_blank"} "查看"]
+                                      :_select [:input {:type "checkbox" :group "select" :sid (:_id row)}]
+                                      :type (or (dd-type (to-int v0)) v)
+                                      :type2 (or (dd-type2 (to-int v0)) v)
+                                      :grade (or (dd-en-grade v0) v)
+                                      :fulltime (if v0 "专职" "<font color=gray>兼职</font>")
+                                      :contract0 (format-date- v)
+                                      :contract1 (if v0 (format-date- v0) "<b>目前在职</b>")
+                                      :uid (:name (au/users v0))
+                                      :freport [:a {:href v0 :target "_blank"} "查看"]
+                                      :info (replace-all v "\r\n" "<br/>")
+                                      :admin (or (dd-pot v) v)
+                                      :respdate (if (nil? v0) "尚未处理" (format "已于%s处理"))
+                                      :cstate (if (nil? v0) "正常" "撤销") ; 考评机构证书状态
+                                      v)])) ]) } ))
+  ([rt head cols] (result-html- rt head cols {})))
+
 (defn- update-
   "共用函数：更新保存记录到esp的tb表中。
   @tb 要更新的表，如 :hot
@@ -248,45 +287,6 @@
   "service：企业在线填报"
   [request]
   (apply-input- request :en))
-
-(defn- format-date-
-  "共用函数：格式化日期，2011-5-4 -> 2011-05-04 "
-  [s]
-  (let [[yyyy m d] (split s "-")]
-    (format "%s-%02d-%02d" yyyy (to-int m) (to-int d))))
-
-(defn- result-html-
-  "共用函数：对没有特殊要求的结果进行列表展示
-  @rt Clojure.sql结果集 [{:c1 v :c2 v ..} ..]
-  @head 表头名称 [活期余额 业务类型 币种 日期] 
-  @cols 列名称 [:ye :yw_type :bz :_created] 
-  @m 客户化定制 {} 设置 :form 表示文档显示所使用的form"
-  ([rt head cols m]
-    (result-html rt {:f-head (fn [thead] (for [th (cons "序号" head)] [:th th]))
-                     :f-row (fn [row-index row]
-                              [:tr (bgcolor-css row-index)
-                               [:td {:align "right" :style "color: lightgray"} row-index]
-                               (for [col cols] 
-                                 (let [v0 (-> col row)
-                                       v (-> v0 str trim) ]
-                                   [:td (td-align v0) 
-                                    (case col
-                                      :_id [:a {:href (format "/c/esp/%s/%s" (:form m) v) :target "_blank"} "查看"]
-                                      :_select [:input {:type "checkbox" :group "select" :sid (:_id row)}]
-                                      :type (or (dd-type (to-int v0)) v)
-                                      :type2 (or (dd-type2 (to-int v0)) v)
-                                      :grade (or (dd-en-grade v0) v)
-                                      :fulltime (if v0 "专职" "<font color=gray>兼职</font>")
-                                      :contract0 (format-date- v)
-                                      :contract1 (if v0 (format-date- v0) "<b>目前在职</b>")
-                                      :uid (:name (au/users v0))
-                                      :freport [:a {:href v0 :target "_blank"} "查看"]
-                                      :info (replace-all v "\r\n" "<br/>")
-                                      :admin (or (dd-pot v) v)
-                                      :respdate (if (nil? v0) "尚未处理" (format "已于%s处理"))
-                                      :cstate (if (nil? v0) "正常" "撤销") ; 考评机构证书状态
-                                      v)])) ]) } ))
-  ([rt head cols] (result-html- rt head cols {})))
 
 (defn- search-field-
   "@tb :pn | :en | :org 等等
@@ -366,6 +366,7 @@
                       :orgid (eui-combo {:id "orgid" :name "orgid"} (zipmap v (with-orgid- v)))
                       :info (replace-all v "\r\n" "<br/>")
                       :content (replace-all v "\r\n" "<br/>")
+                      :safe [:a {:href v} "查看"] ; 考评机构安全生产组织架构
                       v)] ])]
            [:tfoot 
             [:tr {:align "center" :height "50px"} 
@@ -525,7 +526,8 @@
                         v2))) ))))
 
 (defn- get-stand-
-  "@tb 'en-stand1' 'en-stand2' 
+  "达标标准指标
+  @tb 'en-stand1' 'en-stand2' 改为 indic1 indic2 
   @type2 11 12 "
   [tb type2]
   (with-mdb2 "esp"
@@ -536,7 +538,7 @@
   [id]
   (html-body
     (let [type2 (to-int (or id 11))
-          [rt1 rt2 rt3] (map #(get-stand- (str "en-stand" %) type2) [1 2 3])
+          [rt1 rt2 rt3] (map #(get-stand- (str "indic" %) type2) [1 2 3]) ; "en-stand" -> "indic"
           f3 (fn [r] ; r:  某个2级考核指标，如“1.安全工作方针与目标”
                (let [s1 (html [:td {:style "width: 800px"} (:name r)] 
                               [:td [:b (:score r)] (when (= 1 (:required r)) [:font {:color "red"} "★"])] 
@@ -1244,7 +1246,6 @@
     "举报信息已经保存"))
   
 ;;------------------------------------------------- test
-(def m [])
 (require 'wr3.clj.datagen)
 
 (defn- t1
@@ -1288,3 +1289,22 @@
 ;      (update! tb r (into r {:admin "0"})))))
 
 ;(update- :hot {:admin "0871"} (fn [r] {:info "姓 名：张山" :content "举报内容……" :date (datetime)}))
+
+(use 'wr3.clj.app.esptmp :reload)
+(defn- t1 []
+(with-mdb2 "esp"
+  (doseq [[i n t] m1]
+    (insert! :indic1 {:i i :name (name n) :type2 t}))))
+
+(defn- t2 []
+(with-mdb2 "esp"
+  (doseq [[i j n t] m2]
+    (insert! :indic2 {:i i :j j :name (name n) :type2 t}))))
+
+(defn- t3 []
+(with-mdb2 "esp"
+  (doseq [[i j k n star s t] m3]
+    (insert! :indic3 {:i i :j j :k k :name (name n) :star star :score s :type2 t}))))
+
+;(t3)
+
