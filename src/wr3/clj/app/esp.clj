@@ -517,7 +517,7 @@
   (let []
     (html
       [:center [:h1 "达标标准考评（五大类16小类）"]]
-      (eui-tip "注意：目前只有前两个即“<b>道路旅客运输</b>”和“<b>道路危险货物运输</b>”的标准，最新版尚未录入！")
+      (eui-tip "注意：企业根据交通运输部颁布的下列某项标准进行达标自评打分！")
       (for [[k1 v1] dd-type]
         (html 
           [:h2 v1 "："]
@@ -541,7 +541,8 @@
           [rt1 rt2 rt3] (map #(get-stand- (str "indic" %) type2) [1 2 3]) ; "en-stand" -> "indic"
           f3 (fn [r] ; r:  某个2级考核指标，如“1.安全工作方针与目标”
                (let [s1 (html [:td {:style "width: 800px"} (:name r)] 
-                              [:td [:b (:score r)] (when (= 1 (:required r)) [:font {:color "red"} "★"])] 
+                              [:td {:align "right"} (:score r)] 
+                              [:td (format "<font color=red>%s</font>" (apply str (repeat (:star r) "★")))]
                               [:td {:align "right"} (eui-numberspin {:min 0 :max (:score r) :increment 1 
                                                                      :value (:score r) :style "width:40px"})])
                      s2 (if (= 1 (:k r)) s1 (html [:tr s1]))]
@@ -557,7 +558,7 @@
                (let [rt2i (filter #(= (:i r) (:i %)) rt2) ;该1级指标对应的所有二级指标
                      rt3i (filter #(= (:i r) (:i %)) rt3)] ;该1级指标对应的所有三级指标
                  (html [:tr
-                        [:td {:rowspan (count rt3i)} (:name r) [:br][:br](space 10) (:score r) "分"]
+                        [:td {:rowspan (count rt3i)} (:name r)]
                         (f2 (first rt2i))] ; 产生后面2、3级指标的多个[:tr]html片段 
                        (for [r (rest rt2i)] (f2 r)))))
           ]
@@ -565,11 +566,20 @@
       [:table.wr3table {:border 1}
        [:caption (format "%s企业安全生产达标标准" (dd-type2 type2))]
        [:thead 
-        [:tr [:th "考核内容"] [:th {:colspan 2} "考核要点"] [:th "分数"] [:th "自评分"] ]]
+        [:tr [:th "考核内容"] [:th {:colspan 2} "考核要点"] [:th {:nowrap "1"} "分数"] [:th "星级"] [:th "自评分"] ]]
        [:tbody 
         (for [r rt1] (f1 r))]
        [:tfoot
-        [:tr [:td {:colspan 5} [:h2 "注：打 “ <font color=red>★</font> ” 的为必备项，必须完全满足。"]]]]
+        [:tr [:td {:colspan 6} 
+              [:h2 "注："
+               "“<font color=red>★</font>”为一级必备条件；"
+               "“<font color=red>★★</font>”为二级必备条件；"
+               "“<font color=red>★★★</font>”为三级必备条件。" 
+               "即：" [:br][:br](space 8)
+               "一级企业必须满足所有标<font color=red>★、★★、★★★</font>的项；"
+               "二级企业必须满足所有标<font color=red>★★、★★★</font>的项；"
+               "三级企业必须满足所有标<font color=red>★★★</font>的项。"
+               ]]]]
        ] 
       [:br]
       "自评总分：" [:input {:value 900}]
@@ -1290,7 +1300,8 @@
 
 ;(update- :hot {:admin "0871"} (fn [r] {:info "姓 名：张山" :content "举报内容……" :date (datetime)}))
 
-(use 'wr3.clj.app.esptmp :reload)
+
+;(use 'wr3.clj.app.esptmp :reload)
 (defn- t1 []
 (with-mdb2 "esp"
   (doseq [[i n t] m1]
@@ -1306,5 +1317,6 @@
   (doseq [[i j k n star s t] m3]
     (insert! :indic3 {:i i :j j :k k :name (name n) :star star :score s :type2 t}))))
 
+;(with-mdb2 "esp" (destroy! :indic3 {:type2 51}))
 ;(t3)
 
