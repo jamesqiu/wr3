@@ -536,33 +536,34 @@
 (defn stand
   "app: 企业安全生产达标标准——自评，机构考评"
   [id]
-  (html-body
-    (let [type2 (to-int (or id 11))
-          [rt1 rt2 rt3] (map #(get-stand- (str "indic" %) type2) [1 2 3]) ; "en-stand" -> "indic"
-          f3 (fn [r] ; r:  某个2级考核指标，如“1.安全工作方针与目标”
-               (let [s1 (html [:td {:style "width: 800px"} (:name r)] 
-                              [:td {:align "right"} (:score r)] 
-                              [:td (format "<font color=red>%s</font>" (apply str (repeat (:star r) "★")))]
-                              [:td {:align "right"} (eui-numberspin {:min 0 :max (:score r) :increment 1 
-                                                                     :value (:score r) :style "width:40px"})])
-                     s2 (if (= 1 (:k r)) s1 (html [:tr s1]))]
-                 s2))
-          f2 (fn [r] ; r:  某个2级考核指标，如“1.安全工作方针与目标”
-               (let [rt3i (filter #(and (= (:i r) (:i %)) (= (:j r) (:j %))) rt3) ;该2级指标对应的所有三级指标
-                     s1 (html [:td {:rowspan (count rt3i)} (str (:j r) ". " (:name r))]
-                              (f3 (first rt3i)) 
-                              (for [r (rest rt3i)] (f3 r)))
-                     s2 (if (= 1 (:j r)) s1 (html [:tr s1])) ]
-                 s2))
-          f1 (fn [r] ; r： 某个1级考核指标，如“一、安全目标 35分 ”
+  (let [type2 (to-int (or id 11))
+        [rt1 rt2 rt3] (map #(get-stand- (str "indic" %) type2) [1 2 3]) ; "en-stand" -> "indic"
+        f3 (fn [r] ; r:  某个2级考核指标，如“1.安全工作方针与目标”
+             (let [s1 (html [:td {:style "width: 800px"} (:name r)] 
+                            [:td {:align "right"} (:score r)] 
+                            [:td (format "<font color=red>%s</font>" (apply str (repeat (:star r) "★")))]
+                            [:td {:align "right"} (eui-numberspin 
+                                                    {:min 0 :max (:score r) :increment 1
+                                                     :group "score" :score (:score r) :star (:star r)
+                                                     :value (:score r) :style "width:40px"})])
+                   s2 (if (= 1 (:k r)) s1 (html [:tr s1]))]
+               s2))
+        f2 (fn [r] ; r:  某个2级考核指标，如“1.安全工作方针与目标”
+             (let [rt3i (filter #(and (= (:i r) (:i %)) (= (:j r) (:j %))) rt3) ;该2级指标对应的所有三级指标
+                   s1 (html [:td {:rowspan (count rt3i)} (str (:j r) ". " (:name r))]
+                            (f3 (first rt3i)) 
+                            (for [r (rest rt3i)] (f3 r)))
+                   s2 (if (= 1 (:j r)) s1 (html [:tr s1])) ]
+               s2))
+        f1 (fn [r] ; r： 某个1级考核指标，如“一、安全目标 35分 ”
                (let [rt2i (filter #(= (:i r) (:i %)) rt2) ;该1级指标对应的所有二级指标
                      rt3i (filter #(= (:i r) (:i %)) rt3)] ;该1级指标对应的所有三级指标
                  (html [:tr
                         [:td {:rowspan (count rt3i)} (:name r)]
                         (f2 (first rt2i))] ; 产生后面2、3级指标的多个[:tr]html片段 
                        (for [r (rest rt2i)] (f2 r)))))
-          ]
-      (html
+        ]
+    (html-body
       [:table.wr3table {:border 1}
        [:caption (format "%s企业安全生产达标标准" (dd-type2 type2))]
        [:thead 
@@ -575,15 +576,15 @@
                "“<font color=red>★</font>”为一级必备条件；"
                "“<font color=red>★★</font>”为二级必备条件；"
                "“<font color=red>★★★</font>”为三级必备条件。" 
-               "即：" [:br][:br](space 8)
-               "一级企业必须满足所有标<font color=red>★、★★、★★★</font>的项；"
-               "二级企业必须满足所有标<font color=red>★★、★★★</font>的项；"
-               "三级企业必须满足所有标<font color=red>★★★</font>的项。"
-               ]]]]
-       ] 
+                 "即：" [:br][:br](space 8)
+                 "一级企业必须满足所有标<font color=red>★、★★、★★★</font>的项；"
+                 "二级企业必须满足所有标<font color=red>★★、★★★</font>的项；"
+                 "三级企业必须满足所有标<font color=red>★★★</font>的项。"
+                 ]]]] ]
       [:br]
-      "自评总分：" [:input {:value 900}]
-      "自评报告："[:input {:type "file"}]))))
+      "自评总分：" [:input#sum {:style "width:70px; font-size:16px; color:green" :readonly "true" :value "0"}] (space 5) 
+      (eui-button {:href "javascript:esp_get_score()"} "计算分数") (space 10)
+      "自评报告："[:input {:type "file"}] (space 5) (eui-button {} "提 交") [:br][:br] )))
 
 (defn org-backup
   "service: 机构变更申请录入表单"

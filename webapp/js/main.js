@@ -3001,4 +3001,23 @@ function esp_hot_submit() {
 	});	
 }
 
-
+function esp_get_score() {
+	var scores = $('input[group="score"]')
+	var s = ""
+	var err = false
+	scores.each(function(i,e) {
+		var v = $(e).val()
+		if (parseInt(v)) {
+			s += v+'+'
+		} else {
+			err = true
+		}
+	})
+	if (err) {
+		alert("有未打分项")
+		$('#sum').val('0')
+	} else {
+		var sum = eval(s+"0")
+		$('#sum').val(sum)
+	}
+}
