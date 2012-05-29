@@ -17,7 +17,7 @@
 (def cfg-frame-mot
   {:name "esp"
    :style (map #(str % "") ["layout_north" "layout_title"])  ; "" 或者 "1"
-   :title "交通运输企业安全生产标准化——主管部门管理系统（试行）"
+   :title "交通运输企业安全生产标准化——主管机关管理系统（试行）"
    :searcher ["张" ; default-value
               ["考评人员搜索" "range_pn" "icon-ok"] ; label name icon
               ["考评机构搜索" "range_org" "icon-ok"]
@@ -46,6 +46,7 @@
          ["考评机构" "icon-pen" ; title id
           ["考评机构列表" "icon-list"  "org-list"] ; title icon id 
           ["资质证书制发" "icon-list"    "org-cert-resp"] ; title icon id 
+          ["问题整改" "icon-list"    "mot-org-refine"] ; title icon id 
           ["资质撤销" "icon-list"    "org-cancel"] ; title icon id 
           ["年度工作报告"          "icon-list"    "org-report-view"] ; title icon id 
           ["考评情况汇总表"          "icon-list"    "org-eval-report"] ; title icon id 
@@ -58,6 +59,7 @@
           ]
          ["下级机构管理"           "icon-pen" ; title id
           ["统计分析"          "icon-list"    "mot-olap"] ; title icon id 
+          ["委托代办"          "icon-list"    "mot-admin"] ; title icon id 
           ]
          ["系统管理及帮助"     "icon-search"
           ["装载更新配置"     "icon-search" "reload" "/c/console/reload/app.espconf"]
@@ -95,6 +97,7 @@
           ["申请换证" "icon-list"    "org-renew"] 
           ["已认定的资质证书" "icon-list"    "org-cert"] 
           ["年度工作报告" "icon-list" "org-report"] ; title icon id 
+          ["问题整改" "icon-list" "org-refine"] ; title icon id 
           ["使用帮助"          "icon-help"   "help_bt"]
           ]
          ["&nbsp;管理考评员" "icon-user" ; title id
@@ -136,7 +139,7 @@
    ["考评员管理系统" "pn" "考评人员在线申请"]
    ["考评机构管理系统" "org" "考评机构在线申请、评定管理"]
    ["企业在线填报管理系统" "en" "企业在线填报管理"]
-   ["交通运输主管部门管理系统" "mot" "交通运输管理部门（交通部、厅委局）内部管理"]
+   ["交通运输主管机关管理系统" "mot" "交通运输管理部门（交通部、厅委局）内部管理"]
    ])
 
 ;;------------------- 
@@ -199,10 +202,9 @@
 ; 考评机构变更备案
 (def dd-org-backup
   {
-   :name "单位名称变更"
-   :legalp "法定代表人变更"
-   :stop "停业、破产或有其他原因终止业务"
-   :pn "考评员发生重大变化"
+   1 "（一）机构名称和法定代表人变更的"
+   2 "（二）停业、破产或有其他原因终止业务的"
+   3 "（三）从事专职管理和考评工作的人员发生重大变化的"
    })
 ; 企业申请达标级别对应的分数要求
 (def dd-score
@@ -221,13 +223,14 @@
 ; 考评机构的考评资格
 (def dd-org-grade
   {
-   1 "甲级"
-   2 "乙级"
-   3 "丙级"
+   1 "一级"
+   2 "二级"
+   3 "三级"
    })
 ; 数据项英文、中文对照
 (def dd-meta
   {
+   :_id "详情"
    :admin "主管机关"
    :advice "处理意见"
    :begindate "相关专业从业时间"
@@ -235,7 +238,7 @@
    :birth "出生日期"
    :cdate "发证时间"
    :cid "证书号"
-   :content "举报内容"
+   :content "内容"
    :contract0 "聘用日期"
    :contract1 "解聘日期"
    :ctype "证书类型"
@@ -261,6 +264,8 @@
    :pnumber2 "高级技术职称考评员人数"   
    :province "省份"
    :qual "评审机构资质" 
+   :reason "原因"
+   :respdate "受理日期"
    :safe "安全生产组织架构"
    :scroe "分数"
    :sex "性别"
@@ -270,7 +275,7 @@
    :title "职称"
    :train-end "培训结束日期"
    :train-hour "培训学时"
-   :train-id "培训合格证"
+   :train-id "培训合格证号"
    :train-start "培训开始日期"
    :type "类型"
    :type2 "细类"
@@ -379,8 +384,8 @@
    ["法人代表" :legalp {:require true}]
    ["评审机构资质" :qual {:t dd-org-grade :v "甲类"}]
    ["专业范围" :type {:t dd-type :v 1 :title "todo: 改为可以多选，或者每个专业申请一次"}]
-   ["专职考评员人数" :pnumber {:v 15}]
-   ["高级技术职称考评员人数" :pnumber2 {:v 6}]
+   ["专职考评员人数" :pnumber {:v 7 :title "一级≥7名；二级≥5名；三级≥3名。"}]
+   ["高级技术职称考评员人数" :pnumber2 {:v 3 :title "一级≥3名；二级≥2名；三级≥1名。"}]
    ["开始从事相应业务年份" :start {:v 2005}]
    ["主管机关" :admin {:t dd-pot}]
    ["办公地址" :address]

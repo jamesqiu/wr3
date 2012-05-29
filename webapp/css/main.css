@@ -285,6 +285,7 @@ th.desc a {
 	font-family: helvetica, verdana, arial, sans-serif;
 	line-height: 12px;
 	padding: 5px 6px;
+	border: 1px solid gray;
 /*	text-align: left; 
 	vertical-align: top; */
 }
@@ -538,7 +539,7 @@ form.app input[type=text] {
 
 .layout_title {
 	font-family: '微软雅黑';
-	font-size: 30px;
+	font-size: 28px;
 	font-weight: bold;
 	letter-spacing: 5px;
 	color: #eeeeee;

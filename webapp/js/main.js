@@ -2953,6 +2953,9 @@ function esp_fire(cid) {
 	})
 }
 
+/**
+ * 企业提交选择的考评机构，必须是2个。
+ */
 function esp_en_select_org() {
 	var sids = ""
 	var sum = 0
@@ -2967,10 +2970,14 @@ function esp_en_select_org() {
 			alert(data)
 		})
 	} else {		
-		alert('已选'+sum+'个'+sids+'，请选2个。')
+		alert('已选 '+sum+' 个考评机构，请选 2 个。')
 	}
 }
 
+/**
+ * 标识出企业已经选择了的2个考评机构
+ * @param sid 选中的多个orgid，如 "4f8ae..cd,4f8ae..d0"
+ */
 function esp_en_selected(sid) {
 	$('input[type="checkbox"]').each(function(i,e) {
 		if (sid.indexOf($(e).attr('sid')) != -1) {
@@ -3001,16 +3008,19 @@ function esp_hot_submit() {
 	});	
 }
 
+/**
+ * 指标评分计算分值
+ */
 function esp_get_score() {
 	var scores = $('input[group="score"]')
 	var s = ""
 	var err = false
 	scores.each(function(i,e) {
 		var v = $(e).val()
-		if (parseInt(v)) {
-			s += v+'+'
-		} else {
+		if (isNaN(parseInt(v))) {
 			err = true
+		} else {
+			s += v+'+'
 		}
 	})
 	if (err) {
@@ -3020,4 +3030,15 @@ function esp_get_score() {
 		var sum = eval(s+"0")
 		$('#sum').val(sum)
 	}
+}
+
+/**
+ * 指标评分选择申请级别（1 一级 2 二级 3 三级）
+ */
+function esp_stand_grade() {
+	var tips = ["一级企业必须完全满足所有标<font color=red>★、★★、★★★</font>的项",
+                "二级企业必须完全满足所有标<font color=red>★★、★★★</font>的项",
+	            "三级企业必须完全满足所有标<font color=red>★★★</font>的项"]
+	var grade = $('#grade').val()
+	$('#tip').html(tips[grade-1])
 }
