@@ -37,7 +37,7 @@
           ]
          ["考评员" "icon-pen" ; title id
           ["考评员列表" "icon-list"    "pn-list"] ; title icon id 
-          ["考评员统计查询"          "icon-list"    "pn-olap"] ; title icon id 
+          ["考评员统计查询"          "icon-list"    "mot-pn-olap"] ; title icon id 
           ["资格证书制发" "icon-list"    "pn-cert-resp"] ; title icon id 
           ["考评员培训"          "icon-list"    "pn-train-view"] ; title icon id 
           ["考评员考试"          "icon-list"    "pn-exam"] ; title icon id 
@@ -53,6 +53,7 @@
           ]
          ["交通运输企业"           "icon-pen" ; title id
           ["企业列表" "icon-list"  "en-list"] ; title icon id 
+          ["企业统计查询" "icon-list"  "mot-en-olap"] ; title icon id 
           ["附加考评" "icon-list"    "en-recheck"] ; title icon id 
           ["达标证书撤销" "icon-list"    "en-cancel"] ; title icon id 
           ["年度工作报告"          "icon-list"    "en-report-view"] ; title icon id 
@@ -103,7 +104,7 @@
          ["&nbsp;管理考评员" "icon-user" ; title id
           ["本机构考评员列表" "icon-list"    "org-pn"] ; title icon id 
           ["考评员培训情况管理" "icon-list"    "org-pn-train"] 
-          ["考评员档案管理" "icon-list"    "pn-archive"] 
+          ["考评员档案管理" "icon-list"    "org-pn-archive"] 
           ]
          ["&nbsp;企业考评管理" "icon-pen" ; title id
           ["企业考评待办工作" "icon-list" "en-apply-resp"] ; title icon id 
@@ -123,7 +124,7 @@
    :nav [
          ["企业申请" "icon-pen" ; title id
           ["1、在线填报" "icon-list"    "en-apply"] ; title icon id 
-          ["2、达标自评" "icon-list"    "stand-list"] ; title icon id 
+          ["2、达标自评" "icon-list"    "en-stand"] ; title icon id 
           ["3、选择考评机构" "icon-list" "en-select-org"] 
           ["进度查询" "icon-list"    "en-process"] 
           ["企业年度工作报告" "icon-list"  "en-report"] 
@@ -227,6 +228,26 @@
    2 "二级"
    3 "三级"
    })
+; 证书名称
+(def dd-cert
+  {
+   :pn "考评员资格证"
+   :org "考评机构资质证书"
+   :en "企业达标等级证书"
+   })
+; 表单名称，用于doc-标题等
+(def dd-form
+  {
+   :pn "考评员"
+   :org "考评机构"
+   :en "交通运输企业"
+   :pn-apply "考评员申请"
+   :org-apply "考评机构申请"
+   :en-apply "交通运输企业申请"
+   :org-backup "考评机构变更申请"
+   :pn-train "考评员培训考试记录"
+   :hot "实名举报信息"
+   })
 ; 数据项英文、中文对照
 (def dd-meta
   {
@@ -247,7 +268,7 @@
    :edu "学历"
    :exam-date "考试日期"
    :exam-score "考试分数"
-   :from "地域"
+   :from "属地"
    :fulltime "专兼职"
    :grade "级别"
    :info "举报人信息"
@@ -296,7 +317,7 @@
    21 "0771" 22 "0898" 23 "023" 24 "028" 25 "0851" 26 "0871" 27 "0891" 28 "029" 29 "0931" 30 "0971"
    31 "0951" 32 "0991" 33 "032" 34 "033" 35 "034" })
 ; 交通运输主管部门
-(def dd-pot 
+(def dd-pot ; 版本要升级到 dd-admin
  (array-map
    "0"    "交通运输部"
    "010"  "北京交委"
@@ -334,6 +355,45 @@
    "033"  "长江航务管理局"
    "034"  "珠江航务管理局"             
    ))
+(def dd-admin 
+  {
+   "01" "交通运输部"
+   "02" "北京市"
+   "03" "天津市"
+   "04" "河北省"
+   "05" "山西省"
+   "06" "内蒙古自治区"
+   "07" "辽宁省"
+   "08" "吉林省"
+   "09" "黑龙江省"
+   "10" "上海市"
+   "11" "江苏省"
+   "12" "浙江省"
+   "13" "安徽省"
+   "14" "福建省"
+   "15" "江西省"
+   "16" "山东省"
+   "17" "河南省"
+   "18" "湖北省"
+   "19" "湖南省"
+   "20" "广东省"
+   "21" "海南省"
+   "22" "广西壮族自治区"
+   "23" "重庆市"
+   "24" "四川省"
+   "25" "贵州省"
+   "26" "云南省"
+   "27" "西藏自治区"
+   "28" "陕西省"
+   "29" "甘肃省"
+   "30" "青海省"
+   "31" "宁夏回族自治区"
+   "32" "新疆维吾尔自治区"
+   "33" "新疆生产建设兵团"
+   "34" "长江航务管理局"
+   "35" "珠江航务管理局"
+   })
+                
 ; 学历
 (def dd-edu 
   {

@@ -2937,7 +2937,7 @@ function esp_org_hire() {
  */
 function esp_hire(cid) {
 	var fulltime = $('#fulltime').val()
-	$.get('/c/esp/hire/'+cid+'?fulltime='+fulltime, function(data) {
+	$.get('/c/esp/org-hire/'+cid+'?fulltime='+fulltime, function(data) {
 		alert(data)
 	})
 }
@@ -2948,7 +2948,7 @@ function esp_hire(cid) {
  */
 function esp_fire(cid) {
 	alert('cid='+cid)
-	$.get('/c/esp/fire/'+cid, function(data) {
+	$.get('/c/esp/org-fire/'+cid, function(data) {
 		alert(data)
 	})
 }

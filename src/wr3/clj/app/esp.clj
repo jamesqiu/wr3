@@ -12,6 +12,8 @@
 (import 'wr3.upload.FileUpload 'wr3.upload.File 'wr3.util.Charsetx)
 
 (require '[wr3.clj.app.auth :as au])
+
+;;;-------------------------------------------------------------------------------------------------------- 公共函数
 (defn auth
   "该函数被 CljServlet 调用，用于本应用各函数的权限控制 "
   [request fname ids & args]
@@ -34,7 +36,7 @@
         :else false))))
 
 (defn- index-all
-  "app: 所有子系统的进入界面，临时，最后应该是一个不用登录即可访问的静态页面"
+  "app: 所有子系统的进入界面，临时，最后应该被一个不用登录即可访问的静态页面替代"
   []
   (html-body
     [:div {:style "text-align: center; margin: 100px; border: 1px solid blue; width:992px"}
@@ -139,7 +141,7 @@
     [:iframe {:name "ifrm_fileupload" :style "display:none"}] ))
    
 (defn filesave
-  "文件上传form提交后的处理：1、保存文件；2、保存文件后调用js函数"
+  "文件上传form提交后的处理：1、保存文件；2、保存文件后调用js函数fileupload_ok()"
   [request]
   (let [fu (doto (FileUpload.) (.initialize request) .upload)
         myfile (.getFile (.getFiles fu) 0)
@@ -165,19 +167,17 @@
   "共用函数：得到序列化的数据表中指定uid的记录
   @tb 数据表如 :pn :pn-apply "
   [tb uid]
-  (with-mdb2 "esp"
-    (vec (fetch tb :where {:uid uid}))))
+  (with-esp- (fetch tb :where {:uid uid})))
 
 (defn- data-
   "取出数据表所有记录并持久化。
   @tb :pn | :en | :org
   @todo 超过100条增加分页 "
   [tb]
-  (with-mdb2 "esp" 
-    (vec (fetch tb :limit 5000))))
+  (with-esp- (fetch tb :limit 1000)))
 
 (defn- format-date-
-  "共用函数：格式化日期，2011-5-4 -> 2011-05-04 "
+  "共用函数：格式化日期，2011-5-4 -> 2011-05-04 便于显示和文本排序"
   [s]
   (let [[yyyy m d] (split s "-")]
     (format "%s-%02d-%02d" yyyy (to-int m) (to-int d))))
@@ -203,7 +203,7 @@
                                         :_select [:input {:type "checkbox" :group "select" :sid (:_id row)}]
                                         :type (or (dd-type (to-int v0)) v)
                                         :type2 (or (dd-type2 (to-int v0)) v)
-                                        :grade (or (dd-en-grade v0) v)
+                                        :grade (or (dd-en-grade (to-int v0)) v)
                                         :fulltime (if v0 "专职" "<font color=gray>兼职</font>")
                                         :contract0 (format-date- v)
                                         :contract1 (if v0 (format-date- v0) "<b>目前在职</b>")
@@ -235,8 +235,8 @@
   (let [uid (wr3user request)
         tb type
         tb-apply (-> tb name (str "-apply") keyword)
-        r1 (first (with-uid- tb uid))
-        rs2 (with-uid- tb-apply uid)]
+        r1 (first (with-uid- tb uid)) ; 保存的最后录入信息
+        rs2 (with-uid- tb-apply uid)] ; 提交过的所有信息
     (html
       [:h1 (format "录入过的申请信息 %s 条" (if r1 1 0))]
       (eui-button {:href "#" :onclick (format "layout_load_center('/c/esp/%s-input')" (name type))}  
@@ -246,49 +246,19 @@
               (result-html- rs2 '[申请时间 处理状态 查看] [:date :respdate :_id] 
                             {:form (str (name type) "-apply-view")}) )))))
 
-(defn pn-apply
-  "service: 考评员申请导航页"
-  [request]
-  (apply-nav- :pn request))
-
-(defn en-apply
-  "service: 企业申请导航页"
-  [request]
-  (apply-nav- :en request))
-  
-(defn org-apply
-  "service: 考评机构申请导航"
-  [request]
-  (apply-nav- :org request))
-
 (defn- apply-input-
-  "共用函数：pn-input, org-input, en-input的录入表单
+  "共用函数：pn-input, org-input, en-input的录入表单。
+  把缺省value设为用户最后录入的数据记录中的值，以便减少录入量。
   @type :pn :en :org "
   [request type]
   (let [uid (wr3user request)
         cfg0 ({:pn cfg-apply-pn :en cfg-apply-en :org cfg-apply-org} type)
-        nam ({:pn "考评员" :en "企业" :org "考评机构"} type)
+        nam (dd-cert type)
         r (first (with-uid- type uid))
-        cfg (if r
+        cfg (if r 
               (for [[n id m] cfg0] [n id (merge m (if (id r) {:v (id r)} {}))])
               cfg0)]
-    (input-form- cfg {:form (name type) :title (format "交通运输企业安全生产标准化<font color=blue>%s</font>申请表" nam)})))
-
-(defn pn-input
-  "service：评审人员在线申请"
-  [request]
-  (apply-input- request :pn))
-
-(defn org-input
-  "service：评审机构在线申请"
-  [request]
-  (apply-input- request :org))
-;  (input-form- cfg-apply-org {:form "org" :title "交通运输企业安全生产标准化<font color=blue>考评机构</font>申请表"}))
-
-(defn en-input
-  "service：企业在线填报"
-  [request]
-  (apply-input- request :en))
+    (input-form- cfg {:form (name type) :title (format "<font color=blue>%s</font> 申请表" nam)})))
 
 (defn- search-field-
   "@tb :pn | :en | :org 等等
@@ -309,30 +279,12 @@
   @id name的pattern如'张' 
   @tb :pn :org :en "
   [id tb col-names col-ids]
-  (let [nam (tb {:pn "考评人员" :org "考评机构" :en "交通运输企业"})
+  (let [nam (tb {:pn "考评员" :org "考评机构" :en "交通运输企业"})
         rt (search-auto- tb id)]
     (html
       [:h1 (format "%s 列表（%s 名）" nam (count rt))]
-      (result-html- rt col-names col-ids {:form (str (name tb) "-form")}))))
+      (result-html- rt col-names col-ids {:form (str "docv/" (name tb))}))))
 
-(defn pn-list
-  "service: 考评员列表
-  @id name的pattern如'张' "
-  [id]
-  (list- id :pn '[姓名 单位 属地 详情] [:name :org :from :_id]))
-  
-(defn org-list
-  "service: 考评机构列表
-  @id name的pattern如'学校' "
-  [id]
-  (list- id :org '[机构名称 所属省份 详情] [:name :province :_id]))
-  
-(defn en-list
-  "service: 企业列表
-  @id name的pattern如'安徽' "
-  [id]
-  (list- id :en '[所属省份 企业名称 企业类型 等级 详情] [:province :name :type :grade :_id]))
-  
 (defn- with-orgid-
   "orgid数组对应的机构名称
   @orgid 企业申请时自己选择的2个考评机构的id数组，如 ['4f8ae98475e0ae92833680cd' '4f8ae98475e0ae92833680d0'] "
@@ -347,18 +299,18 @@
   @id object-id字符串如 '4f8ad8ef75e0ae9283368075' 
   @m 定制化，参数 {:befor .. :after ..} :befor 在前面的html内容或者带rt参数的fn，
   :after 在后面的html内容或者带rt参数的 (fn [rt] ..) "
-  ([tb id title m]
+  ([tb id m]
     (with-mdb2 "esp"
       (let [rt (fetch-by-id tb (object-id id))]
         (html-body
           (when-let [before (:before m)] (if (fn? before) (before rt) before))
           [:table.wr3table {:border 1}
-           [:caption (format "%s <u>%s</u>" title (if-let [n (:name rt)] n ""))]
+           [:caption (format "%s <u>%s</u>" (dd-form tb) (if-let [n (:name rt)] n ""))]
            [:tbody
             (for [[k v] (dissoc rt :_id)]
               [:tr 
                [:th {:style "text-align: left"} (or (dd-meta k) k) "："] 
-               [:td (case k
+               [:td (case k ; 显示转换，如：有些代码可以用字典得到名称
                       :type (or (dd-type (to-int v)) v) 
                       :type2 (or (dd-type2 (to-int v 11)) v) 
                       :grade (or (dd-en-grade (to-int v)) v)
@@ -376,158 +328,16 @@
             [:tr {:align "center" :height "50px"} 
              [:td {:colspan 2 } (eui-button {:href "#" :onclick "window.close();"} "关闭")]]]] 
           (when-let [after (:after m)] (if (fn? after) (after rt) after))))))  
-  ([tb id title] (doc- tb id title {})))
+  ([tb id] (doc- tb id {})))
   
-(defn pn-form
-  "service: 查看指定考评员的记录表单"
-  [id]
-  (doc- :pn id "考评员"))
-  
-(defn org-form
-  "service: 查看指定考评机构的记录表单"
-  [id]
-  (doc- :org id "考评机构"))
-  
-(defn en-form
-  "service: 查看指定企业的记录表单"
-  [id]
-  (doc- :en id "交通运输企业"))
-  
-(defn org-backup-form
-  "service: 查看指定考评机构变更申请的记录表单"
-  [id]
-  (doc- :org-backup id "考评机构申请变更项"))
-  
-;; todo: refactoring following... 
-
-(defn pn-process
-  "service: 申请进度查询"
-  [request]
-  (let [wr3user (session request "wr3user")
-        r (with-mdb2 "esp" (fetch-one :pn :where {:uid "pn1"}))
-        oid (:_id r)]
-    (if (= wr3user "pn1")
-      (eui-button {:href (str "/c/esp/pn-form/" (str oid)) :target "_blank"} "查看已有申请记录")
-      "尚无申请记录" )))
-
-(defn pn-learn
-  "service: 考评员培训、考试查询
-  @see pn-train 主管机构的考评员培训视图"
-  [request]
-  (let [uid (wr3user request)
-        oid (:_id (first (with-esp- (fetch :pn :where {:uid uid}))))
-        rs (with-esp- (fetch :pn-train :where {:_id oid}))]
-    (html
-      [:h1 "考评员培训、考试情况"]
-      (eui-tip "1、首次培训时间不少于24个学时；2、年度继续教育时间不少于8个学时；")
-      (if (empty? rs) 
-        [:h3 "尚无培训和考试记录。"]
-        (html
-          [:h3 (format "有 %s 次培训和考试记录" (count rs))]
-          (result-html- rs '["培训证书" "培训类型" "培训日期" "培训学时" "考试日期" "考试分数" "查看"]
-                        [:train-id :type :train-start :train-hour :exam-date :exam-score :_id] {:form "pn-learn-view"})) ) )))
-
-(defn pn-learn-view
-  "app: 查看考评员培训考试记录
-  @id object-id"
-  [id]
-  (doc- :pn-train id "考评员培训考试记录"))
-
-(defn pn-renew
-  "service: 换证申请"
-  []
-  (let [r (first (with-uid- :pn "pn1"))
-        cid (:cid r) ]
-    (html
-      [:h1 "换证申请原因："]
-      [:h2 "1、考评员资格证5年有效期慢提前3个月申请换证。" 
-       (when cid (format "目前证书：<u>%s</u>，到期日：%s" 
-                         (html [:a {:href (str "/c/esp/pn-cert/" cid) :target "_blank"} cid])
-                         (-> cid (subs 0 4) to-int (+ 5))))] 
-      [:h2 "2、跨管辖范围流动申请换发新证书"] [:br]  
-      (eui-button {:href "#" :onclick "layout_load_center('/c/esp/pn-input')"} "申请换证") )))
-  
-(defn pn-olap
-  "service: 考评员分析"
-  []
-  (let [rs (data- :pn)
-        region (for [r rs] (-> r :from (subs 0 2)))
-        rt (apply array-map (flatten (for [[v vv] (group-by #(str %) region)] [v (count vv)])))
-        rt1 (frequencies (map :type (with-esp- (fetch :pn :only [:type] :sort {:type 1}))))
-        rt2 (into {} (for [[k v] rt1] [(dd-type k) v]))
-        rt3 (frequencies (map :edu (with-esp- (fetch :pn :only [:edu] :sort {:edu 1}))))]
-    (html
-      (eui-tip "提示：可点击右上角搜索框，按考评员姓名或者证书号模糊查询。")
-      (barf rt {:title "考评员地域分布情况" :x "省份" :y "考评员人数"})
-      (pief rt2 {:title "各专业类型考评员统计" :x "专业类型" :y "考评员人数"}) 
-      (linef rt3 {:title "考评员学历统计" :x "学历" :y "考评员人数"}) 
-      )))
-
-(defn pn-archive
-  "service: 考评机构的考评员档案管理"
-  []
-  (html
-    [:h1 "考评员档案管理"]
-    (eui-button {:plain "true" :iconCls "icon-sum"} "安全生产标准化考评员汇总表、登记表") [:br]
-    (eui-button {:plain "true" :iconCls "icon-list"} "考评员学历和专业技术能力证明汇总表") [:br]
-    (eui-button {:plain "true" :iconCls "icon-file"} "考评员培训情况汇总表（何时培训，多长时间，取得何种培训合格证书）") [:br]
-    ))
-
-(defn pn-apply-view
-  "app: 查看申请记录
-  @id object-id
-  @todo 根据字段确定申请状态 "
-  [id]
-  (doc- :pn-apply id "考评员"))
-
-(defn en-apply-view
-  "app: 查看申请记录
-  @id object-id"
-  [id]
-  (doc- :en-apply id "企业"))
-
-(defn org-apply-view
-  "app: 查看申请记录
-  @id object-id"
-  [id]
-  (doc- :org-apply id "考评机构"))
-
-(defn en-backup
-  "service: 企业变更申请
-  @todo 照着 org-backup 去做"
-  []
-  (html
-    [:h1 "管理办法规定："]
-    [:h2 "企业法人代表、名称、地址等变更的，应在变更后1个月内，向相应的主管机关提供有关材料，"
-     "申请对企业安全生产标准化达标证书的变更。"]
-    (eui-button {:href "#" :onclick "layout_load_center('/c/esp/en-input')"} "填写变更信息")))
-
-(defn en-analysis
-  "service: 企业统计分析"
-  []
-  (let [rt (data- :en)
-        rt1 (group-by :province rt)
-        m (for [[p ls] rt1] [p (count ls)])
-        m1 (sort-by #(- (second %)) m)]
-    (html
-      [:h1 "各省一级企业数量分析"]
-      (barf (apply array-map (flatten m1)) {:x "省份" :y "一级企业数量"})
-      (pief (apply array-map (flatten m1)) {})
-      )))
-
-(defn stand-list
-  "service: 列出所有的达标标准"
-  []
-  (let []
-    (html
-      [:center [:h1 "达标标准考评（五大类16小类）"]]
-      (eui-tip "注意：企业根据交通运输部颁布的下列某项标准进行达标自评打分！")
-      (for [[k1 v1] dd-type]
-        (html 
-          [:h2 v1 "："]
-          (for [[k2 v2] (filter #(= (int (/ (key %) 10)) k1) dd-type2)]
-            (eui-button {:href (str "/c/esp/stand/" k2) :target "_blank" :style "margin: 5px"} 
-                        v2))) ))))
+(defn docv
+  "service: 公用函数 docview，根据 form 和 object-id 来显示文档
+  /c/esp/docv/form/id
+  @ids[0] form 数据表名如 'pn' 'en' 'org' 'org-apply' 'org-backup' 等 
+  @ids[1] id object-id字符串，如 '4fa12e1fa57efc69b5cd0890?' "
+  [ids]
+  (let [[form id _] ids]
+    (doc- (keyword form) id)))
 
 (defn- get-stand-
   "达标标准指标
@@ -538,7 +348,7 @@
     (vec (fetch (keyword tb) :where {:type2 type2} :sort {:i 1 :j 1 :k 1}))))  
 
 (defn stand
-  "app: 企业安全生产达标标准——自评，机构考评"
+  "app: 企业、考评机构安全生产达标标准的自评、考评"
   [id]
   (let [type2 (to-int (or id 11))
         is-type2-42? (= 42 type2)
@@ -599,6 +409,89 @@
       (eui-button {:href "javascript:esp_get_score()"} "计算分数") (space 10)
       "自评报告："[:input {:type "file"}] (space 5) (eui-button {} "提 交") (repeat 10 [:br]) )))
 
+;;;-------------------------------------------------------------------------------------------------------- pn  考评员
+(defn pn-apply
+  "service: 考评员申请导航页"
+  [request]
+  (apply-nav- :pn request))
+
+(defn pn-input
+  "service：评审人员在线申请"
+  [request]
+  (apply-input- request :pn))
+
+(defn pn-list
+  "service: 考评员列表
+  @id name的pattern如'张' "
+  [id]
+  (list- id :pn [] [:name :org :from :_id]))
+
+(defn pn-learn
+  "service: 考评员培训、考试查询
+  @see pn-train 主管机构的考评员培训视图"
+  [request]
+  (let [uid (wr3user request)
+        oid (:_id (first (with-esp- (fetch :pn :where {:uid uid}))))
+        rs (with-esp- (fetch :pn-train :where {:_id oid}))]
+    (html
+      [:h1 "考评员培训、考试情况"]
+      (eui-tip "1、首次培训时间不少于24个学时；2、年度继续教育时间不少于8个学时；")
+      (if (empty? rs) 
+        [:h3 "尚无培训和考试记录。"]
+        (html
+          [:h3 (format "有 %s 次培训和考试记录" (count rs))]
+          (result-html- rs '["培训证书" "培训类型" "培训日期" "培训学时" "考试日期" "考试分数" "查看"]
+                        [:train-id :type :train-start :train-hour :exam-date :exam-score :_id] {:form "docv/pn-train"})) ) )))
+
+
+
+(defn pn-renew
+  "service: 换证申请"
+  [request]
+  (let [uid (wr3user request)
+        rt (with-esp- (fetch :pn :where {:uid uid })) ]
+    (html
+      [:h1 "换证申请原因："]
+      [:h2 "1、考评员资格证5年有效期慢提前3个月申请换证。"]
+      (if (empty? rt)
+        (eui-tip "目前没有证书。")
+        (html 
+          [:h2 (space 6) "目前证书："]          
+          (for [r rt] (let [cid (:cid r) 
+                            renew-date (-> cid (subs 0 4) to-int (+ 5))]
+                        (format "%s证书号：<u>%s</u>，到期日：%s<br/>" (space 10)
+                                (html [:a {:href (str "/c/esp/pn-cert/" cid) :target "_blank"} cid])
+                                renew-date)))))
+      [:h2 "2、跨管辖范围流动申请换发新证书"] [:br]  
+      (eui-button {:href "#" :onclick "layout_load_center('/c/esp/pn-input')"} "申请换证") )))
+  
+;;;-------------------------------------------------------------------------------------------------------- org 考评机构
+(defn org-apply
+  "service: 考评机构申请导航"
+  [request]
+  (apply-nav- :org request))
+
+(defn org-input
+  "service：评审机构在线申请"
+  [request]
+  (apply-input- request :org))
+
+(defn org-list
+  "service: 考评机构列表
+  @id name的pattern如'学校' "
+  [id]
+  (list- id :org [] [:name :province :_id]))
+
+(defn org-pn-archive
+  "service: 考评机构-考评员档案管理"
+  []
+  (html
+    [:h1 "考评员档案管理"]
+    (eui-button {:plain "true" :iconCls "icon-sum"} "安全生产标准化考评员汇总表、登记表") [:br]
+    (eui-button {:plain "true" :iconCls "icon-list"} "考评员学历和专业技术能力证明汇总表") [:br]
+    (eui-button {:plain "true" :iconCls "icon-file"} "考评员培训情况汇总表（何时培训，多长时间，取得何种培训合格证书）") [:br]
+    ))
+
 (defn org-backup
   "service: 机构变更申请录入表单"
   [request]
@@ -609,7 +502,7 @@
       (when (pos? n)
         (html 
           (eui-tip (format "已提交的 %s 条变更备案申请：" n))
-          (result-html- rs '["变更原因" "备案时间" "查看"] [:reason :date :_id] {:form "org-backup-form"})))) [:br][:br]
+          (result-html- rs '["变更原因" "备案时间" "查看"] [:reason :date :_id] {:form "docv/org-backup"})))) [:br][:br]
     [:form {:id "fm1"}     
      [:table {:style "font-family: 微软雅黑; font-size: 16px"}
       [:caption "提交新的变更备案申请"]
@@ -629,6 +522,7 @@
       (with-mdb "esp"
         (insert! :org-backup (into vars {:uid (wr3user request) :date (datetime)})))
       "提交完毕！请点击左边菜单刷新。")))
+
 
 (defn org-pn
   "service: 本考评机构机构的所有考评员
@@ -667,7 +561,7 @@
         c1 (:contract1 r)
         belong (:belong r)]
     (if r
-      (doc- :pn (str oid) "要聘用/解聘的考评员" 
+      (doc- :pn (str oid) 
             {:before (if (and c0 (not c1)) 
                        (html
                          (eui-tip "该考评员目前已经聘用。") [:br]
@@ -678,8 +572,8 @@
                                          (str "聘用考评员" (:name r))) [:br][:br]))})
       "无效证书号")))
 
-(defn hire
-  "service: 后台聘用指定证书号的考评员
+(defn org-hire
+  "service: 考评机构后台聘用指定证书号的考评员
   @id 证书号cid
   @fulltime 专职'1'或兼职 "
   [id fulltime request]
@@ -692,8 +586,8 @@
           (update! :pn r (into r {:fulltime ft :contract0 (date) :contract1 nil :belong uid}))
           "聘用成功")))))
 
-(defn fire
-  "service: 后台解聘指定证书号的考评员
+(defn org-fire
+  "service: 考评机构后台解聘指定证书号的考评员
   @id 证书号cid "
   [id request]
   (let [cid id]
@@ -718,6 +612,79 @@
                     ["姓名" "培训合格证" "开始日期" "结束日期" "学时" "类型"] 
                     [:name :train-id :train-start :train-end :train-hour :type]))))
 
+;;;-------------------------------------------------------------------------------------------------------- en  企业
+
+(defn en-apply
+  "service: 企业申请导航页"
+  [request]
+  (apply-nav- :en request))
+  
+(defn en-input
+  "service：企业在线填报"
+  [request]
+  (apply-input- request :en))
+
+(defn en-list
+  "service: 企业列表
+  @id name的pattern如'安徽' "
+  [id]
+  (list- id :en [] [:province :name :type :grade :_id]))
+
+(defn en-backup
+  "service: 企业变更申请
+  @todo 照着 org-backup 去做"
+  []
+  (html
+    [:h1 "管理办法规定："]
+    [:h2 "企业法人代表、名称、地址等变更的，应在变更后1个月内，向相应的主管机关提供有关材料，"
+     "申请对企业安全生产标准化达标证书的变更。"]
+    (eui-button {:href "#" :onclick "layout_load_center('/c/esp/en-input')"} "填写变更信息")))
+
+(defn en-stand
+  "service: 列出所有的达标标准"
+  []
+  (let []
+    (html
+      [:center [:h1 "达标标准考评（五大类16小类）"]]
+      (eui-tip "注意：企业根据交通运输部颁布的下列某项标准进行达标自评打分！")
+      (for [[k1 v1] dd-type]
+        (html 
+          [:h2 v1 "："]
+          (for [[k2 v2] (filter #(= (int (/ (key %) 10)) k1) dd-type2)]
+            (eui-button {:href (str "/c/esp/stand/" k2) :target "_blank" :style "margin: 5px"} 
+                        v2))) ))))
+
+;;;-------------------------------------------------------------------------------------------------------- mot 主管机关
+(defn mot-pn-olap
+  "service: 主管机关-考评员分析"
+  []
+  (let [rs (data- :pn)
+        region (for [r rs] (-> r :from (subs 0 2)))
+        rt (apply array-map (flatten (for [[v vv] (group-by #(str %) region)] [v (count vv)])))
+        rt1 (frequencies (map :type (with-esp- (fetch :pn :only [:type] :sort {:type 1}))))
+        rt2 (into {} (for [[k v] rt1] [(dd-type k) v]))
+        rt3 (frequencies (map :edu (with-esp- (fetch :pn :only [:edu] :sort {:edu 1}))))]
+    (html
+      (eui-tip "提示：可点击右上角搜索框，按考评员姓名或者证书号模糊查询。")
+      (barf rt {:title "各地域考评员分布情况" :x "省份" :y "考评员人数"})
+      (pief rt2 {:title "各专业类型考评员数量统计" :x "专业类型" :y "考评员人数"}) 
+      (linef rt3 {:title "考评员学历统计" :x "学历" :y "考评员人数"}) 
+      )))
+
+(defn mot-en-olap
+  "service: 企业统计分析"
+  []
+  (let [rt (data- :en)
+        rt1 (group-by :province rt)
+        m (for [[p ls] rt1] [p (count ls)])
+        m1 (sort-by #(- (second %)) m)]
+    (html
+      [:h1 "各省一级企业数量分析"]
+      (barf (apply array-map (flatten m1)) {:x "省份" :y "一级企业数量"})
+      (pief (apply array-map (flatten m1)) {})
+      )))
+
+;; todo refactorring
 (defn- cert-renew-
   "证书换证
   @todo pn、org、en 都会有多个不同类型证书 "
@@ -731,7 +698,7 @@
       (if (empty? rs)
         (eui-tip (format "还没有%s证书，具备证书后系统会自动提醒换证（%s年到期前3个月）。" cname y))
         (for [r rs] 
-          (html (eui-button {:href (format "/c/esp/%s-form/%s" (name tb) (:_id r)) :target "_blank"}
+          (html (eui-button {:href (format "/c/esp/docv/%s?form=%s" (:_id r) (name tb)) :target "_blank"}
                             (format "%s证书：%s" cname (:cid r))) (space 5)
                 (format "发证时间：%s，换证时间：<u><b>%s</b></u>" (:cdate r) (date-add (:cdate r) y -3 0)) 
                 [:br] ))))))
@@ -757,7 +724,7 @@
         (eui-tip "还没有资质证书。")
         (html
           (result-html- rs '["证书号" "证书类型" "发证日期" "证书状态" "查看"] 
-                        [:cid :type :cdate :cstate :_id] {:form "org-form"}))))))
+                        [:cid :type :cdate :cstate :_id] {:form "docv/org"}))))))
 
 (defn- year-report-
   "service: 年度工作报告；
@@ -810,7 +777,8 @@
   (year-report- :en request))
 
 (defn pn-cert
-  "显示考评员证书"
+  "显示考评员证书
+  @id 资格证书号"
   [id]
   (let [cid (or id "2011-2-0351-15442")
         r (first (with-esp- (fetch :pn :where {:cid cid})))
@@ -839,7 +807,7 @@
     (html
       [:h1 (format "%s主管的考评机构（%s 名）" (dd-pot admin) (count rs))]
       (eui-tip "请在如下的考评机构列表中自行选择两个。")
-      (result-html- rs '[机构名称 所属省份 详情 选择] [:name :province :_id :_select] {:form "org-form"}) [:br]
+      (result-html- rs '[机构名称 所属省份 详情 选择] [:name :province :_id :_select] {:form "docv/org"}) [:br]
       (eui-button {:onclick "esp_en_select_org()"} "提 交")
       [:script (format "esp_en_selected('%s')" (join (:orgid r) ","))]
       )))
@@ -864,12 +832,10 @@
       [:h1 "申请进度查询"]
       (when rs
         (html [:h2 (format "已提交过%s次申请：" (count rs))]
-              (for [r rs] 
-                (html (eui-button {:href (format "/c/esp/en-apply-view/%s" (:_id r)) :target "_blank"}
-                                  (format "查看%s的申请" (:date r))) (space 5))))))))
+              (result-html- rs [] [:date :grade :type2 :admin :_id] {:form "docv/en-apply"}) )))))
 
 (defn pn-apply-resp
-  "service: 交管-考评员申请受理. 
+  "service: 主管机关-考评员申请受理. 
   @todo: 需要真正进行数据处理"
   []
   (let [rs (with-esp- (fetch :pn-apply ))]
@@ -878,7 +844,7 @@
       (result-html- 
         rs ["姓名" "申请类型" "申请时间" "详细" "选择"]
         [:name :type :date :_id :_select] 
-        {:form "pn-apply-view"}) [:br]
+        {:form "docv/pn-apply"}) [:br]
       (eui-button {:onclick "esp_pn_apply_resp()"} "资格证书制发") )))
 
 (defn pn-renew-resp
@@ -903,7 +869,7 @@
   @id object-id
   @todo 保存数据"
   [id]
-  (doc- :org-apply id "考评机构" 
+  (doc- :org-apply id 
         {:after (html
                   [:br] [:label "处理意见："] (eui-textarea {} ) [:br][:br]
                   (eui-button {} "同意") (space 3)
@@ -926,7 +892,7 @@
   @id object-id
   @todo 保存数据"
   [id]
-  (doc- :org-backup id "考评机构变更" 
+  (doc- :org-backup id 
         {:after (html
                   [:br] [:label "处理意见："] (eui-textarea {} ) [:br][:br]
                   (eui-button {} "提交") )}))
@@ -958,7 +924,7 @@
   @id object-id
   @todo 保存数据"
   [id]
-  (doc- :en-apply id "交通运输企业" 
+  (doc- :en-apply id 
         {:after (html
                   [:br]
                   (eui-button {} "同意（并指派考评机构）") (space 3) [:br][:br]
@@ -969,7 +935,7 @@
   @id object-id
   @todo 保存数据"
   [id]
-  (doc- :en-apply id "交通运输企业" 
+  (doc- :en-apply id 
         {:after (fn [rt] 
                   (html
                     [:br]
@@ -1004,7 +970,7 @@
   @id object-id
   @todo 保存数据"
   [id]
-  (doc- :en-apply id "交通运输企业考评结论审核" 
+  (doc- :en-apply id 
         {:after (html
                   [:br]
                   (eui-button {} "同意发证") (space 3) [:br][:br]
@@ -1039,7 +1005,7 @@
   "app: 主管部门查看并受理举报信息"
   [id]
   (let [r (with-mdb2 "esp" (fetch-by-id :hot (object-id id)))]
-    (doc- :hot id "举报信息"
+    (doc- :hot id
           {:after (html
                     [:form#fm1 {:action "/c/esp/mot-hot-resp" :method "post"}
                      [:input {:name "oid" :type "hidden" :value (:_id r)}]
@@ -1064,7 +1030,7 @@
   [title]
   (html
     [:h1 title]
-    (eui-tip "暂无需要制发的资格证")))
+    (eui-tip "暂无需要制发的资格证（系统可直接套打A3纸，也可生成电子证书。）")))
 
 (defn pn-cert-resp
   "service: 主管部门制发考评员资格证"
@@ -1134,15 +1100,14 @@
        (eui-button {:onclick "$('#fm1').submit()"} "查询")] )))
 
 (defn- cert-cancel-resp-
-  "查询指定证书号的考评员，显示信息并撤销
+  "查询指定证书号，显示信息并撤销
   @type :pn :org "
   [type cid]
   (let [tb type
-        nam (type {:pn "考评员" :org "考评机构" :en "企业"})
         r (first (with-esp- (fetch tb :where {:cid cid})))
         id (str (:_id r))]
     (if r
-      (doc- tb id (format "取消%s资格证" nam) 
+      (doc- tb id 
             {:after (html
                       [:br] (eui-button {} "撤销（并填写意见）") (space 3) (eui-textarea {} ) [:br][:br] )})
       (html-body (eui-tip "未找到该证书号！" )) )))
