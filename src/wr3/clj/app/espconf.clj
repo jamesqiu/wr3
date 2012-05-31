@@ -24,28 +24,28 @@
               ["交通运输企业搜索" "range_en" "icon-tip"] ]
    :nav [
          ["待办事宜" "icon-pen" ; title icon
-          ["考评员申请受理" "icon-list"     "pn-apply-resp"] ; title icon id 
-          ["考评员换证申请受理" "icon-list" "pn-renew-resp"]  
-          ["考评机构申请受理" "icon-list"    "org-apply-resp"]  
-          ["考评机构变更备案受理" "icon-list" "org-backup-resp"] 
-          ["考评机构换证受理" "icon-list"    "org-renew-resp"] 
+          ["考评员申请受理" "icon-user"     "pn-apply-resp"] ; title icon id 
+          ["考评员换证申请受理" "icon-user" "cert-renew-resp/pn"]  
+          ["考评机构申请受理" "icon-earth"    "org-apply-resp"]  
+          ["考评机构变更备案受理" "icon-earth" "org-backup-resp"] 
+          ["考评机构换证申请受理" "icon-earth"    "cert-renew-resp/org"] 
           ["企业初次申请受理" "icon-list"    "en-apply-resp"]  
           ["企业考评结论审核" "icon-list"    "en-review"]  
-          ["企业换证申请受理" "icon-list"    "en-renew-resp"]  
-          ["企业变更申请受理" "icon-list"    "en-backup-resp"]  
-          ["投诉举报受理" "icon-list"    "mot-hot"]  
+          ["企业变更备案申请受理" "icon-list"    "en-backup-resp"]  
+          ["企业换证申请受理" "icon-list"    "cert-renew-resp/en"]  
+          ["投诉举报受理" "icon-tip"    "mot-hot"]  
           ]
          ["考评员" "icon-pen" ; title id
           ["考评员列表" "icon-list"    "pn-list"] ; title icon id 
           ["考评员统计查询"          "icon-list"    "mot-pn-olap"] ; title icon id 
-          ["资格证书制发" "icon-list"    "pn-cert-resp"] ; title icon id 
+          ["资格证书制发" "icon-list"    "cert-resp/pn"] ; title icon id 
           ["考评员培训"          "icon-list"    "pn-train-view"] ; title icon id 
           ["考评员考试"          "icon-list"    "pn-exam"] ; title icon id 
           ["考评员资格撤销"      "icon-list"    "pn-cancel"] ; title icon id 
           ]
          ["考评机构" "icon-pen" ; title id
           ["考评机构列表" "icon-list"  "org-list"] ; title icon id 
-          ["资质证书制发" "icon-list"    "org-cert-resp"] ; title icon id 
+          ["资质证书制发" "icon-list"    "cert-resp/org"] ; title icon id 
           ["问题整改" "icon-list"    "mot-org-refine"] ; title icon id 
           ["资质撤销" "icon-list"    "org-cancel"] ; title icon id 
           ["年度工作报告"          "icon-list"    "org-report-view"] ; title icon id 
@@ -79,7 +79,7 @@
          ["考评员" "icon-pen" ; title id
           ["申请考评证书" "icon-list"    "pn-apply"] ; title icon id url 
           ["培训、考试情况" "icon-list"  "pn-learn"] 
-          ["换证申请" "icon-list"  "pn-renew"] 
+          ["换证申请" "icon-list"  "cert-renew/pn"] 
           ["使用帮助" "icon-help" "pn-help" "/static/esp/about-pn.html"]
           ]
          ] 
@@ -95,9 +95,9 @@
          ["&nbsp;考评机构" "icon-arrow" ; title id
           ["申请资质证书" "icon-list"    "org-apply"] ; title icon id 
           ["申请变更备案" "icon-list"    "org-backup"] ; title icon id 
-          ["申请换证" "icon-list"    "org-renew"] 
+          ["申请换证" "icon-list"    "cert-renew/org"] 
           ["已认定的资质证书" "icon-list"    "org-cert"] 
-          ["年度工作报告" "icon-list" "org-report"] ; title icon id 
+          ["年度工作报告" "icon-list" "report/org"] ; title icon id 
           ["问题整改" "icon-list" "org-refine"] ; title icon id 
           ["使用帮助"          "icon-help"   "help_bt"]
           ]
@@ -108,7 +108,7 @@
           ]
          ["&nbsp;企业考评管理" "icon-pen" ; title id
           ["企业考评待办工作" "icon-list" "en-apply-resp"] ; title icon id 
-          ["企业达标等级证书制发" "icon-list" "en-cert-resp"] ; title icon id 
+          ["企业达标等级证书制发" "icon-list" "cert-resp/en"] ; title icon id 
           ["工作进度查询" "icon-list" "org-en-process"] 
           ["考评企业档案管理" "icon-list" "en-archive"] 
           ["考评情况汇总表" "icon-list" "org-eval-report"] 
@@ -127,9 +127,9 @@
           ["2、达标自评" "icon-list"    "en-stand"] ; title icon id 
           ["3、选择考评机构" "icon-list" "en-select-org"] 
           ["进度查询" "icon-list"    "en-process"] 
-          ["企业年度工作报告" "icon-list"  "en-report"] 
+          ["企业年度工作报告" "icon-list"  "report/en"] 
           ["申请变更" "icon-list"    "en-backup"] 
-          ["申请换证" "icon-list"    "en-renew"] 
+          ["申请换证" "icon-list"    "cert-renew/en"] 
           ]
          ]   
    })
