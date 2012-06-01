@@ -187,7 +187,7 @@
   @rt Clojure.sql结果集 [{:c1 v :c2 v ..} ..]
   @head 表头名称 [活期余额 业务类型 币种 日期]，如果(empty? head)如[] nil，则使用dd-meta自动从cols参数得到head
   @cols 列名称 [:ye :yw_type :bz :_created] 
-  @m 客户化定制 {} 设置 :form 表示cols中含 :_id 时文档显示所使用的form"
+  @m 客户化定制 {} 设置 :form 表示cols中含 :_id 时文档显示所使用的form "
   ([rt head cols m]
     (let [head (if (empty? head) (for [c cols] (or (dd-meta c) c)) head)]
       (result-html rt {:f-head (fn [thead] (for [th (cons "序号" head)] [:th th]))
@@ -213,7 +213,7 @@
                                         :admin (or (dd-pot v) v)
                                         :respdate (if (nil? v0) "尚未处理" (format "已于%s处理"))
                                         :cstate (if (nil? v0) "正常" "撤销") ; 考评机构证书状态
-                                        :reason (or (dd-org-backup (to-int v0)) v)
+                                        :reason (or (get (case (:id m) "org" dd-org-backup "en" dd-en-backup) (to-int v0)) v)
                                         v)])) ]) } )))
   ([rt head cols] (result-html- rt head cols {})))
 
@@ -321,7 +321,7 @@
                       :orgid (eui-combo {:id "orgid" :name "orgid"} (zipmap v (with-orgid- v)))
                       :info (replace-all v "\r\n" "<br/>")
                       :content (replace-all v "\r\n" "<br/>")
-                      :reason (or (dd-org-backup (to-int v)) v) ; 考评机构备案原因
+                      :reason (or (get (case tb :org-backup dd-org-backup :en-backup dd-en-backup) (to-int v)) v) ; 考评机构备案原因
                       :safe [:a {:href v} "查看"] ; 考评机构安全生产组织架构
                       v)] ])]
            [:tfoot 
@@ -491,6 +491,66 @@
       (update! tb {:uid uid :year yyyy} m))
     (str "已保存 " yyyy " 年度报告。")))
 
+(defn apply-resp
+  "service: 主管机关对考评员、考评机构、企业的申请受理. 
+  @id 代表申请来源的字符串：pn,org,en "
+  [id request]
+  (let [tb (keyword (str id "-apply")) ; :pn-apply :org-apply :en-apply
+        cname (dd-cert (keyword id))
+        rs (with-esp- (fetch tb))
+        form (cond 
+               (= id "pn") "docv/pn-apply"
+               (= id "org") "mot-org-apply" 
+               (and (= id "en") (wr3role? request "mot")) "mot-en-apply"
+               (and (= id "en") (wr3role? request "org")) "org-en-apply" )
+        tip (case id 
+              "pn" "同意则颁发资格证书"
+              "org" "主管机构处理：（同意/不同意）+意见"
+              "en" "企业申请处理：主管机关（同意+指派考评机构）/（不同意+意见）——> 考评机构（同意）/（不同意+意见）——> 主管机关审核")]
+    (html
+      [:h1 (format "受理%s申请" cname)]
+      (eui-tip tip)
+      (result-html- rs []
+                    [:name (if (= id "en") :type2 :type) :date :_id :_select] 
+                    {:form form}) [:br]
+      (when (= id "pn") 
+        (eui-button {:onclick "esp_pn_apply_resp()"} "资格证书制发")) )))
+
+(defn backup
+  "service: 考评机构、企业变更申请录入表单
+  @id 'org'或'en'，分别代表考评机构、企业 "
+  [id request]
+  (let [tb (keyword (str id "-backup"))
+        form (format "docv/%s-backup" id)
+        rs (with-esp- (fetch tb :where {:uid (wr3user request)}))
+        reason (if (= id "org") dd-org-backup dd-en-backup)
+        n (count rs)] 
+    (html
+      [:h1 "申请变更备案"]
+      (when (pos? n)
+        (html 
+          (eui-tip (format "已提交的 %s 条变更备案申请：" n))
+          (result-html- rs '["变更原因" "备案时间" "查看"] [:reason :date :_id] {:form form :id id}))) [:br][:br]
+      [:form {:id "fm1"}     
+       [:table {:style "font-family: 微软雅黑; font-size: 16px"}
+        [:caption "提交新的变更备案申请"]
+        [:tbody
+         [:tr [:td [:label "选择变更原因："]] [:td (eui-combo {:name "reason"} reason)]]
+         [:tr [:td [:label "变更内容描述："]] [:td (eui-textarea {:name "content" :style "width:350px"} "")]] ]
+        [:tfoot [:tr [:td {:colspan 2 :align "right" :style "padding:10px"} 
+                      (eui-button {:href "#" :onclick (format "esp_save_backup('%s')" id)} "提交申请")]]]] ] )))
+
+(defn backup-save
+  "service: 机构变更申请表单提交保存.
+  @id 'org'或'en'，分别代表考评机构、企业 "
+  [id request]
+  (let [tb (keyword (str id "-backup")) ; org-backup, en-backup
+        vars (query-vars request)]
+    (do
+      (with-mdb "esp"
+        (insert! tb (into vars {:uid (wr3user request) :date (datetime)})))
+      "提交完毕！请点击左边菜单刷新。")))
+
 ;;;-------------------------------------------------------------------------------------------------------- pn  考评员
 (defn pn-apply
   "service: 考评员申请导航页"
@@ -553,38 +613,6 @@
     (eui-button {:plain "true" :iconCls "icon-list"} "考评员学历和专业技术能力证明汇总表") [:br]
     (eui-button {:plain "true" :iconCls "icon-file"} "考评员培训情况汇总表（何时培训，多长时间，取得何种培训合格证书）") [:br]
     ))
-
-(defn org-backup
-  "service: 机构变更申请录入表单"
-  [request]
-  (html
-    [:h1 "申请变更备案"]
-    (let [rs (with-mdb2 "esp" (vec (fetch :org-backup :where {:uid (wr3user request)})))
-          n (count rs)]
-      (when (pos? n)
-        (html 
-          (eui-tip (format "已提交的 %s 条变更备案申请：" n))
-          (result-html- rs '["变更原因" "备案时间" "查看"] [:reason :date :_id] {:form "docv/org-backup"})))) [:br][:br]
-    [:form {:id "fm1"}     
-     [:table {:style "font-family: 微软雅黑; font-size: 16px"}
-      [:caption "提交新的变更备案申请"]
-      [:tbody
-       [:tr
-        [:td [:label "选择变更原因："]] [:td (eui-combo {:name "reason"} dd-org-backup)]]
-       [:tr 
-        [:td [:label "变更内容描述："]] [:td (eui-textarea {:name "content" :style "width:350px"} "")]] ]
-      [:tfoot [:tr [:td {:colspan 2 :align "right" :style "padding:10px"} 
-                    (eui-button {:href "#" :onclick "esp_save_org_backup()"} "提交申请")]]]] ] ))
-     
-(defn org-backup-save
-  "机构变更申请表单提交保存"
-  [request]
-  (let [vars (query-vars request)]
-    (do
-      (with-mdb "esp"
-        (insert! :org-backup (into vars {:uid (wr3user request) :date (datetime)})))
-      "提交完毕！请点击左边菜单刷新。")))
-
 
 (defn org-pn
   "service: 本考评机构机构的所有考评员
@@ -686,6 +714,22 @@
         (html
           (result-html- rs '["证书号" "证书类型" "发证日期" "证书状态" "查看"] 
                         [:cid :type :cdate :cstate :_id] {:form "docv/org"}))))))
+
+(defn org-en-apply
+  "app: 考评机构受理企业申请记录
+  @id object-id
+  @todo 保存数据"
+  [id]
+  (doc- :en-apply id 
+        {:after (fn [rt] 
+                  (html 
+                    [:br] [:label "第一步："]
+                    (eui-button {:href (str "/c/esp/stand/" (:type2 rt)) :target "_blank" :title "todo..."}
+                                "考评打分") [:br][:br]
+                    [:label "第二步："] 
+                    (eui-button {:title "todo..."} "同 意") " &nbsp; 或者 &nbsp; "
+                    (eui-button {:title "todo..."} "不同意（并填写意见）") (space 3) (eui-textarea {} ) 
+                    [:br][:br] ))}))
 
 ;;;-------------------------------------------------------------------------------------------------------- en  企业
 
@@ -797,50 +841,8 @@
       (pief (apply array-map (flatten m1)) {})
       )))
 
-;;;------------------------------------------------------------------------------------ todo
-
-(defn apply-resp
-  "service: 主管机关对考评员、考评机构、企业的申请受理. 
-  @id pn,org,en "
-  [id]
-  (let [tb (keyword (str id "-apply")) ; :pn-apply :org-apply :en-apply
-        cname (dd-cert (keyword id))
-        rs (with-esp- (fetch tb))
-        form ((keyword id) {:pn "pn-apply" :org "org-apply-resp-doc" :en "todo"})]
-    (html
-      [:h1 (format "受理%s申请" cname)]
-      (result-html- rs []
-                    [:name :type :date :_id :_select] 
-                    {:form (format "docv/" form)}) [:br]
-      (eui-button {:onclick "esp_pn_apply_resp()"} "资格证书制发") )))
-
-(defn pn-apply-resp
-  "service: 下级主管机关-考评员申请受理. 
-  @todo: 需要真正进行数据处理"
-  []
-  (let [rs (with-esp- (fetch :pn-apply ))]
-    (html
-      [:h1 "考评员资格证书申请"]
-      (result-html- 
-        rs ["姓名" "申请类型" "申请时间" "详细" "选择"]
-        [:name :type :date :_id :_select] 
-        {:form "docv/pn-apply"}) [:br]
-      (eui-button {:onclick "esp_pn_apply_resp()"} "资格证书制发") )))
-
-(defn org-apply-resp
-  "交通主管部门考评机构申请受理"
-  []
-  (let [rs (with-esp- (fetch :org-apply ))]
-    (html
-      [:h1 "考评机构申请受理"]
-      (eui-tip "主管机构处理：（同意/不同意）+意见")
-      (result-html- 
-        rs ["姓名" "申请类型" "申请时间" "受理"]
-        [:name :type :date :_id] 
-        {:form "org-apply-resp-doc"}) [:br] )))
-
-(defn org-apply-resp-doc
-  "app: 受理考评机构申请记录
+(defn mot-org-apply 
+  "app: 主管机关受理考评机构申请记录
   @id object-id
   @todo 保存数据"
   [id]
@@ -850,23 +852,7 @@
                   (eui-button {} "同意") (space 3)
                   (eui-button {} "不同意") )}))
 
-
-(defn en-apply-resp
-  "交通主管部门/考评机构 企业初次申请受理"
-  [request]
-  (let [rs (with-esp- (fetch :en-apply ))
-        uid (wr3user request)
-        role (get-in au/users [uid :roles]) ; todo
-        doc ({"mot" "en-apply-resp-doc" "org" "en-apply-resp-doc2"} role)]
-    (html
-      [:h1 "企业初次申请受理"]
-      (eui-tip "企业申请处理：主管机关（同意+指派考评机构）/（不同意+意见）——> 考评机构（同意）/（不同意+意见）——> 主管机关审核")
-      (result-html- 
-        rs ["企业名称" "申请类型" "申请时间" "受理"]
-        [:name :type2 :date :_id] 
-        {:form doc}) [:br] )))
-
-(defn en-apply-resp-doc
+(defn mot-en-apply
   "app: 主管机构受理企业申请记录
   @id object-id
   @todo 保存数据"
@@ -877,23 +863,15 @@
                   (eui-button {} "同意（并指派考评机构）") (space 3) [:br][:br]
                   [:br] (eui-button {} "不同意（并填写意见）") (space 3) (eui-textarea {} ) [:br][:br] )}))
 
-(defn en-apply-resp-doc2
-  "app: 考评机构受理企业申请记录
-  @id object-id
-  @todo 保存数据"
-  [id]
-  (doc- :en-apply id 
-        {:after (fn [rt] 
-                  (html
-                    [:br]
-                    [:label "第一步："] 
-                    (eui-button {:href (str "/c/esp/stand/" (:type2 rt)) :target "_blank" :title "todo..."}
-                                "考评打分") [:br][:br]
-                    [:label "第二步："] 
-                    (eui-button {:title "todo..."} "同 意") " &nbsp; 或者 &nbsp; "
-                    (eui-button {:title "todo..."} "不同意（并填写意见）") (space 3) (eui-textarea {} ) 
-                    [:br][:br] ))}))
+;;;------------------------------------------------------------------------------------ todo
 
+
+(defn en-backup-resp
+  "service: 主管部门受理企业变更备案"
+  []
+  (html
+    [:h1 "企业变更备案申请受理"]
+    (eui-tip "暂无换证申请")))
 
 (defn org-backup-resp
   "交通主管部门考评机构变更备案受理"
@@ -945,13 +923,6 @@
                   [:br]
                   (eui-button {} "同意发证") (space 3) [:br][:br]
                   [:br] (eui-button {} "不同意（并填写意见）") (space 3) (eui-textarea {} ) [:br][:br] )}))
-
-(defn en-backup-resp
-  "service: 主管部门受理企业变更备案"
-  []
-  (html
-    [:h1 "企业变更备案申请受理"]
-    (eui-tip "暂无换证申请")))
 
 (defn mot-hot
   "service: 主管部门受理实名投诉举报"

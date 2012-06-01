@@ -24,12 +24,12 @@
               ["交通运输企业搜索" "range_en" "icon-tip"] ]
    :nav [
          ["待办事宜" "icon-pen" ; title icon
-          ["考评员申请受理" "icon-user"     "pn-apply-resp"] ; title icon id 
+          ["考评员申请受理" "icon-user"     "apply-resp/pn"] ; title icon id 
           ["考评员换证申请受理" "icon-user" "cert-renew-resp/pn"]  
-          ["考评机构申请受理" "icon-earth"    "org-apply-resp"]  
+          ["考评机构申请受理" "icon-earth"    "apply-resp/org"]  
           ["考评机构变更备案受理" "icon-earth" "org-backup-resp"] 
           ["考评机构换证申请受理" "icon-earth"    "cert-renew-resp/org"] 
-          ["企业初次申请受理" "icon-list"    "en-apply-resp"]  
+          ["企业初次申请受理" "icon-list"    "apply-resp/en"]  
           ["企业考评结论审核" "icon-list"    "en-review"]  
           ["企业变更备案申请受理" "icon-list"    "en-backup-resp"]  
           ["企业换证申请受理" "icon-list"    "cert-renew-resp/en"]  
@@ -94,7 +94,7 @@
    :nav [
          ["&nbsp;考评机构" "icon-arrow" ; title id
           ["申请资质证书" "icon-list"    "org-apply"] ; title icon id 
-          ["申请变更备案" "icon-list"    "org-backup"] ; title icon id 
+          ["申请变更备案" "icon-list"    "backup/org"] ; title icon id 
           ["申请换证" "icon-list"    "cert-renew/org"] 
           ["已认定的资质证书" "icon-list"    "org-cert"] 
           ["年度工作报告" "icon-list" "report/org"] ; title icon id 
@@ -107,7 +107,7 @@
           ["考评员档案管理" "icon-list"    "org-pn-archive"] 
           ]
          ["&nbsp;企业考评管理" "icon-pen" ; title id
-          ["企业考评待办工作" "icon-list" "en-apply-resp"] ; title icon id 
+          ["企业考评待办工作" "icon-list" "apply-resp/en"] ; title icon id 
           ["企业达标等级证书制发" "icon-list" "cert-resp/en"] ; title icon id 
           ["工作进度查询" "icon-list" "org-en-process"] 
           ["考评企业档案管理" "icon-list" "en-archive"] 
@@ -128,7 +128,7 @@
           ["3、选择考评机构" "icon-list" "en-select-org"] 
           ["进度查询" "icon-list"    "en-process"] 
           ["企业年度工作报告" "icon-list"  "report/en"] 
-          ["申请变更" "icon-list"    "en-backup"] 
+          ["申请变更" "icon-list"    "backup/en"] 
           ["申请换证" "icon-list"    "cert-renew/en"] 
           ]
          ]   
@@ -207,6 +207,13 @@
    2 "（二）停业、破产或有其他原因终止业务的"
    3 "（三）从事专职管理和考评工作的人员发生重大变化的"
    })
+; 企业变更备案
+(def dd-en-backup
+  {
+   1 "企业法人代表变更的"
+   2 "企业名称变更的"
+   3 "企业地址变更的"
+   })
 ; 企业申请达标级别对应的分数要求
 (def dd-score
   {
@@ -245,6 +252,7 @@
    :org-apply "考评机构申请"
    :en-apply "交通运输企业申请"
    :org-backup "考评机构变更申请"
+   :en-backup "企业变更申请"
    :pn-train "考评员培训考试记录"
    :hot "实名举报信息"
    })
@@ -252,6 +260,7 @@
 (def dd-meta
   {
    :_id "详情"
+   :_select "选择"
    :admin "主管机关"
    :advice "处理意见"
    :begindate "相关专业从业时间"

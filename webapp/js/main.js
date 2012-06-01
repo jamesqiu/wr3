@@ -2910,13 +2910,17 @@ function fileupload_ok(fname) {
 //------------------------ 文件上传</end>
 
 /**
- * 机构变更申请保存
+ * 考评机构、企业变更申请保存
  */
-function esp_save_org_backup() {
-	var url = '/c/esp/org-backup-save?' + $('#fm1').serialize()
-	$.post(url, function(data) {
-		alert(data)
-	})
+function esp_save_backup(id) {
+	$.messager.confirm('确认提交', '提交变更备案？', function(r){
+		if (r) {
+			var url = '/c/esp/backup-save/'+id+'?' + $('#fm1').serialize()
+			$.post(url, function(data) {
+				$.messager.alert('提交结果', data, 'info');
+			})
+		}
+	})		
 }
 
 /**
