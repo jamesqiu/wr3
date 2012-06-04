@@ -213,7 +213,11 @@
                                         :admin (or (dd-pot v) v)
                                         :respdate (if (nil? v0) "尚未处理" (format "已于%s处理"))
                                         :cstate (if (nil? v0) "正常" "撤销") ; 考评机构证书状态
-                                        :reason (or (get (case (:id m) "org" dd-org-backup "en" dd-en-backup) (to-int v0)) v)
+                                        :reason (or (get (case (:id m) 
+                                                           "org" dd-org-backup 
+                                                           "en" dd-en-backup) 
+                                                         (to-int v0)) v)
+                                        :content (if (> (count v) 20) (str (subs v 0 20) " ……") v)
                                         v)])) ]) } )))
   ([rt head cols] (result-html- rt head cols {})))
 
@@ -442,7 +446,7 @@
       (eui-tip "暂无换证申请"))))
 
 (defn cert-resp
-  "service: 主管部门制发考评员、考评机构证书，考评机构制发企业证书。
+  "service: 主管机关制发考评员、考评机构证书，考评机构制发企业证书。
   @id pn,en,org "
   [id]
   (let [title (format "%s制发" (dd-cert (keyword id)))]
@@ -550,6 +554,73 @@
       (with-mdb "esp"
         (insert! tb (into vars {:uid (wr3user request) :date (datetime)})))
       "提交完毕！请点击左边菜单刷新。")))
+
+(defn backup-resp
+  "主管机关受理考评机构、企业变更备案.
+  @id 'en' 'org' "
+  [id request]
+  (let [tb (keyword (str id "-backup"))
+        rs (with-esp- (fetch tb ))]
+    (html
+      [:h1 (format "%s 变更备案受理" (dd-form (keyword id)))]
+      (eui-tip "主管机关处理：（同意/不同意）+意见")
+      (result-html- rs []
+                    [:reason :content :date :_id] 
+                    {:form (format "backup-resp-doc/%s" id) :id id}) 
+      [:br] )))
+
+(defn backup-resp-doc
+  "app: 主管机关受理考评机构、企业变更记录
+  @ids ids[0]: 'org', 'en'; ids[1]: object-id
+  @todo 保存数据"
+  [ids]
+  (let [tb (keyword (str (first ids) "-backup"))
+        oid (second ids)]
+  (doc- tb oid 
+        {:after (html
+                  [:br] [:label "处理意见："] (eui-textarea {} ) [:br][:br]
+                  (eui-button {} "提交") )})))
+  
+(defn- cert-cancel
+  "service: 主管机关对pn、org、en证书的撤销
+  @id 'pn' 'org' 'en' "
+  [id]
+  (let [type (keyword id)
+        nam (dd-form type)
+        v0 (type {:pn "2011-2-022-20789" :org "2012-D-00-丙7585" :en "2012-2-1-0551-00844"})]
+    (html
+      [:h1 (format "%s资格撤销工作" nam)]
+      [:form {:id "fm1" :action (format "/c/esp/cert-cancel-doc/%s" (name type)) :method "get" :target "_blank"}
+       [:label (format "请输入要撤销资质的%s证书号：" nam)]
+       (eui-text {:id "cid" :name "cid" :value v0}) (space 3) 
+       (eui-button {:onclick "$('#fm1').submit()"} "查询")] )))
+
+(defn cert-cancel-doc
+  "service: 查询指定证书号，显示信息并撤销
+  @id 'pn' 'org' 'en', 
+  @cid cid证书号
+  @type :pn :org "
+  [id cid]
+  (let [tb (keyword id)
+        r (first (with-esp- (fetch tb :where {:cid cid})))
+        id (str (:_id r))]
+    (if r
+      (doc- tb id 
+            {:after (html
+                      [:br] (eui-button {} "撤销（并填写意见）") (space 3) (eui-textarea {} ) [:br][:br] )})
+      (html-body (eui-tip "未找到该证书号！" )) )))
+  
+(defn report-view
+  "service: mot查看org、en的年报
+  @id :org :en "
+  [id]
+  (let [tb (get {"org" :org-report "en" :en-report} id)
+        nam (dd-form (keyword id))
+        rs (data- tb)]
+    (html
+      [:h1 (format "%s年度工作报告" nam)]
+      (result-html- rs ["年度" (format "%s名称" nam) "报送日期" "文件"]
+                    [:year :uid :date :freport]))))
 
 ;;;-------------------------------------------------------------------------------------------------------- pn  考评员
 (defn pn-apply
@@ -686,7 +757,7 @@
       "已解聘")))
 
 (defn org-pn-train
-  "省级交通主管部门管理的考评员培训
+  "省级主管机关管理的考评员培训
   @see pn-learn 考评员自己的培训视图"
   [request]
   (let [uid (wr3user request)
@@ -696,7 +767,7 @@
     (html
       [:h1 "考评员培训工作"]
       [:h2 "培训时间，培训学时（不少于24个学时），培训类别，培训合格证号"]
-      [:div "注：由省级交通运输主管部门、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作。"]
+      [:div "注：由省级交通运输主管机关、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作。"]
       [:br]
       (result-html- rt2 
                     ["姓名" "培训合格证" "开始日期" "结束日期" "学时" "类型"] 
@@ -730,6 +801,25 @@
                     (eui-button {:title "todo..."} "同 意") " &nbsp; 或者 &nbsp; "
                     (eui-button {:title "todo..."} "不同意（并填写意见）") (space 3) (eui-textarea {} ) 
                     [:br][:br] ))}))
+
+(defn org-en-process
+  "service: 考评机构查询企业申请处理进度
+  @todo"
+  []
+  (let []
+    (html
+      [:h1 "企业考评及证书制发工作进度"]
+      [:h2 "待处理的企业申请考评"]
+      (eui-tip "目前暂无")
+      [:h2 "已处理待主管机关审核的企业申请"]
+      (eui-tip "目前暂无")
+      [:h2 "待发证的企业"]
+      (eui-tip "目前暂无") )))
+
+(defn org-en-archive
+  "service: 考评机构的企业档案管理"
+  []
+  (en-list "山西"))
 
 ;;;-------------------------------------------------------------------------------------------------------- en  企业
 
@@ -863,40 +953,8 @@
                   (eui-button {} "同意（并指派考评机构）") (space 3) [:br][:br]
                   [:br] (eui-button {} "不同意（并填写意见）") (space 3) (eui-textarea {} ) [:br][:br] )}))
 
-;;;------------------------------------------------------------------------------------ todo
-
-
-(defn en-backup-resp
-  "service: 主管部门受理企业变更备案"
-  []
-  (html
-    [:h1 "企业变更备案申请受理"]
-    (eui-tip "暂无换证申请")))
-
-(defn org-backup-resp
-  "交通主管部门考评机构变更备案受理"
-  []
-  (let [rs (with-esp- (fetch :org-backup ))]
-    (html
-      [:h1 "考评机构变更备案受理"]
-      (eui-tip "主管机构处理：（同意/不同意）+意见")
-      (result-html- 
-        rs ["考评机构名称" "法定代表人变更" "考评员发生重大变化" "终止业务" "申请时间" "受理"]
-        [:uid :legalp :pn :stop :date :_id] 
-        {:form "org-backup-resp-doc"}) [:br] )))
-
-(defn org-backup-resp-doc
-  "app: 受理考评机构变更记录
-  @id object-id
-  @todo 保存数据"
-  [id]
-  (doc- :org-backup id 
-        {:after (html
-                  [:br] [:label "处理意见："] (eui-textarea {} ) [:br][:br]
-                  (eui-button {} "提交") )}))
-
-(defn en-review
-  "交通主管部门企业考评结论审核"
+(defn mot-en-review
+  "主管机关企业考评结论审核"
   []
   (let [rs (with-esp- (fetch :en-apply ))]
     (html
@@ -909,11 +967,11 @@
       (result-html- 
         rs ["企业名称" "申请类型" "申请时间" "考评机构评分" "详细" "选择"]
         [:name :type2 :date :score :_id :_select]  ; todo: 考评机构评分score字段
-        {:form "en-review-doc"}) [:br]
+        {:form "mot-en-review-doc"}) [:br]
       (eui-button {:onclick "esp_en_apply_resp()"} "同意，进行公示") [:br][:br]
       [:h2 "公示期满可发证企业一览："] (eui-tip "无公示期满的企业") )))
 
-(defn en-review-doc
+(defn mot-en-review-doc
   "app: 受理企业考评结论审核
   @id object-id
   @todo 保存数据"
@@ -925,7 +983,7 @@
                   [:br] (eui-button {} "不同意（并填写意见）") (space 3) (eui-textarea {} ) [:br][:br] )}))
 
 (defn mot-hot
-  "service: 主管部门受理实名投诉举报"
+  "service: 主管机关受理实名投诉举报"
   []
   (let [rs (with-esp- (fetch :hot :sort {:date 1}))]
     (html
@@ -936,7 +994,7 @@
         ))))
 
 (defn mot-hot-doc
-  "app: 主管部门查看并受理举报信息"
+  "app: 主管机关查看并受理举报信息"
   [id]
   (let [r (with-mdb2 "esp" (fetch-by-id :hot (object-id id)))]
     (doc- :hot id
@@ -959,18 +1017,8 @@
           (eui-tip "已保存" )
           (eui-button {:href "#" :onclick "window.close();"} "关闭") )))))
                      
-(defn pn-train
-  "省级交通主管部门管理的考评员培训
-  @deprecated: 好像没用到了。
-  @see pn-learn 考评员自己的培训视图"
-  []
-  (html
-    [:h1 "考评员培训工作"]
-    [:h2 "培训时间，培训学时（不少于24个学时），培训类别，培训合格证号"]
-    [:div "注：由省级交通运输主管部门、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作。"] ))
-  
-(defn pn-train-view
-  "省级交通主管部门管理的考评员培训
+(defn mot-pn-train
+  "省级主管机关管理的考评员培训
   @see pn-learn 考评员自己的培训视图"
   [request]
   (let [rt2 (with-esp- (fetch :pn-train :sort {:train-start 1}))
@@ -978,15 +1026,15 @@
     (html
       [:h1 "考评员培训工作"]
       [:h2 "培训时间，培训学时（不少于24个学时），培训类别，培训合格证号"]
-      [:div "注：由省级交通运输主管部门、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作。"]
+      [:div "注：由省级交通运输主管机关、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作。"]
       [:br]
       (barf yyyymm {:title "各月份培训的考评员数量" :x "月份" :y "考评员人数"}) 
       (result-html- rt2 
                     ["姓名" "培训合格证" "开始日期" "结束日期" "学时" "类型"] 
                     [:name :train-id :train-start :train-end :train-hour :type]))))
 
-(defn pn-exam
-  "省级交通主管部门管理的考评员考试"
+(defn mot-pn-exam
+  "省级主管机关管理的考评员考试"
   []
   (let [rt2 (with-esp- (fetch :pn-train :only [:exam-score] :sort {:exam-score 1}))
         scores (into (sorted-map) (frequencies (map :exam-score rt2)))]
@@ -994,101 +1042,18 @@
       [:h1 "考评员考试工作"]
       [:h2 "考试时间，考试成绩，是否合格，考试类别，"]
       [:div "注：交通运输部负责组织编写培训教材和考试大纲。"
-       "省级交通运输主管部门、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作"] [:br]
+       "省级交通运输主管机关、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作"] [:br]
       (linef scores {:title "各分数值的考评员数量" :x "分数" :y "考评员人数"} 1000) )))
-  
-;;--- 资格撤销 <begin>
-(defn- cert-cancel-
-  "省级交通主管部门管理的资格撤销
-  @type :pn :org "
-  [type]
-  (let [nam (type {:pn "考评员" :org "考评机构" :en "企业"})
-        v0 (type {:pn "2011-2-022-20789" :org "2012-D-00-丙7585" :en "2012-2-1-0551-00844"})]
-    (html
-      [:h1 (format "%s资格撤销工作" nam)]
-      [:form {:id "fm1" :action (format "/c/esp/%s-cancel-resp" (name type)) :method "get" :target "_blank"}
-       [:label (format "请输入要撤销资质的%s证书号：" nam)]
-       (eui-text {:id "cid" :name "cid" :value v0}) (space 3) 
-       (eui-button {:onclick "$('#fm1').submit()"} "查询")] )))
-
-(defn- cert-cancel-resp-
-  "查询指定证书号，显示信息并撤销
-  @type :pn :org "
-  [type cid]
-  (let [tb type
-        r (first (with-esp- (fetch tb :where {:cid cid})))
-        id (str (:_id r))]
-    (if r
-      (doc- tb id 
-            {:after (html
-                      [:br] (eui-button {} "撤销（并填写意见）") (space 3) (eui-textarea {} ) [:br][:br] )})
-      (html-body (eui-tip "未找到该证书号！" )) )))
-
-(defn pn-cancel
-  "省级交通主管部门管理的考评员资格撤销"
-  []
-  (cert-cancel- :pn))    
-
-(defn pn-cancel-resp
-  "查询指定证书号的考评员，显示信息并撤销"
-  [cid]
-  (cert-cancel-resp- :pn cid))
-
-(defn org-cancel
-  "省级交通主管部门管理的考评机构资格撤销"
-  []
-  (cert-cancel- :org))    
-
-(defn org-cancel-resp
-  "查询指定证书号的考评机构，显示信息并撤销"
-  [cid]
-  (cert-cancel-resp- :org cid))
-
-(defn en-cancel
-  "交管部门企业资格撤销"
-  []
-  (cert-cancel- :en))   
-
-(defn en-cancel-resp
-  "查询指定证书号的企业，显示信息并撤销"
-  [cid]
-  (cert-cancel-resp- :en cid))
-
-;;--- 资格撤销 </end>
-  
-;;--- 查看年报 <begin>
-(defn- report-view-
-  "service: 交管部门考评机构、企业年报
-  @type :org :en "
-  [type]
-  (let [tb (type {:org :org-report :en :en-report})
-        nam (type {:org "考评机构" :en "企业"})
-        rs (data- tb)]
-    (html
-      [:h1 (format "%s年度工作报告" nam)]
-      (result-html- rs ["年度" (format "%s名称" nam) "报送日期" "文件"]
-                    [:year :uid :date :freport]))))
  
-(defn org-report-view
-  "service: 交管部门查看考评机构年报"
-  []
-  (report-view- :org))
- 
-(defn en-report-view
-  "service: 交管部门查看企业年报"
-  []
-  (report-view- :en))
-;;--- 查看年报 </end>
-
-(defn org-eval-report
-  ""
+(defn mot-org-eval
+  "service: mot查看org的考评情况汇总"
   []
   (html
     [:h1 "考评机构考评情况汇总表"]
     (eui-tip "暂无记录")))
-
-(defn en-recheck
-  "主管部门对企业进行附加考评"
+  
+(defn mot-en-recheck
+  "service：主管机关对企业进行附加考评"
   []
   (let [rs (with-esp- (fetch :org :only [:name]))
         r (apply array-map (flatten (for [r rs] [(:_id r) (:name r)])))]
@@ -1102,7 +1067,7 @@
       (eui-button {} "提 交") )))
 
 (defn mot-olap
-  "service: 交管综合分析"
+  "service: 主管机关对下级机关的综合分析"
   []
   (let [rt1 (with-esp- (fetch :en :only [:admin :grade]))
         rt2 (sort (for [e (frequencies (for [{admin :admin grade :grade} rt1] [admin grade]))] 
@@ -1122,24 +1087,12 @@
   (html
     (eui-tip "向下级主管机关委托代办审核工作。")))
 
-(defn org-en-process
-  "service: 考评机构企业申请处理进度查询"
+(defn mot-org-refine
   []
-  (let []
-    (html
-      [:h1 "企业考评及证书制发工作进度"]
-      [:h2 "待处理的企业申请考评"]
-      (eui-tip "目前暂无")
-      [:h2 "已处理待主管部门审核的企业申请"]
-      (eui-tip "目前暂无")
-      [:h2 "待发证的企业"]
-      (eui-tip "目前暂无") )))
-
-(defn en-archive
-  "service: 考评机构的企业档案管理"
-  []
-  (en-list "山西"))
-
+  (html
+    (eui-tip "Todo：选择考评机构下发整改通知。")))
+  
+;;;-------------------------------------------------------------------------------------------------------- hot 热线举报投诉
 (defn hot
   "app: 举报热线"
   []
@@ -1150,7 +1103,7 @@
       [:form {:id "fm1" :action "/c/esp/hot-save" :method "post"}
        [:label [:b "举报人信息等："]] (eui-textarea {:name "info"} "姓 名：\n身份证号：\n联系方式：\n\n其 他：\n") [:br][:br]
        [:label [:b "填写举报内容："]] (eui-textarea {:name "content" :style "width: 500px; height: 300px"} "") [:br][:br]
-       [:label [:b "选择主管部门："]] (eui-combo {:name "admin"} dd-pot) [:br][:br]
+       [:label [:b "选择主管机关："]] (eui-combo {:name "admin"} dd-pot) [:br][:br]
        (eui-button {:onclick "esp_hot_submit()"} "提 交")] )))
   
 (defn hot-save
@@ -1160,11 +1113,6 @@
     (with-mdb2 "esp"
       (insert! :hot (into vars {:date (datetime)})))
     "举报信息已经保存"))
-  
-(defn mot-org-refine
-  []
-  (html
-    (eui-tip "Todo：选择考评机构下发整改通知。")))
   
 ;;------------------------------------------------- test
 (require 'wr3.clj.datagen)
@@ -1230,5 +1178,3 @@
 
 ;(with-mdb2 "esp" (destroy! :org-backup {:content {:$exists false}}))
 ;(t3)
-
-(update- :pn {:uid "pn1"} (fn [r] {:cdate "2011-10-15"}))
