@@ -49,7 +49,7 @@
           ["问题整改" "icon-list"    "mot-org-refine"] ; title icon id 
           ["资质撤销" "icon-list"    "cert-cancel/org"] ; title icon id 
           ["年度工作报告"          "icon-list"    "report-view/org"] ; title icon id 
-          ["考评情况汇总表"          "icon-list"    "org-eval-report"] ; title icon id 
+          ["考评情况汇总表"          "icon-list"    "mot-org-eval"] ; title icon id 
           ]
          ["交通运输企业"           "icon-pen" ; title id
           ["企业列表" "icon-list"  "en-list"] ; title icon id 
@@ -110,8 +110,8 @@
           ["企业考评待办工作" "icon-list" "apply-resp/en"] ; title icon id 
           ["企业达标等级证书制发" "icon-list" "cert-resp/en"] ; title icon id 
           ["工作进度查询" "icon-list" "org-en-process"] 
-          ["考评企业档案管理" "icon-list" "mot-en-archive"] 
-          ["考评情况汇总表" "icon-list" "mot-org-eval"] 
+          ["考评企业档案管理" "icon-list" "org-en-archive"] 
+          ["考评情况汇总表" "icon-list" "org-en-eval"] 
           ]
          ]   
    })
@@ -123,8 +123,8 @@
    :title "交通运输企业安全生产标准化——企业在线填报管理系统（试行）"
    :nav [
          ["企业申请" "icon-pen" ; title id
-          ["1、在线填报" "icon-list"    "en-apply"] ; title icon id 
-          ["2、达标自评" "icon-list"    "en-stand"] ; title icon id 
+          ["1、达标自评" "icon-list"    "en-stand"] 
+          ["2、在线填报" "icon-list"    "en-apply"] 
           ["3、选择考评机构" "icon-list" "en-select-org"] 
           ["进度查询" "icon-list"    "en-process"] 
           ["企业年度工作报告" "icon-list"  "report/en"] 
@@ -221,6 +221,13 @@
    "二级" 700 ; >=700
    "三级" 600 ; >=600
    })
+; 企业达标自评提示
+(def dd-stand-tip
+  {
+   1 "一级企业必须完全满足所有标<font color=red>★、★★、★★★</font>的项"
+   2 "二级企业必须完全满足所有标<font color=red>★★、★★★</font>的项"
+	 3 "三级企业必须完全满足所有标<font color=red>★★★</font>的项"
+  })
 ; 企业达标等级
 (def dd-en-grade
   {
@@ -287,6 +294,7 @@
    :name "名称"
    :org "单位组织"
    :orgid "选择的2个考评机构"
+   :orgid1 "指定的考评机构"
    :pcode "邮编"
    :pid "证件号"
    :pn "考评员"
@@ -295,10 +303,12 @@
    :province "省份"
    :qual "评审机构资质" 
    :reason "原因"
+   :resp "受理结果"
    :respdate "受理日期"
    :safe "安全生产组织架构"
    :scroe "分数"
    :sex "性别"
+   :stand "达标自评"
    :start "开始从事相应业务年份" 
    :stop "终止业务"
    :tel "电话"

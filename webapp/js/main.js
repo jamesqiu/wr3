@@ -3046,3 +3046,23 @@ function esp_stand_grade() {
 	var grade = $('#grade').val()
 	$('#tip').html(tips[grade-1])
 }
+
+function esp_stand_save(id) {
+	var url = '/c/esp/stand-save/'+id+'?'+$('#fm1').serialize()
+	$.post(url, function(data) {
+		alert(data)
+	})
+}
+
+/**
+ * mot处理企业申请
+ * @oid 文档object-id
+ * @yes_or_no 'yes' or 'no'
+ */
+function esp_mot_en_apply(oid, yes_or_no) {
+	var url = '/c/esp/mot-en-apply-resp/'+yes_or_no+'?oid='+oid+'&orgid='+$('#orgid').val()
+			+'&advice='+$('#advice').val().replace(/\n/g,'<br/>')
+	$.post(url, function(data) {
+		alert(data)
+	})
+}

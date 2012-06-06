@@ -60,11 +60,20 @@
 
 ;;; ------------ query var map 处理
 (defn query-vars
-  "获得request的queryString中的key-value，以hash-map形式返回"
+  "获得request的queryString中的key-value，以hash-map形式返回.
+  注意：key是字符串而不是keyword"
   [^HttpSession request]
   (if (nil? request) {}
     (let [m (.getParameterMap request)]
       (zipmap (keys m) (map #(join % "&") (vals m)))))) ; ?k1=a&k1=b 变为{"k1" "a&b"}
+
+(defn query-vars2
+  "获得request的queryString中的key-value，以hash-map形式返回.
+  注意：key是keyword而不是字符串"
+  [^HttpSession request]
+  (if (nil? request) {}
+    (let [m (.getParameterMap request)]
+      (zipmap (map keyword (keys m)) (map #(join % "&") (vals m)))))) ; ?k1=a&k1=b 变为{"k1" "a&b"}
 
 ;;; ------------ html wrapper
 (defmacro html-body
@@ -516,7 +525,7 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
     [:div {:style "position: absolute; right: 10px; top: 8px; color: gray"} "当前用户: " 
      [:span#wr3user {:style "color:red; font-weight:bold"} ".."] (space 3)
      [:script "app_user()"]
-     [:a {:href "#" :onclick "app_exit('/c/esp')"} "退出"]]
+     [:a {:href "#" :onclick (format "app_exit('/%s')" (:name cfg))} "退出"]]
     ; 搜索条
     (when (:searcher cfg)
       [:div {:style "position: absolute; right: 10px; top: 35px"}
@@ -533,8 +542,8 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   (eui-region 
     (if (= "right" (:left-or-right cfg)) "east" "west") 
     {:title "快捷导航" :style "width: 210px"}
-    [:div {:style "margin: 10px"} (eui-button {:href "/c/esp" :plain "true" :iconCls "icon-back" } "返回子系统列表") ]
-    
+    [:div {:style "margin: 10px"} 
+     (eui-button {:href (or (:main cfg) (str "/" (:name cfg))) :plain "true" :iconCls "icon-back" } "返回子系统列表") ]
     (eui-accord 
       {:id "accord1" :style "" }
       (for [[title icon & nav2] (:nav cfg)]
@@ -543,10 +552,9 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
           (for [[title icon id url] nav2]
             (let [url2 (if (and url (.startsWith url "/")) url
                          (format "/c/%s/%s" (:name cfg) (or url id)))]
-              (html
-                (eui-button {:id id :plain "true" :iconCls icon :title url2
-                             :onclick (format "layout_load_center('%s')" url2) }
-                            title) [:br] ) ))) ))))
+              (html (eui-button {:id id :plain "true" :iconCls icon :title url2
+                                 :onclick (format "layout_load_center('%s')" url2) }
+                                title) [:br] ) ))) ))))
 
 (defn frame-main
   "layout.center"

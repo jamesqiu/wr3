@@ -5,7 +5,7 @@
       :todo ""} 
      wr3.clj.app.esp)
 
-(use 'wr3.clj.app.espconf :reload) ; 正式发布后去掉 reload
+(use 'wr3.clj.app.espconf :reload)
 (use 'hiccup.core)
 (use 'wr3.clj.web 'wr3.clj.tb 'wr3.clj.s 'wr3.clj.n 'wr3.clj.chart 'wr3.clj.u)
 (use 'somnium.congomongo 'wr3.clj.nosql 'wr3.clj.chart)
@@ -62,68 +62,24 @@
                    "not-found"))
     (index-all)))
 
-(defn- input-form-
-  "统一录入表单，用于 pn-input, en-input, org-input 函数
-  @cfg 表单录入项的配置
-  @m 含 {:title .. :form ..} 的其他定制化参数, :title为标题，:form 为区别标识如 'en', 'pn', 'org' "
-  [cfg m]
-  (let [css-label "font-family:微软雅黑; font-size:14px; vertical-align:center; height: 35px; border-bottom:1px dotted gray"]
-    (html
-      [:form {:method "POST" :action (format "/c/esp/input-save") :enctype "multipart/form-data"}
-       [:table {:align "left" :style "margin-left: 30px"}
-        [:caption {:style "padding: 5px"} [:h1 (m :title)]]
-        (for [[nam id {t :t v :v require :require title :title}] cfg]
-          (let [sid (name id)
-                m {:id sid :name sid :value v :title title}]
-            [:tr 
-             [:td {:style css-label} [:label (str nam "：")]]
-             [:td {:style "border-bottom:1px dotted gray"}
-              (cond 
-                (true? require)  (eui-text     (into m {:required "true" :style "width: 250px"}))
-                (= t 'textarea)  (eui-textarea m v)
-                (= t 'file)      (html 
-                                   (eui-text (into m {:type "hidden" :value (or v "")}))
-                                   [:span (when (not (nullity? v))
-                                            (html [:a {:href v :target "_blank"} "查看"] (space 3)))]
-                                   (eui-button {:onclick (format "fileupload('%s', '%s')" (str nam) sid)} "上传文件"))
-                (= t 'email)     (eui-email    m)
-                (map? t)         (eui-combo    m t)
-                (vector? t)      (eui-combo    m (apply array-map (flatten (for [e t] [e e]))))
-                :else            (eui-text     (into m {:style "width: 250px"})))
-              ]]))
-        [:tfoot [:tr [:td {:colspan 2 :align "center" :style "padding: 15px"} 
-                      (eui-button {:onclick (format "esp_input_save('%s')" (m :form))} " 保 存 ") (space 5)
-                      (eui-button {:onclick (format "esp_input_submit('%s')" (m :form))} "提交申请") (space 5)
-                      (eui-button {:onclick "$('form').get(0).reset()"} " 取 消 ") ]]]]]
-      (eui-dialog "fileupload" {:closed "true" :href "/c/esp/fileupload"})
-      [:script "fileupload_bt()"] )))
+(defn- fileupload-field-
+  "文件上传相关的2个字段：（1）一个hidden字段，上传成功文件后显示文件链接；（2）一个上传按钮，弹出真正的文件选取上传； 
+  @nam 字段名称如'简历' 
+  @sid 字段id、name如'resume'
+  @v 初始赋值 
+  @m 字段的其他属性如 {:id .. :name .. :title ..}  "
+  [nam sid v m] 
+  (html 
+    (eui-text (merge m {:id sid :name sid :type "hidden" :value (or v "")}))
+    [:span (when (not (nullity? v))
+             (html [:a {:href v :target "_blank"} "查看"] (space 3)))]
+    (eui-button {:onclick (format "fileupload('%s', '%s')" (str nam) sid)} "上传文件..")))
 
-(defn- input-save-submit-
-  "service: 共用函数，考评员、考评机构、企业申请表提交保存或更新
-  被 input-form- 进行ajax调用
-  @id form名称如'pn' 'en' 'org' "
-  [id request submit?]
-  (let [vars (query-vars request)
-        uid (wr3user request)
-        tb1 (keyword id)
-        tb2 (keyword (str id "-apply"))
-        m (into {:uid uid} (for [[k v] vars :when (not (nullity? v))] [k v]))]
-    (with-mdb "esp" 
-      (update! tb1 {:uid uid} m) ; 保存到基本信息表
-      (when submit?  ; 保存到申请表 
-        (insert! tb2 (into m {:date (datetime)})))
-      )
-    (format "已%s %s 的申请表。" (if submit? "提交" "保存") (vars "name") )))
-
-(defn input-save
-  "service: 考评员，考评机构，企业申请表保存；"
-  [id request]
-  (input-save-submit- id request false))
-
-(defn input-submit
-  "service: 共用函数，考评员、考评机构、企业申请表提交保存"
-  [id request]
-  (input-save-submit- id request true))
+(defn- fileupload-dialog-
+  "文件上传的dialog及其js事件函数"
+  []
+  (html (eui-dialog "fileupload" {:closed "true" :href "/c/esp/fileupload"})
+        [:script "fileupload_bt()"]))
 
 ;;; 文件上传的设计：
 ;;;   js函数fileupload(name,sid)弹出对话框（传入input hidden字段中文名及对应id或name），
@@ -158,11 +114,75 @@
           "文件上载完成"
           [:script (format "parent.fileupload_ok('%s')" fname1)])))))
 
+(defn- input-form-
+  "统一录入表单，用于 pn-input, en-input, org-input 函数
+  @cfg 表单录入项的配置
+  @m 含 {:title .. :form ..} 的其他定制化参数, :title为标题，:form 为区别标识如 'en', 'pn', 'org' "
+  [cfg m]
+  (let [css-label "font-family:微软雅黑; font-size:14px; vertical-align:center; height: 35px; border-bottom:1px dotted gray"]
+    (html
+      [:form {:method "POST" :action "/c/esp/input-save"}
+       [:table {:align "left" :style "margin-left: 30px"}
+        [:caption {:style "padding: 5px"} [:h1 (m :title)]]
+        (for [[nam id {t :t v :v require :require title :title}] cfg]
+          (let [sid (name id)
+                attr {:id sid :name sid :value v :title title}]
+            [:tr 
+             [:td {:style css-label} [:label (str nam "：")]]
+             [:td {:style "border-bottom:1px dotted gray"}
+              (cond 
+                (true? require)  (eui-text     (into attr {:required "true" :style "width: 250px"}))
+                (= t 'textarea)  (eui-textarea attr v)
+                (= t 'file) (fileupload-field- nam sid v attr)
+                (= t 'email)     (eui-email    attr)
+                (map? t)         (eui-combo    attr t)
+                (vector? t)      (eui-combo    attr (apply array-map (flatten (for [e t] [e e]))))
+                :else            (eui-text     (into attr {:style "width: 250px"})))
+              ]]))
+        [:tfoot [:tr [:td {:colspan 2 :align "center" :style "padding: 15px"} 
+                      (eui-button {:onclick (format "esp_input_save('%s')" (m :form))} " 保 存 ") (space 5)
+                      (eui-button {:onclick (format "esp_input_submit('%s')" (m :form))} "提交申请") (space 5)
+                      (eui-button {:onclick "$('form').get(0).reset()"} " 取 消 ") ]]]]]
+      (fileupload-dialog-) )))
+
+(defn- input-save-submit-
+  "service: 共用函数，考评员、考评机构、企业申请表提交保存或更新
+  被 input-form- 进行ajax调用
+  @id form名称如'pn' 'en' 'org' "
+  [id request submit?]
+  (let [vars (query-vars request)
+        uid (wr3user request)
+        tb1 (keyword id)
+        tb2 (keyword (str id "-apply"))
+        m (into {:uid uid} (for [[k v] vars :when (not (nullity? v))] [k v]))]
+    (with-mdb "esp" 
+      (update! tb1 {:uid uid} m) ; 保存到基本信息表
+      (when submit?  ; 保存到申请表 
+        (insert! tb2 (into m {:date (datetime)})))
+      )
+    (format "已%s %s 的申请表。" (if submit? "提交" "保存") (vars "name") )))
+
+(defn input-save
+  "service: 考评员，考评机构，企业申请表保存；"
+  [id request]
+  (input-save-submit- id request false))
+
+(defn input-submit
+  "service: 共用函数，考评员、考评机构、企业申请表提交保存"
+  [id request]
+  (input-save-submit- id request true))
+
 (defmacro with-esp-
   "共用函数：查询出esp的序列化数据"
   [fetch-op]
   `(with-mdb2 "esp" (vec ~fetch-op)))
 
+(defn- with-oid-
+  "通过object-id来查询文档
+  @oid object-id的字符串"
+  [tb oid]
+  (with-mdb2 "esp" (fetch-by-id tb (object-id oid))))
+  
 (defn- with-uid-
   "共用函数：得到序列化的数据表中指定uid的记录
   @tb 数据表如 :pn :pn-apply "
@@ -181,6 +201,15 @@
   [s]
   (let [[yyyy m d] (split s "-")]
     (format "%s-%02d-%02d" yyyy (to-int m) (to-int d))))
+
+(defn- resp-format-
+  "格式化'yes' 'no'的显示，用于函数result-html-， doc-
+  @yes-or-no 'yes' or 'no' "
+  [yes-or-no]
+  (case yes-or-no 
+    "yes" "<font color=green>同 意</font>" 
+    "no" "<font color=red>不同意</font>" 
+    "<font color=gray>尚未受理</font>"))
 
 (defn- result-html-
   "共用函数：对没有特殊要求的结果进行列表展示
@@ -218,11 +247,15 @@
                                                            "en" dd-en-backup) 
                                                          (to-int v0)) v)
                                         :content (if (> (count v) 20) (str (subs v 0 20) " ……") v)
+                                        :stand (html "自评分：" [:b (:sum v0)]  
+                                                     "； 申请等级：" [:b (dd-en-grade (to-int (:grade v0)))] "；"
+                                                     (when-let [report (:report v0)] [:a {:href report} "自评报告"])) ; 企业达标自评
+                                        :resp (resp-format- v0)
                                         v)])) ]) } )))
   ([rt head cols] (result-html- rt head cols {})))
 
 (defn- update-
-  "共用函数：更新保存记录到esp的tb表中。
+  "共用函数：更新保存记录到esp的tb表中。不需要用with-mdb2包围
   @tb 要更新的表，如 :hot
   @where 查询要更新记录的条件，如 {:_id (object-id '..')}  
   @f 带一个r记录参数的函数，如 (fn [r] {:date (date)}) "
@@ -304,36 +337,36 @@
   @m 定制化，参数 {:befor .. :after ..} :befor 在前面的html内容或者带rt参数的fn，
   :after 在后面的html内容或者带rt参数的 (fn [rt] ..) "
   ([tb id m]
-    (with-mdb2 "esp"
-      (let [rt (fetch-by-id tb (object-id id))]
-        (html-body
-          (when-let [before (:before m)] (if (fn? before) (before rt) before))
-          [:table.wr3table {:border 1}
-           [:caption (format "%s <u>%s</u>" (dd-form tb) (if-let [n (:name rt)] n ""))]
-           [:tbody
-            (for [[k v] (dissoc rt :_id)]
-              [:tr 
-               [:th {:style "text-align: left"} (or (dd-meta k) k) "："] 
-               [:td (case k ; 显示转换，如：有些代码可以用字典得到名称
-                      :type (or (dd-type (to-int v)) v) 
-                      :type2 (or (dd-type2 (to-int v 11)) v) 
-                      :grade (or (dd-en-grade (to-int v)) v)
-                      :belong (str v (when-let [n ((get au/users v) :name)] (format " (%s)" n)))
-                      :fulltime (if v "专职" "兼职")
-                      :qual (or (dd-org-grade (to-int v)) v)
-                      :admin (or (dd-pot (str v)) v)
-                      :orgid (eui-combo {:id "orgid" :name "orgid"} (zipmap v (with-orgid- v)))
-                      :info (replace-all v "\r\n" "<br/>")
-                      :content (replace-all v "\r\n" "<br/>")
-                      :reason (or (get (case tb :org-backup dd-org-backup :en-backup dd-en-backup) (to-int v)) v) ; 考评机构备案原因
-                      :safe [:a {:href v} "查看"] ; 考评机构安全生产组织架构
-                      v)] ])]
-           [:tfoot 
-            [:tr {:align "center" :height "50px"} 
-             [:td {:colspan 2 } (eui-button {:href "#" :onclick "window.close();"} "关闭")]]]] 
-          (when-let [after (:after m)] (if (fn? after) (after rt) after))))))  
+    (let [rt (with-oid- tb id)]
+      (html-body
+        (when-let [before (:before m)] (if (fn? before) (before rt) before))
+        [:table.wr3table {:border 1}
+         [:caption (format "%s <u>%s</u>" (dd-form tb) (if-let [n (:name rt)] n ""))]
+         [:tbody
+          (for [[k v] (dissoc rt :_id)]
+            [:tr 
+             [:th {:style "text-align: left"} (or (dd-meta k) k) "："] 
+             [:td (case k ; 显示转换，如：有些代码可以用字典得到名称
+                    :type (or (dd-type (to-int v)) v) 
+                    :type2 (or (dd-type2 (to-int v 11)) v) 
+                    :grade (or (dd-en-grade (to-int v)) v)
+                    :belong (str v (when-let [n ((get au/users v) :name)] (format " (%s)" n)))
+                    :fulltime (if v "专职" "兼职")
+                    :qual (or (dd-org-grade (to-int v)) v)
+                    :admin (or (dd-pot (str v)) v)
+                    :orgid (eui-combo {:id "orgid" :name "orgid"} (zipmap v (with-orgid- v)))
+                    :info (replace-all v "\r\n" "<br/>")
+                    :content (replace-all v "\r\n" "<br/>")
+                    :reason (or (get (case tb :org-backup dd-org-backup :en-backup dd-en-backup) (to-int v)) v) ; 考评机构备案原因
+                    :safe [:a {:href v} "查看"] ; 考评机构安全生产组织架构
+                    :resp [:b (resp-format- v)]
+                    v)] ])]
+         [:tfoot 
+          [:tr {:align "center" :height "50px"} 
+           [:td {:colspan 2 } (eui-button {:href "#" :onclick "window.close();"} "关闭")]]]] 
+        (when-let [after (:after m)] (if (fn? after) (after rt) after)))))
   ([tb id] (doc- tb id {})))
-  
+
 (defn docv
   "service: 公用函数 docview，根据 form 和 object-id 来显示文档
   /c/esp/docv/form/id
@@ -352,69 +385,73 @@
     (vec (fetch (keyword tb) :where {:type2 type2} :sort {:i 1 :j 1 :k 1}))))  
 
 (defn stand
-  "app: 企业、考评机构安全生产达标标准的自评、考评"
-  [id]
-  (let [type2 (to-int (or id 11))
-        is-type2-42? (= 42 type2)
-        [rt1 rt2 rt3] (map #(get-stand- (str "indic" %) type2) [1 2 3]) ; "en-stand" -> "indic"
-        f3 (fn [r] ; r:  某个3级考核指标，如“①制定企业安全生产方针、”
-             (let [[score star] [(:score r) (:star r)]
-                   [i j k] [(:i r) (:j r) (:k r)]
-                   s1 (html [:td {:style "width: 800px"} (:name r)] 
-                            [:td {:align "right"} score] 
-                            [:td (format "<font color=red>%s</font>" (apply str (repeat star "★")))]
-                            [:td {:align "right"} (eui-numberspin 
-                                                    {:min 0 :max score :increment 1
-                                                     :i i :j j :k k
-                                                     :group "score" :score score :star star
-                                                     :value score :style "width:40px"})])
-                   s2 (if (= 1 (:k r)) s1 (html [:tr s1]))]
-               s2))
-        f2 (fn [r] ; r:  某个2级考核指标，如“1.安全工作方针与目标”
-             (let [rt3i (filter #(and (= (:i r) (:i %)) (= (:j r) (:j %))) rt3) ;该2级指标对应的所有三级指标
-                   s1 (html [:td {:rowspan (count rt3i)} (str (:j r) ". " (:name r))]
-                            (f3 (first rt3i)) 
-                            (for [r (rest rt3i)] (f3 r)))
-                   s2 (if (= 1 (:j r)) s1 (html [:tr s1])) ]
-               s2))
-        f1 (fn [r] ; r： 某个1级考核指标，如“一、安全目标 35分 ”
+  "app: 企业、考评机构安全生产达标标准的自评、考评
+  @id type2细类 
+  @m 含各字段缺省值的hash-map，如：{:grade '2' :sum '998' :report '..' :f_1_1_1 '5'}  "
+  ([id m]
+    (let [type2 (to-int (or id 11))
+          is-type2-42? (= 42 type2)
+          [rt1 rt2 rt3] (map #(get-stand- (str "indic" %) type2) [1 2 3]) ; "en-stand" -> "indic"
+          fsetv (fn [k v0] (if-let [v (get m k)] (to-int v) v0)) ; k：字段名称如:grade,:sum； v0：字段缺省值
+          f3 (fn [r] ; r:  某个3级考核指标，如“①制定企业安全生产方针、”
+               (let [[score star] [(:score r) (:star r)]
+                     [i j k] [(:i r) (:j r) (:k r)]
+                     s1 (html [:td {:style "width: 800px"} (:name r)] 
+                              [:td {:align "right"} score] 
+                              [:td (format "<font color=red>%s</font>" (apply str (repeat star "★")))]
+                              [:td {:align "right"} (let [fname (format "f_%d_%d_%d" i j k)]
+                                                      (eui-numberspin 
+                                                        {:min 0 :max score :increment 1 :style "width:40px"
+                                                         :name fname :i i :j j :k k
+                                                         :group "score" :score score :star star
+                                                         :value (fsetv (keyword fname) score) }))])
+                     s2 (if (= 1 (:k r)) s1 (html [:tr s1]))] s2))
+          f2 (fn [r] ; r:  某个2级考核指标，如“1.安全工作方针与目标”
+               (let [rt3i (filter #(and (= (:i r) (:i %)) (= (:j r) (:j %))) rt3) ;该2级指标对应的所有三级指标
+                     s1 (html [:td {:rowspan (count rt3i)} (str (:j r) ". " (:name r))]
+                              (f3 (first rt3i)) 
+                              (for [r (rest rt3i)] (f3 r)))
+                     s2 (if (= 1 (:j r)) s1 (html [:tr s1])) ] s2))
+          f1 (fn [r] ; r： 某个1级考核指标，如“一、安全目标 35分 ”
                (let [rt2i (filter #(= (:i r) (:i %)) rt2) ;该1级指标对应的所有二级指标
                      rt3i (filter #(= (:i r) (:i %)) rt3)] ;该1级指标对应的所有三级指标
-                 (html [:tr
-                        [:td {:rowspan (count rt3i)} (:name r)]
+                 (html [:tr [:td {:rowspan (count rt3i)} (:name r)]
                         (f2 (first rt2i))] ; 产生后面2、3级指标的多个[:tr]html片段 
-                       (for [r (rest rt2i)] (f2 r)))))
-        ]
-    (html-body
-      [:h2 [:label "请选择申请达标级别："] 
-       (eui-combo {:id "grade" :value 1 :onchange "esp_stand_grade()"} 
-                  (if is-type2-42? (dissoc dd-en-grade 3) dd-en-grade))] 
-      (eui-tip [:span#tip "一级企业必须完全满足所有标<font color=red>★、★★、★★★</font>的项"
-                (when is-type2-42? "<br/>注：城市轨道交通运输企业由于安全要求高，只能申请一二级达标，不能申请三级达标。")])
-      [:table.wr3table {:border 1}
-       [:caption (format "%s企业安全生产达标标准" (dd-type2 type2))]
-       [:thead 
-        [:tr [:th "考核内容"] [:th {:colspan 2} "考核要点"] [:th {:nowrap "1"} "分数"] [:th "星级"] [:th "自评分"] ]]
-       [:tbody 
-        (for [r rt1] (f1 r))]
-       [:tfoot
-        [:tr [:td {:colspan 6} 
-              [:h2 "注："
-               "“<font color=red>★</font>”为一级必备条件；"
-               "“<font color=red>★★</font>”为二级必备条件；"
-               "“<font color=red>★★★</font>”为三级必备条件。" 
-                 "即：" [:br][:br](space 8)
-                 "一级企业必须完全满足所有标<font color=red>★、★★、★★★</font>的项；"
-                 "二级企业必须完全满足所有标<font color=red>★★、★★★</font>的项；"
-                 "三级企业必须完全满足所有标<font color=red>★★★</font>的项。"
-                 ]]]] ]
-      [:br]
-      "自评总分：" [:input#sum {:style "width:70px; font-size:16px; color:green" :readonly "true" :value "0"}] (space 5) 
-      (eui-button {:href "javascript:esp_get_score()"} "计算分数") (space 10)
-      "自评报告："[:input {:type "file"}] (space 5) (eui-button {} "提 交") (repeat 10 [:br]) )))
-
+                       (for [r (rest rt2i)] (f2 r))))) ]
+      (html-body
+        [:form#fm1 {:method "POST" :action "/c/esp/stand-save"}
+         [:h2 [:label "请选择申请达标级别："] (eui-combo {:id "grade" :name "grade"  :onchange "esp_stand_grade()"
+                                                :value (fsetv :grade 1) }
+                                               (if is-type2-42? (dissoc dd-en-grade 3) dd-en-grade))] 
+         (eui-tip [:span#tip (dd-stand-tip (fsetv :grade 1))
+                   (when is-type2-42? "<br/>注：城市轨道交通运输企业由于安全要求高，只能申请一二级达标，不能申请三级达标。")])
+         [:table.wr3table {:border 1}
+          [:caption (format "%s企业安全生产达标标准" (dd-type2 type2))]
+          [:thead [:tr [:th "考核内容"] [:th {:colspan 2} "考核要点"] [:th {:nowrap "1"} "分数"] [:th "星级"] [:th "自评分"] ]]
+          [:tbody (for [r rt1] (f1 r))]
+          [:tfoot [:tr [:td {:colspan 6}
+                        [:h2 "注：" "“<font color=red>★</font>”为一级必备条件；" "“<font color=red>★★</font>”为二级必备条件；"
+                         "“<font color=red>★★★</font>”为三级必备条件。" "即：" [:br][:br](space 8)
+                         (join (vals dd-stand-tip) "；") "。" ]]]] ] [:br]
+         "自评总分：" [:input#sum {:name "sum" :style "width:70px; font-size:16px; color:green" :readonly "true" 
+                              :value (fsetv :sum "0")}] (space 5) 
+         (eui-button {:href "javascript:esp_get_score()"} "计算分数") (space 10)
+         "自评报告：" (fileupload-field- "自评报告" "report" (:report m) {}) (space 10)
+         (eui-button {:onclick (format "esp_stand_save(%s)" type2)} "提 交") ] (fileupload-dialog-) (repeat 10 [:br]) )))
+  ([id] (stand id {})))
+  
+(defn stand-save
+  [id request]
+  (let [type2 (to-int id)
+        uid (wr3user request)
+        vars (query-vars request)]
+    (do
+      (with-mdb2 "esp"
+        (insert! :en-stand {:uid uid :date (datetime) :type2 type2 :stand vars}))
+      "已经保存")))
+  
 (defn cert-renew
-  "service：考评员、考评机构、企业的证书换证
+         "service：考评员、考评机构、企业的证书换证
   @id 'pn' 'org' 'en' 转换为:pn :org :en "
   [id request]
   (let [tb (keyword id)
@@ -467,20 +504,14 @@
     (html
       (when-not r (eui-tip "还没有本年度工作记录。"))
       [:h1 (year) " 年度工作报告"]
-      
-      [:form {:method "POST" :action (format "/c/esp/report-save") :enctype "multipart/form-data"}
+      [:form {:method "POST" :action "/c/esp/report-save"}
        [:label "年度报告："]
-       (eui-text {:type "hidden" :name sid :id sid})
-       [:span (when r
-                (html [:a {:href (:freport r) :target "_blank"} "查看"] (space 3)))]      
-       (eui-button {:onclick (format "fileupload('%s', '%s')" "年度工作报告" sid)} "上传文件") [:br][:br]
+       (fileupload-field- "年度工作报告" sid (:freport r) {})
+       [:br][:br]
        (eui-button {:onclick (format "esp_report_save('%s')" tb-report)} "保 存") (space 5) ]
-      
-      (eui-dialog "fileupload" {:closed "true" :href "/c/esp/fileupload"})
-      [:script "fileupload_bt()"]
+      (fileupload-dialog-)
       [:h2 "已经上传的所有年度工作报告："]
-      (result-html- rs '["年度" "上报时间" "查看"] [:year :date :freport])
-      )))
+      (result-html- rs '["年度" "上报时间" "查看"] [:year :date :freport]) )))
 
 (defn report-save
   "service: 共用函数，org、en年度报告保存，被 year-report- 函数ajax调用
@@ -515,7 +546,7 @@
       [:h1 (format "受理%s申请" cname)]
       (eui-tip tip)
       (result-html- rs []
-                    [:name (if (= id "en") :type2 :type) :date :_id :_select] 
+                    [:name (if (= id "en") :type2 :type) :date :resp :_id :_select] 
                     {:form form}) [:br]
       (when (= id "pn") 
         (eui-button {:onclick "esp_pn_apply_resp()"} "资格证书制发")) )))
@@ -623,6 +654,8 @@
                     [:year :uid :date :freport]))))
 
 ;;;-------------------------------------------------------------------------------------------------------- pn  考评员
+(def pn---------- nil)
+
 (defn pn-apply
   "service: 考评员申请导航页"
   [request]
@@ -659,6 +692,8 @@
 
 
 ;;;-------------------------------------------------------------------------------------------------------- org 考评机构
+(def org---------- nil)
+
 (defn org-apply
   "service: 考评机构申请导航"
   [request]
@@ -714,7 +749,7 @@
   (let [;cid (or cid "2011-2-0471-07959")
         ;r (first (with-esp- (fetch :pn :where {:cid cid})))
         r (if id 
-            (with-mdb2 "esp" (fetch-by-id :pn (object-id id)))
+            (with-oid- :pn id)
             (first (with-esp- (fetch :pn :where {:cid cid}))))
         oid (:_id r)
         cid (:cid r)
@@ -819,9 +854,17 @@
 (defn org-en-archive
   "service: 考评机构的企业档案管理"
   []
-  (en-list "山西"))
+  (list- "山西" :en [] [:province :name :type :grade :_id]))
+ 
+(defn org-en-eval
+  "service: org查看en的考评情况汇总"
+  []
+  (html
+    [:h1 "企业考评情况汇总表"]
+    (eui-tip "暂无记录")))
 
 ;;;-------------------------------------------------------------------------------------------------------- en  企业
+(def en---------- nil)
 
 (defn en-apply
   "service: 企业申请导航页"
@@ -851,18 +894,29 @@
 
 (defn en-stand
   "service: 列出所有的达标标准"
-  []
-  (let []
+  [request]
+  (let [uid (wr3user request)
+        rt (with-esp- (fetch :en-stand :where {:uid uid}))]
     (html
       [:center [:h1 "达标标准考评（五大类16小类）"]]
+      [:h2 "已经提交过的达标自评："]
+      (result-html- rt [] [:date :type2 :stand :_id] {:form "en-stand-view"}) [:br]
       (eui-tip "注意：企业根据交通运输部颁布的下列某项标准进行达标自评打分！")
       (for [[k1 v1] dd-type]
         (html 
           [:h2 v1 "："]
           (for [[k2 v2] (filter #(= (int (/ (key %) 10)) k1) dd-type2)]
-            (eui-button {:href (str "/c/esp/stand/" k2) :target "_blank" :style "margin: 5px"} 
-                        v2))) ))))
+            (eui-button {:href (str "/c/esp/stand/" k2) :target "_blank" :style "margin: 5px"} v2))) ))))
 
+(defn en-stand-view
+  "显示en之前达标自评的结果
+  @id 达标自评结果文档的object-id"
+  [id]
+  (let [doc (with-oid- :en-stand id)
+        type2 (str (:type2 doc))
+        m (:stand doc)] 
+    (stand type2 m)))
+  
 (defn en-select-org
   "app: 企业选择考评机构"
   [request]
@@ -874,7 +928,7 @@
     (html
       [:h1 (format "%s主管的考评机构（%s 名）" (dd-pot admin) (count rs))]
       (eui-tip "请在如下的考评机构列表中自行选择两个。")
-      (result-html- rs '[机构名称 所属省份 详情 选择] [:name :province :_id :_select] {:form "docv/org"}) [:br]
+      (result-html- rs [] [:name :admin :_id :_select] {:form "docv/org"}) [:br]
       (eui-button {:onclick "esp_en_select_org()"} "提 交")
       [:script (format "esp_en_selected('%s')" (join (:orgid r) ","))]
       )))
@@ -902,6 +956,8 @@
               (result-html- rs [] [:date :grade :type2 :admin :_id] {:form "docv/en-apply"}) )))))
 
 ;;;-------------------------------------------------------------------------------------------------------- mot 主管机关
+(def mot---------- nil)
+
 (defn mot-pn-olap
   "service: 主管机关-考评员分析"
   []
@@ -948,10 +1004,23 @@
   @todo 保存数据"
   [id]
   (doc- :en-apply id 
-        {:after (html
-                  [:br]
-                  (eui-button {} "同意（并指派考评机构）") (space 3) [:br][:br]
-                  [:br] (eui-button {} "不同意（并填写意见）") (space 3) (eui-textarea {} ) [:br][:br] )}))
+        {:after 
+         (html [:br] 
+               (eui-button {:onclick (format "esp_mot_en_apply('%s','yes')" id)} "同意（并指派考评机构）") (space 3)[:br][:br][:br]
+               (eui-button {:onclick (format "esp_mot_en_apply('%s','no')" id)} "不同意（并填写意见）") (space 3) 
+               (eui-textarea {:id "advice"} ) [:br][:br] )}))
+
+(defn mot-en-apply-resp
+  "service: 主管机关同意/不同意企业申请达标证书
+  @id 'yes' or 'no' "
+  [id request]
+  (let [vars (query-vars2 request)
+        oid (:oid vars)
+        orgid1 (when (= id "yes") (:orgid vars))
+        advice (when (= id "no") (:advice vars))]
+    (update- :en-apply {:_id (object-id oid)} 
+             (fn [r] {:resp id :respdate (datetime) :orgid1 orgid1 :advice advice}))
+    "申请已处理"))
 
 (defn mot-en-review
   "主管机关企业考评结论审核"
@@ -996,7 +1065,7 @@
 (defn mot-hot-doc
   "app: 主管机关查看并受理举报信息"
   [id]
-  (let [r (with-mdb2 "esp" (fetch-by-id :hot (object-id id)))]
+  (let [r (with-oid- :hot id)]
     (doc- :hot id
           {:after (html
                     [:form#fm1 {:action "/c/esp/mot-hot-resp" :method "post"}
@@ -1044,7 +1113,7 @@
       [:div "注：交通运输部负责组织编写培训教材和考试大纲。"
        "省级交通运输主管机关、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作"] [:br]
       (linef scores {:title "各分数值的考评员数量" :x "分数" :y "考评员人数"} 1000) )))
- 
+  
 (defn mot-org-eval
   "service: mot查看org的考评情况汇总"
   []
@@ -1093,6 +1162,8 @@
     (eui-tip "Todo：选择考评机构下发整改通知。")))
   
 ;;;-------------------------------------------------------------------------------------------------------- hot 热线举报投诉
+(def hot---------- nil)
+
 (defn hot
   "app: 举报热线"
   []
@@ -1121,16 +1192,13 @@
   "造org表的数据字段" 
   []
   (with-mdb2 "esp"
-    (let [rs (fetch :org)
-          name3 (wr3.clj.datagen/rand-name) ]
-      (doseq [r rs]
-        (let [m {:_id ""
-                 :name ""
-                 :legalp (name3)
-                 :admin 13
-                 :mobile (format "13%s" (apply str (random-n 9 9)))
-                 }]
-          (update! :org r (dissoc (into m r) :legelp)) ))) ))
+    (let [rs (fetch :org) name3 (wr3.clj.datagen/rand-name) ]
+      (doseq [r rs] (let [m {:_id ""
+                             :name ""
+                             :legalp (name3)
+                             :admin 13
+                             :mobile (format "13%s" (apply str (random-n 9 9))) }]
+                      (update! :org r (dissoc (into m r) :legelp)) ))) ))
 
 (defn- gen-pn-cid-
   "考评员证书号格式为：YYYY—C—NA—XXXXX。YYYY表示年份，C表示类别，NA表示发证机关, XXXXX表示编号"
@@ -1150,17 +1218,7 @@
   
 ;注：文件大小不能太大，1616行？或者？个字节
 
-;;;; test
-;(with-mdb2 "esp"
-;  (let [tb :hot
-;        rs (fetch tb)]
-;    (doseq [r rs]
-;      (update! tb r (into r {:admin "0"})))))
-
-;(update- :hot {:admin "0871"} (fn [r] {:info "姓 名：张山" :content "举报内容……" :date (datetime)}))
-
-
-;(use 'wr3.clj.app.esptmp :reload)
+(use 'wr3.clj.app.esptmp)
 (defn- t1 []
 (with-mdb2 "esp"
   (doseq [[i n t] m1]
@@ -1178,3 +1236,6 @@
 
 ;(with-mdb2 "esp" (destroy! :org-backup {:content {:$exists false}}))
 ;(t3)
+;(update- :org-apply {} (fn [row] {:admin "0351"}))
+;(with-oid- :en-apply "4faa19f6b920d899978c1bb2")
+(update- :en-apply {:_id (object-id  "4faa19f6b920d899978c1bb2")} (fn [r] {:advice "--test--"}))
