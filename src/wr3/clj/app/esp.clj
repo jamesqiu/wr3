@@ -133,7 +133,7 @@
               (cond 
                 (true? require)  (eui-text     (into attr {:required "true" :style "width: 250px"}))
                 (= t 'textarea)  (eui-textarea attr v)
-                (= t 'file) (fileupload-field- nam sid v attr)
+                (= t 'file)      (fileupload-field- nam sid v attr)
                 (= t 'email)     (eui-email    attr)
                 (map? t)         (eui-combo    attr t)
                 (vector? t)      (eui-combo    attr (apply array-map (flatten (for [e t] [e e]))))
@@ -254,6 +254,13 @@
                                         v)])) ]) } )))
   ([rt head cols] (result-html- rt head cols {})))
 
+(defn- insert-
+  "共用函数：保存新纪录到esp的tb表中，不需要用with-mdb2包围
+  @tb 如:pn-train 
+  @m {:name .. :scroe ..} "
+  [tb m]
+  (with-mdb2 "esp" (insert! tb m)))
+                            
 (defn- update-
   "共用函数：更新保存记录到esp的tb表中。不需要用with-mdb2包围
   @tb 要更新的表，如 :hot
@@ -534,12 +541,14 @@
         cname (dd-cert (keyword id))
         rs (with-esp- (fetch tb))
         form (cond 
-               (= id "pn") "docv/pn-apply"
+               (= id "pn") "mot-pn-apply"
                (= id "org") "mot-org-apply" 
                (and (= id "en") (wr3role? request "mot")) "mot-en-apply"
                (and (= id "en") (wr3role? request "org")) "org-en-apply" )
         tip (case id 
-              "pn" "同意则颁发资格证书"
+              "pn" (str "同意则颁发资格证书；<br/>注：直接从事交通运输安全生产行政管理工作10年以上，"
+                        "熟悉掌握交通运输安全生产相关法规和企业安全生产标准化规定者，身体健康，经本人申请、所在单位推荐、"
+                        "发证主管机关核准，可直接办理考评员资格证。")
               "org" "主管机构处理：（同意/不同意）+意见"
               "en" "企业申请处理：主管机关（同意+指派考评机构）/（不同意+意见）——> 考评机构（同意）/（不同意+意见）——> 主管机关审核")]
     (html
@@ -677,8 +686,7 @@
   @see pn-train 主管机构的考评员培训视图"
   [request]
   (let [uid (wr3user request)
-        oid (:_id (first (with-esp- (fetch :pn :where {:uid uid}))))
-        rs (with-esp- (fetch :pn-train :where {:_id oid}))]
+        rs (with-esp- (fetch :pn-train :where {:uid uid}))]
     (html
       [:h1 "考评员培训、考试情况"]
       (eui-tip "1、首次培训时间不少于24个学时；2、年度继续教育时间不少于8个学时；")
@@ -792,7 +800,7 @@
       "已解聘")))
 
 (defn org-pn-train
-  "省级主管机关管理的考评员培训
+  "省级主管机关查看属于自己的考评员的培训、考试情况
   @see pn-learn 考评员自己的培训视图"
   [request]
   (let [uid (wr3user request)
@@ -800,7 +808,7 @@
         ids (vec (map #(-> % :_id str) rt))
         rt2 (with-esp- (fetch :pn-train :where {:_id {:$in (map #(object-id %) ids)}}))]
     (html
-      [:h1 "考评员培训工作"]
+      [:h1 "本机构考评员培训、考试情况一览"]
       [:h2 "培训时间，培训学时（不少于24个学时），培训类别，培训合格证号"]
       [:div "注：由省级交通运输主管机关、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作。"]
       [:br]
@@ -824,7 +832,7 @@
 (defn org-en-apply
   "app: 考评机构受理企业申请记录
   @id object-id
-  @todo 保存数据"
+  @todo 1、保存数据；2、传入企业uid"
   [id]
   (doc- :en-apply id 
         {:after (fn [rt] 
@@ -987,6 +995,16 @@
       (pief (apply array-map (flatten m1)) {})
       )))
 
+(defn mot-pn-apply 
+  "app: 主管机关受理考评机构申请记录
+  @id object-id
+  @todo 保存数据"
+  [id]
+  (doc- :pn-apply id 
+        {:after (html
+                  [:br][:br] "todo：如果有考试成绩直接列出（通过/不通过），如果没有，确定是否10年以上直接颁发考评员资格证。" [:br][:br]
+                  (eui-button {} "同意发证") )}))
+
 (defn mot-org-apply 
   "app: 主管机关受理考评机构申请记录
   @id object-id
@@ -1090,7 +1108,8 @@
   "省级主管机关管理的考评员培训
   @see pn-learn 考评员自己的培训视图"
   [request]
-  (let [rt2 (with-esp- (fetch :pn-train :sort {:train-start 1}))
+  (let [count (with-mdb2 "esp" (fetch-count :pn-train))
+        rt2 (with-esp- (fetch :pn-train :sort {:train-start 1}))
         yyyymm (frequencies (map #(-> % :train-start (leftback "-")) rt2))]
     (html
       [:h1 "考评员培训工作"]
@@ -1098,9 +1117,47 @@
       [:div "注：由省级交通运输主管机关、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作。"]
       [:br]
       (barf yyyymm {:title "各月份培训的考评员数量" :x "月份" :y "考评员人数"}) 
+      [:h2 "尚无培训、考试记录的考评员："]
+      (eui-tip "请点击查看考评员详情并录入培训、考试资料。") ; todo: 增加excel导入功能
+      (result-html- (data- :pn-apply) [] [:name :type :mobile :_id] {:form "mot-pn-train-doc"})
+      [:h2 (format "已录入的考评员培训、考试记录（%s 条）：" count)]
       (result-html- rt2 
                     ["姓名" "培训合格证" "开始日期" "结束日期" "学时" "类型"] 
                     [:name :train-id :train-start :train-end :train-hour :type]))))
+
+(defn mot-pn-train-doc
+  "mot录入考评员培训及考试结果"
+  [id]
+  (doc- :pn-apply id
+        {:after 
+         (let [fields [:name :type :admin :train-start :train-end :train-hour :train-id :exam-date :exam-score]
+               r (with-oid- :pn-apply id)
+               uid (:uid r)]
+           (html [:h2 "录入考评员培训及考试结果："]
+                 [:form#fm1 {} 
+                  [:table 
+                   (for [f fields]
+                     (let [attr {:name (name f) :value (get r f)}]
+                       [:tr 
+                        [:td [:label (dd-meta f) "："]] 
+                        [:td (case f
+                               :type (eui-combo attr dd-type)
+                               :admin (eui-combo attr dd-admin)
+                               (:train-start :train-end :exam-date) (eui-datebox attr)
+                               :train-hour (eui-numberspin {:min 0 :max 100 :value 24} )
+                               :exam-score (eui-numberspin {:min 0 :max 100 :value 85} )
+                               (eui-text attr))]]))]]
+                 (eui-button {:onclick (format "esp_pn_train_save('%s')" uid)} "保存") ))}))
+
+(defn pn-train-save
+  "考评员培训、考试信息表单保存
+  @id 考评员uid "
+  [id request]
+  (let [pn-uid id
+        vars (query-vars2 request)
+        vars2 (for [[k v] vars] [k (case k (:type :train-hour :exam-score) (to-int v) v)])]
+    (insert- :pn-train (into {:uid pn-uid} vars2))
+    "已保存"))
 
 (defn mot-pn-exam
   "省级主管机关管理的考评员考试"
@@ -1236,6 +1293,6 @@
 
 ;(with-mdb2 "esp" (destroy! :org-backup {:content {:$exists false}}))
 ;(t3)
-;(update- :org-apply {} (fn [row] {:admin "0351"}))
+;(update- :pn-train {:name "张文件1"} (fn [row] {:uid "pn1"}))
 ;(with-oid- :en-apply "4faa19f6b920d899978c1bb2")
-(update- :en-apply {:_id (object-id  "4faa19f6b920d899978c1bb2")} (fn [r] {:advice "--test--"}))
+;(with-mdb2 "esp" (destroy! :pn-train {:name "张测试"}))

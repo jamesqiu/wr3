@@ -3066,3 +3066,15 @@ function esp_mot_en_apply(oid, yes_or_no) {
 		alert(data)
 	})
 }
+
+/**
+ * 保存考评员培训考试信息
+ * @uid 考评员uid
+ * @param uid
+ */
+function esp_pn_train_save(uid) {
+	var url = '/c/esp/pn-train-save/' + uid + "?"+$('#fm1').serialize()
+	$.post(url, function(data) {
+		alert(data)
+	})
+}

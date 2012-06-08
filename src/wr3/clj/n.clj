@@ -99,7 +99,7 @@
 
 ;(use '[clojure.contrib.lazy-seqs :only (primes)])
 ; Lazy sequence of all the prime numbers. 因上面语句出错直接从 lazy_seqs.clj 源码中抽出使用.
-(def primes
+(def ^{:doc "一个lazy的无限长质数系列，配合take、first、last、nth等使用，如(take 10 primes) "} primes
   (concat 
     [2 3 5 7]
     (lazy-seq

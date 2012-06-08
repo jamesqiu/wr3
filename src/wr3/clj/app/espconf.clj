@@ -37,6 +37,7 @@
           ]
          ["考评员" "icon-pen" ; title id
           ["考评员列表" "icon-list"    "pn-list"] ; title icon id 
+          ["培训、考试管理" "icon-list"    "mot-pn-train"] ; title icon id 
           ["考评员统计查询"          "icon-list"    "mot-pn-olap"] ; title icon id 
           ["资格证书制发" "icon-list"    "cert-resp/pn"] ; title icon id 
           ["考评员培训"          "icon-list"    "mot-pn-train"] ; title icon id 
@@ -103,7 +104,7 @@
           ]
          ["&nbsp;管理考评员" "icon-user" ; title id
           ["本机构考评员列表" "icon-list"    "org-pn"] ; title icon id 
-          ["考评员培训情况管理" "icon-list"    "org-pn-train"] 
+          ["本机构考评员培训考试" "icon-list"    "org-pn-train"] 
           ["考评员档案管理" "icon-list"    "org-pn-archive"] 
           ]
          ["&nbsp;企业考评管理" "icon-pen" ; title id
@@ -375,7 +376,7 @@
    "034"  "珠江航务管理局"             
    ))
 (def dd-admin 
-  {
+  (array-map
    "01" "交通运输部"
    "02" "北京市"
    "03" "天津市"
@@ -411,7 +412,7 @@
    "33" "新疆生产建设兵团"
    "34" "长江航务管理局"
    "35" "珠江航务管理局"
-   })
+   ))
                 
 ; 学历
 (def dd-edu 
