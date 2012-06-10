@@ -333,6 +333,8 @@ function cdoc_onload() {
 function mdb_onload() {
 
 	$("a.db").click(function() {
+		$('a.db').css('color', '')
+		$(this).css('color', 'red')
 		var dbname = $(this).text();
 		$("div#collections").load(wr3path+"../c/mdb/db/"+dbname)
 	});
@@ -343,7 +345,9 @@ function mdb_onload() {
  * 
  * @return
  */
-function mdb_data(db,coll) {
+function mdb_data(obj,db,coll) {
+	$('a.coll').css('color', '')
+	$(obj).css('color', 'red')
 	$("div#data").load(wr3path+"../c/mdb/data/"+db+"/"+coll);
 }
 
@@ -3062,6 +3066,27 @@ function esp_stand_save(id) {
 function esp_mot_en_apply(oid, yes_or_no) {
 	var url = '/c/esp/mot-en-apply-resp/'+yes_or_no+'?oid='+oid+'&orgid='+$('#orgid').val()
 			+'&advice='+$('#advice').val().replace(/\n/g,'<br/>')
+	$.post(url, function(data) {
+		alert(data)
+	})
+}
+
+/**
+ * mot处理企业申请
+ * @type "pn" "org" "en"
+ * @oid 文档object-id
+ * @yes_or_no 'yes' or 'no'
+ */
+function esp_mot_apply(type, oid, yes_or_no) {
+	var url = '/c/esp/mot-apply-resp/'+type
+		+'?resp=' +yes_or_no
+		+'&oid='+oid
+		+'&advice='+$('#advice').val().replace(/\n/g,'<br/>')
+	if (type=="en") {
+		url += ('&orgid1='+$('#orgid').val())
+	} else if (type=="pn") {
+		url += ('&pass-direct='+$('#pass-direct').prop('checked'))
+	}
 	$.post(url, function(data) {
 		alert(data)
 	})

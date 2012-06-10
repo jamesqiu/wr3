@@ -36,7 +36,7 @@
           dbc (into {} (for [c (collections)] [c (fetch-count (keyword c))]))
           dbc2 (sort-by key dbc)
           f (fn [c] (for [[k v] c] (format "<b>%s</b> (%s)"
-                                           (html [:a.coll {:href "#" :onclick (format "mdb_data('%s','%s');" db k)} k]) v)))]
+                                           (html [:a.coll {:href "#" :onclick (format "mdb_data(this, '%s','%s');" db k)} k]) v)))]
       (html
         [:h2 (format "[%s] 的集合表: " db)]
         [:div (join (f dbc2) " &nbsp;|&nbsp; ")]) )))

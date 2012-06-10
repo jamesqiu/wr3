@@ -203,7 +203,7 @@
     (format "%s-%02d-%02d" yyyy (to-int m) (to-int d))))
 
 (defn- resp-format-
-  "格式化'yes' 'no'的显示，用于函数result-html-， doc-
+  "格式化'yes' 'no'的显示，用于函数(result-html- ..)， (doc- ..)
   @yes-or-no 'yes' or 'no' "
   [yes-or-no]
   (case yes-or-no 
@@ -240,7 +240,7 @@
                                         :freport [:a {:href v0 :target "_blank"} "查看"]
                                         :info (replace-all v "\r\n" "<br/>")
                                         :admin (or (dd-pot v) v)
-                                        :respdate (if (nil? v0) "尚未处理" (format "已于%s处理"))
+                                        :respdate (if (nil? v0) "尚未处理" (format "已于%s处理" v))
                                         :cstate (if (nil? v0) "正常" "撤销") ; 考评机构证书状态
                                         :reason (or (get (case (:id m) 
                                                            "org" dd-org-backup 
@@ -265,11 +265,15 @@
   "共用函数：更新保存记录到esp的tb表中。不需要用with-mdb2包围
   @tb 要更新的表，如 :hot
   @where 查询要更新记录的条件，如 {:_id (object-id '..')}  
-  @f 带一个r记录参数的函数，如 (fn [r] {:date (date)}) "
-  [tb where f]
+  @f 带一个r记录参数的函数，如 (fn [r] {:date (date)}) 
+  @replace 任意值（一般用 :replace 即可），代表要替代而不是合并 "
+  [tb where f & replace]
   (with-mdb2 "esp"
     (let [rs (fetch tb :where where)]
-      (doseq [r rs] (update! tb r (into r (f r)))))))
+      (doseq [r rs] 
+        (update! tb r (if replace 
+                        (f r) 
+                        (into r (f r)) ))))))
 
 (defn- apply-nav-
   "共用函数：各种证书申请导航页
@@ -288,7 +292,7 @@
       (when rs2
         (html [:h1 (format "已提交过%s次申请：" (count rs2))]
               (result-html- rs2 '[申请时间 处理状态 查看] [:date :respdate :_id] 
-                            {:form (str (name type) "-apply-view")}) )))))
+                            {:form (format "docv/%s-apply" (name type))}) )) )))
 
 (defn- apply-input-
   "共用函数：pn-input, org-input, en-input的录入表单。
@@ -995,49 +999,45 @@
       (pief (apply array-map (flatten m1)) {})
       )))
 
-(defn mot-pn-apply 
-  "app: 主管机关受理考评机构申请记录
-  @id object-id
-  @todo 保存数据"
-  [id]
-  (doc- :pn-apply id 
-        {:after (html
-                  [:br][:br] "todo：如果有考试成绩直接列出（通过/不通过），如果没有，确定是否10年以上直接颁发考评员资格证。" [:br][:br]
-                  (eui-button {} "同意发证") )}))
+;;-- mot-(pn en org)-apply[-resp]
+(defn- mot-apply-
+  "主管机关对pn、org、en的申请回应。
+  @type 即 :pn :org :en
+  @oid 申请文档的object-id "
+  [type oid]
+  (let [tb (-> type name (str "-apply") keyword) 
+        f-click (fn [y-n] (format "esp_mot_apply('%s','%s','%s')" (name type) oid y-n))]
+    (doc- tb oid
+          {:after
+           (fn [rt]
+             (html
+               (case type
+                 :pn (let [uid (:uid rt) t (:type rt)
+                           rs (with-esp- (fetch :pn-train :where {:uid uid :type t}))]
+                       (html [:h2 "该考评员“" (dd-type t) "”类型的培训、考试记录："]
+                             (result-html- rs [] [:name :type :train-id :exam-date :exam-score]) [:br][:br]
+                             (eui-tip "直接从事交通运输安全生产行政管理工作10年以上，熟悉掌握交通运输安全生产相关法规和企业安全生产标准化规定者：")
+                             (eui-text {:id "pass-direct" :type "checkbox"}) (space 2) "直接颁发" ))
+                 :org ""
+                 :en (eui-tip "注意：请指派一个考评机构对该企业进行考评！")
+                 nil)
+               [:br][:br] [:label "意见及说明："] (eui-textarea {:id "advice" :style "width:500px"} ) [:br][:br][:br]
+               (eui-button {:onclick (f-click "yes") :iconCls "icon-ok"} "同 &nbsp; 意") (space 5)
+               (eui-button {:onclick (f-click "no") :iconCls "icon-cancel"} "不同意") (repeat 5 [:br]) ))})))
 
-(defn mot-org-apply 
-  "app: 主管机关受理考评机构申请记录
-  @id object-id
-  @todo 保存数据"
-  [id]
-  (doc- :org-apply id 
-        {:after (html
-                  [:br] [:label "处理意见："] (eui-textarea {} ) [:br][:br]
-                  (eui-button {} "同意") (space 3)
-                  (eui-button {} "不同意") )}))
+(defn mot-pn-apply [id] (mot-apply- :pn id))
+(defn mot-org-apply [id] (mot-apply- :org id))
+(defn mot-en-apply [id] (mot-apply- :en id))
 
-(defn mot-en-apply
-  "app: 主管机构受理企业申请记录
-  @id object-id
-  @todo 保存数据"
-  [id]
-  (doc- :en-apply id 
-        {:after 
-         (html [:br] 
-               (eui-button {:onclick (format "esp_mot_en_apply('%s','yes')" id)} "同意（并指派考评机构）") (space 3)[:br][:br][:br]
-               (eui-button {:onclick (format "esp_mot_en_apply('%s','no')" id)} "不同意（并填写意见）") (space 3) 
-               (eui-textarea {:id "advice"} ) [:br][:br] )}))
-
-(defn mot-en-apply-resp
-  "service: 主管机关同意/不同意企业申请达标证书
-  @id 'yes' or 'no' "
+(defn mot-apply-resp
+  "主管机关保存pn、org、en的申请处理意见
+  @id 类型'pn' 'org' 'en' "
   [id request]
-  (let [vars (query-vars2 request)
-        oid (:oid vars)
-        orgid1 (when (= id "yes") (:orgid vars))
-        advice (when (= id "no") (:advice vars))]
-    (update- :en-apply {:_id (object-id oid)} 
-             (fn [r] {:resp id :respdate (datetime) :orgid1 orgid1 :advice advice}))
+  (let [tb (keyword (str id "-apply")) ; :pn-apply :org-apply :en-apply
+        vars (query-vars2 request) 
+        oid (:oid vars)]
+    (update- tb {:_id (object-id oid)}
+             (fn [r] (merge vars {:respdate (datetime)})))
     "申请已处理"))
 
 (defn mot-en-review
@@ -1144,8 +1144,8 @@
                                :type (eui-combo attr dd-type)
                                :admin (eui-combo attr dd-admin)
                                (:train-start :train-end :exam-date) (eui-datebox attr)
-                               :train-hour (eui-numberspin {:min 0 :max 100 :value 24} )
-                               :exam-score (eui-numberspin {:min 0 :max 100 :value 85} )
+                               :train-hour (eui-numberspin (merge attr {:min 0 :max 100 :value 24}) )
+                               :exam-score (eui-numberspin (merge attr {:min 0 :max 100 :value 85}) )
                                (eui-text attr))]]))]]
                  (eui-button {:onclick (format "esp_pn_train_save('%s')" uid)} "保存") ))}))
 
@@ -1295,4 +1295,5 @@
 ;(t3)
 ;(update- :pn-train {:name "张文件1"} (fn [row] {:uid "pn1"}))
 ;(with-oid- :en-apply "4faa19f6b920d899978c1bb2")
-;(with-mdb2 "esp" (destroy! :pn-train {:name "张测试"}))
+;(with-mdb2 "esp" (destroy! :pn-train {:train-id "2012-01-00001"}))
+;(update- :en-apply {:oid {:$exists true}} (fn [row] (dissoc row :oid)) :replace)
