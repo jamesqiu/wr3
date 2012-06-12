@@ -2843,23 +2843,17 @@ function esp_onload() {
 
 function esp_input_save(form) {
 	var url = '/c/esp/input-save/'+form +'?' + $("form").serialize() 
-	$.post(url, function(data) {
-		alert('提示：' + data)
-	})
+	ajax_post(url)
 }
 
 function esp_input_submit(form) {
 	var url = '/c/esp/input-submit/'+form +'?' + $("form").serialize() 
-	$.post(url, function(data) {
-		alert('提示：' + data)
-	})
+	ajax_post(url)
 }
 
 function esp_report_save(form) {
 	var url = '/c/esp/report-save/'+form +'?' + $("form").serialize() 
-	$.post(url, function(data) {
-		alert('提示：' + data)
-	})
+	ajax_post(url)
 }
 
 //------------------------ 3个通用函数：文件上传。@see esp.clj/fileupload, esp.clj/filesave
@@ -2955,7 +2949,6 @@ function esp_hire(cid) {
  * @param cid
  */
 function esp_fire(cid) {
-	alert('cid='+cid)
 	$.get('/c/esp/org-fire/'+cid, function(data) {
 		alert(data)
 	})
@@ -3053,8 +3046,25 @@ function esp_stand_grade() {
 
 function esp_stand_save(id) {
 	var url = '/c/esp/stand-save/'+id+'?'+$('#fm1').serialize()
+	ajax_post(url)
+}
+
+/**
+ * 共用函数，取textarea的值，并把\n转换为<br/>
+ * @o 如 textarea字段的id如：'advice'
+ * @returns
+ */
+function textarea_val(id) {
+	return $('#'+id).val().replace(/\n/g,'<br/>')
+}
+
+/**
+ * 共用函数，ajax post一个url并alert结果
+ * @param url
+ */
+function ajax_post(url) {
 	$.post(url, function(data) {
-		alert(data)
+		alert('提示：' + data)
 	})
 }
 
@@ -3066,9 +3076,7 @@ function esp_stand_save(id) {
 function esp_mot_en_apply(oid, yes_or_no) {
 	var url = '/c/esp/mot-en-apply-resp/'+yes_or_no+'?oid='+oid+'&orgid='+$('#orgid').val()
 			+'&advice='+$('#advice').val().replace(/\n/g,'<br/>')
-	$.post(url, function(data) {
-		alert(data)
-	})
+	ajax_post(url)
 }
 
 /**
@@ -3087,9 +3095,16 @@ function esp_mot_apply(type, oid, yes_or_no) {
 	} else if (type=="pn") {
 		url += ('&pass-direct='+$('#pass-direct').prop('checked'))
 	}
-	$.post(url, function(data) {
-		alert(data)
-	})
+	ajax_post(url)
+}
+
+/**
+ * mot对en的审核（org评估之后）
+ */
+function esp_mot_review(y_or_n, oid) {
+	var advice = textarea_val('advice')
+	var url = '/c/esp/mot-en-review-save/'+oid+'?resp-review='+y_or_n+'&advice-review='+advice
+	ajax_post(url)
 }
 
 /**
@@ -3099,7 +3114,13 @@ function esp_mot_apply(type, oid, yes_or_no) {
  */
 function esp_pn_train_save(uid) {
 	var url = '/c/esp/pn-train-save/' + uid + "?"+$('#fm1').serialize()
-	$.post(url, function(data) {
-		alert(data)
-	})
+	ajax_post(url)
+}
+
+/**
+ * mot受理org、en变更备案
+ */
+function esp_backup(tb, oid) {
+	var url = '/c/esp/backup-resp-save/'+tb+'/'+oid+'?advice='+textarea_val('advice')
+	ajax_post(url)
 }

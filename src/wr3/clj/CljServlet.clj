@@ -8,7 +8,7 @@
      返回true表示通过，继续输出页面；返回 false 等则表示验证没有通过，跳转到/login.html;
    3.类似Play!，自动绑定querystring中的值和app/*.clj函数中的同名参数，例如 clj1/foo/01/012?name=james&age=30 对应函数为
      (defn foo [name age] ...) 
-       -- foo函数自动获取到name=james, age=30这两个值；也可以有3个自动绑定的名称：
+       -- foo函数自动获取到name=james, age=30这两个值；也可以有3个自动绑定的名称(id ids request)：
      (defn foo [id ids request name age] ...) 
        -- foo函数自动获取到 id=01, ids='(01 012), request=request, name=james, age=30
       "}
