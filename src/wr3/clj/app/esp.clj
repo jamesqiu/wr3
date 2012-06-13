@@ -6,7 +6,7 @@
       } 
      wr3.clj.app.esp)
 
-(use 'wr3.clj.app.espconf :reload)
+(use 'wr3.clj.app.espconf :reload) ; 发布时去除reload
 (use 'hiccup.core)
 (use 'wr3.clj.web 'wr3.clj.tb 'wr3.clj.s 'wr3.clj.n 'wr3.clj.chart 'wr3.clj.u)
 (use 'somnium.congomongo 'wr3.clj.nosql 'wr3.clj.chart)
@@ -203,6 +203,12 @@
   (let [[yyyy m d] (split s "-")]
     (format "%s-%02d-%02d" yyyy (to-int m) (to-int d))))
 
+(defn- format-date-cert-
+  "共用函数：格式化日期，2011-5-4 -> '2011年5月4日' 便于显示和文本排序"
+  [s]
+  (let [[yyyy m d] (split s "-")]
+    (format "%s年 %02d月 %02d日" yyyy (to-int m) (to-int d))))
+
 (defn- resp-format-
   "格式化'yes' 'no'的显示，用于函数(result-html- ..)， (doc- ..)
   @yes-or-no 'yes' or 'no' "
@@ -231,6 +237,7 @@
                                       (case col
                                         :_id [:a {:href (format "/c/esp/%s/%s" (:form m) v) :target "_blank"} "查看"]
                                         :_select [:input {:type "checkbox" :group "select" :sid (:_id row)}]
+                                        :_issue [:a {:href (format "/c/esp/cert-issue/%s/%s" (:issue m) (:_id row)) :target "_blank"} "发证"]
                                         :type (or (dd-type (to-int v0)) v)
                                         :type2 (or (dd-type2 (to-int v0)) v)
                                         :grade (or (dd-en-grade (to-int v0)) v)
@@ -240,7 +247,7 @@
                                         :uid (:name (au/users v0))
                                         :freport [:a {:href v0 :target "_blank"} "查看"]
                                         :info (replace-all v "\r\n" "<br/>")
-                                        :admin (or (dd-pot v) v)
+                                        :admin (or (dd-admin v) v)
                                         :respdate (if (nil? v0) "<font color=gray>尚未处理</font>" 
                                                     (format "已于%s处理" v))
                                         :cstate (if (nil? v0) "正常" "撤销") ; 考评机构证书状态
@@ -253,7 +260,7 @@
                                                      "等级：" (when-let [grd (:grade v0)] 
                                                              [:b (dd-en-grade (to-int grd))]) "；"
                                                      (when-let [report (:report v0)] [:a {:href report} "自评报告"])) ; 企业达标自评
-                                        (:resp :resp-review) (resp-format- v0)
+                                        (:resp :resp-eval :resp-review) (resp-format- v0)
                                         v)])) ]) } )))
   ([rt head cols] (result-html- rt head cols {})))
 
@@ -367,7 +374,7 @@
                     :belong (str v (when-let [n ((get au/users v) :name)] (format " (%s)" n)))
                     :fulltime (if v "专职" "兼职")
                     :qual (or (dd-org-grade (to-int v)) v)
-                    :admin (or (dd-pot (str v)) v)
+                    :admin (or (dd-admin (str v)) v)
                     :orgid (eui-combo {:id "orgid" :name "orgid"} (zipmap v (with-orgid- v)))
                     :orgid1 [:a {:href (str "/c/esp/docv/org/" v) :target "_blank"} "查看"]
                     :enid [:a {:href (str "/c/esp/docv/en/" v) :target "_blank"} "查看"]
@@ -484,8 +491,9 @@
     (with-mdb2 "esp"
       (insert! :en-stand {:uid uid :enid enid :date (datetime) :type2 type2
                           :stand (dissoc vars :enid)}))
+    (println "-- is role en: " (wr3role? request "en")) 
     (cond 
-      (wr3role? request "en") (update- :en-apply {:uid uid :type2 id} (fn [r] {:score0 sum}))
+      (wr3role? request "en")  (update- :en-apply {:uid uid  :type2 id} (fn [r] {:score0 sum}))
       (wr3role? request "org") (update- :en-apply {:uid enid :type2 id} (fn [r] {:score1 sum}))
       :else nil )
     "已经保存"))
@@ -523,13 +531,62 @@
       (eui-tip "暂无换证申请"))))
 
 (defn cert-resp
-  "service: 主管机关制发考评员、考评机构证书，考评机构制发企业证书。
-  @id pn,en,org "
+  "service: 用户：org和mot；mot制发考评员、考评机构证书，org制发企业证书。
+  @id 'pn','en','org' "
   [id]
   (let [title (format "%s制发" (dd-cert (keyword id)))]
     (html
       [:h1 title]
-      (eui-tip "暂无需要制发的资格证（系统可直接套打A3纸，也可生成电子证书。）"))))
+      (eui-tip "系统可直接套打A3纸，也可生成电子证书。")
+      [:h2 "审核通过的申请："]
+      (case id
+        "en" (let [rs (with-esp- (fetch :en-apply :where {:resp-review "yes"}))]
+               (result-html- rs [] [:name :resp :resp-eval :resp-review :respdate-review :_id :_issue] 
+                             {:form "docv/en-apply" :issue "en-apply"}))
+        nil)
+      )))
+
+(defn cert-issue
+  "制发证书"
+  [ids request]
+  (let [[typ oid] ids
+        tb (keyword typ)
+        r (with-oid- tb oid)
+        fields [["证书编号" "cid" (en-cert-id {:admin (:admin r)})]
+                ["有效期开始日期" "date" (date)]
+                ["企业名称" "name" (:name r)]
+                ["经营类别" "type2" (dd-type2 (to-int (:type2 r)))]
+                ["达标等级" "grade" (dd-en-grade (to-int (:grade r)))]]]
+    (html-body 
+      (eui-tip "注意：请核查内容是否有误。")
+      [:form#fm1 {:action "/c/esp/cert-print" :method "post"}
+       [:table.wr3table {:border 1} [:caption "证书内容"]
+        (for [[s nam v] fields]
+          [:tr [:th {:style "text-align:left"} s "："] 
+           [:td (eui-text {:name nam :value v :style "width:300px"})]]) ][:br][:br]
+       (eui-button {:onclick "$('#fm1')[0].reset()"} "重置") (space 10)
+       (eui-button {:onclick "$('#fm1').submit()"} "查看、打印证书")])))
+
+(defn cert-print
+  "查看打印操作"
+  [request]
+  (let [vars (query-vars2 request)
+        date (:date vars)
+        date-end (date-add date 3 0 0)
+        f1 (fn [x y] {:style (format "position:absolute;left:%d;top:%d;font-size:19pt;background-color:white" x y)})
+        f2 (fn [x y] {:style (format "position:absolute;left:%d;top:%d;font-family:黑体;font-size:21pt;width:450px" x y)})
+        f3 (fn [x y] {:style (format "position:absolute;left:%d;top:%d;font-size:20pt;background-color:white;width:230px" x y)})]
+    (html
+      [:body {:style "margin:0px; font-family: 宋体; font-size:21pt"}
+       [:div {:style (str "background:url('/img/esp/cert-en.jpg'); "
+                          "border:0px solid red; width:1654px; height:1169px")} ]
+       [:div (f1 250 785) (:cid vars)]
+       [:div (f1 250 832) (format-date-cert- date) " 至 " (format-date-cert- date-end)]
+       [:div (f2 1080 285) (:name vars)]
+       [:div (f2 1080 407) (:type2 vars)]
+       [:div (f2 1080 530) (:grade vars)]
+       [:div (f3 1262 926) (format-date-cert- date)]
+       ])))
 
 (defn report
   "service: 考评机构、企业的年度工作报告；
@@ -715,6 +772,15 @@
       (eui-button {:onclick f-yes :iconCls "icon-ok"} s-yes) (space 10)
       (eui-button {:onclick f-no :iconCls "icon-cancel"} s-no) br2 br2 )))
 
+
+(defn- has-digit4- [n] (some #(= \4 %) (str n)))
+
+(defn- en-cert-sid 
+  "根据目前最后一个序列号，得到下一个不含'4'的序列号。 例子：
+  (en-cert-sid 444444) ; 500000
+  (take 1000 (iterate en-cert-sid 1)) ; (1 2 3 5 6 7 8 9 10 11 12 13 15 ..) "
+  [max] (find-first #(not (has-digit4- %)) (iterate inc (inc max))))
+
 ;;;-------------------------------------------------------------------------------------------------------- pn  考评员
 (def pn---------- nil)
 
@@ -886,12 +952,22 @@
   @id object-id
   @todo 1、保存数据；2、传入企业uid"
   [id]
-  (doc- :en-apply id 
-        {:after (fn [rt] (html
-                           [:br] [:label "第一步："] 
-                           (eui-button {:href (format "/c/esp/stand/%s?enid=%s" (:type2 rt) (:uid rt)) 
+  (let [f-yes (format "esp_org_en_apply('yes', '%s')" id) 
+        f-no  (format "esp_org_en_apply('no',  '%s')" id)]
+    (doc- :en-apply id 
+          {:after (fn [rt] (html
+                             [:br] [:label "第一步："] 
+                             (eui-button {:href (format "/c/esp/stand/%s?enid=%s" (:type2 rt) (:uid rt)) 
                                         :target "_blank"} "考评打分") [:br][:br]
-                           [:label "第二步："] (yes-no-advice- {:onclick []}) ))}))
+                             [:label "第二步："] (yes-no-advice- {:onclick [f-yes f-no]}) ))})))
+
+(defn org-en-apply-save
+  "service: 保存org对en的考评结果
+  @id :en-apply表文档的object-id"
+  [id request]
+  (let [vars (query-vars2 request)]
+    (update- :en-apply {:_id (object-id id)} (fn [r] (merge {:respdate-eval (datetime)} vars)))
+    "审核结果已经保存 " ))
 
 (defn org-en-process
   "service: 考评机构查询企业申请处理进度
@@ -982,7 +1058,7 @@
         r (first (with-esp- (fetch :en-apply :where {:uid uid} :sort {:date -1}))) ; 第一条申请
         ] 
     (html
-      [:h1 (format "%s主管的考评机构（%s 名）" (dd-pot admin) (count rs))]
+      [:h1 (format "%s主管的考评机构（%s 名）" (dd-admin admin) (count rs))]
       (eui-tip "请在如下的考评机构列表中自行选择两个。")
       (result-html- rs [] [:name :admin :_id :_select] {:form "docv/org"}) [:br]
       (eui-button {:onclick "esp_en_select_org()"} "提 交")
@@ -1095,7 +1171,7 @@
       [:h2 "待审核企业："]
       (result-html- 
         rs []
-        [:name :type2 :date :score0 :score1 :resp :resp-review :_id :_select]  ; todo: 考评机构评分score字段
+        [:name :type2 :date :score0 :score1 :resp :resp-eval :resp-review :_id :_select]  ; todo: 考评机构评分score字段
         {:form "mot-en-review-doc"}) [:br]
       (eui-button {:onclick "esp_en_apply_resp()"} "同意，进行公示") [:br][:br]
       [:h2 "公示期满可发证企业一览："] (eui-tip "无公示期满的企业") )))
@@ -1148,7 +1224,7 @@
                     [:form#fm1 {:action "/c/esp/mot-hot-resp" :method "post"}
                      [:input {:name "oid" :type "hidden" :value (:_id r)}]
                      [:p [:label "处理意见："] (eui-textarea {:name "advice"})]
-                     [:p [:label "转发至主管机关："] (eui-combo {:id "admin" :name "admin" :value (:admin r)} dd-pot)]
+                     [:p [:label "转发至主管机关："] (eui-combo {:id "admin" :name "admin" :value (:admin r)} dd-admin)]
                      [:p (eui-button {:onclick "$('#fm1').submit()"} "提 交")]] )})))
   
 (defn mot-hot-resp
@@ -1262,7 +1338,7 @@
       (cross-table rt2 {:caption "主管机构各级企业数量统计表"
                         :dim-top-name "企业级别"
                         :dim-left-name "主管机构"
-                        :f-dim-left (fn [v] (dd-pot v))
+                        :f-dim-left (fn [v] (dd-admin v))
                         :f-dim-top (fn [v] (str (dd-en-grade (to-int v)) "企业"))}) )))
 
 (defn mot-admin
@@ -1290,7 +1366,7 @@
       [:form {:id "fm1" :action "/c/esp/hot-save" :method "post"}
        [:label [:b "举报人信息等："]] (eui-textarea {:name "info"} "姓 名：\n身份证号：\n联系方式：\n\n其 他：\n") [:br][:br]
        [:label [:b "填写举报内容："]] (eui-textarea {:name "content" :style "width: 500px; height: 300px"} "") [:br][:br]
-       [:label [:b "选择主管机关："]] (eui-combo {:name "admin"} dd-pot) [:br][:br]
+       [:label [:b "选择主管机关："]] (eui-combo {:name "admin"} dd-admin) [:br][:br]
        (eui-button {:onclick "esp_hot_submit()"} "提 交")] )))
   
 (defn hot-save
@@ -1319,7 +1395,7 @@
 (defn- gen-pn-cid-
   "考评员证书号格式为：YYYY—C—NA—XXXXX。YYYY表示年份，C表示类别，NA表示发证机关, XXXXX表示编号"
   [type]
-  (format "2011-%s-%s-%05d" type (-> (rand-nth (vec dd-pot)) first) (rand-int 100000)))
+  (format "2011-%s-%s-%05d" type (-> (rand-nth (vec dd-admin)) first) (rand-int 100000)))
 
 (defn- gen-org-cid-
   "考评员证书号格式为：YYYY—C—NA—甲XXXXX。YYYY表示年份，C表示类别，NA表示发证机关, XXXXX表示编号"
@@ -1329,8 +1405,17 @@
         grade (rand-nth ["乙" "丙"])
         admin (:admin r)
         admin (to-int admin)
-        na (subs (dd-pot admin) 0 2)]
+        na (subs (dd-admin admin) 0 2)]
     (format "2012-%s-%s-%s%04d" c na grade (rand-int 10000))))
+
+(defn- en-cert-id
+  "生成企业的达标证书号"
+  ([m]
+    (let [year (or (:year m) (year))
+          admin (or (:admin m) "01")
+          max (or (:max m) 0)]
+      (format "%s-%s-%06d" year admin (en-cert-sid max))))
+  ([] (en-cert-id nil)))
   
 ;注：文件大小不能太大，1616行？或者？个字节
 
@@ -1362,3 +1447,4 @@
 ;(with-mdb2 "esp" (update! :en-apply {:uid "en1"} {:$set {:score0 989}}))
 ;(update- :en-apply {:uid "en1" :type2 "11"} (fn [r] {:score0 989}))
 ;(with-esp- (fetch :en-apply :where {:type2 {:$in [11 "11"]}}))
+;(en-cert-id {:year 2011 :admin 26 :max 386})

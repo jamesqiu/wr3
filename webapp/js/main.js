@@ -3108,6 +3108,17 @@ function esp_mot_review(y_or_n, oid) {
 }
 
 /**
+ * org对en的考评
+ * @param y_or_n
+ * @param oid
+ */
+function esp_org_en_apply(y_or_n, oid) {
+	var advice = textarea_val('advice')
+	var url = '/c/esp/org-en-apply-save/'+oid+'?resp-eval='+y_or_n+'&advice-eval='+advice
+	ajax_post(url)
+}
+
+/**
  * 保存考评员培训考试信息
  * @uid 考评员uid
  * @param uid
