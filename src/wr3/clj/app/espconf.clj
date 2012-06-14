@@ -229,15 +229,8 @@
    2 "二级企业必须完全满足所有标<font color=red>★★、★★★</font>的项"
 	 3 "三级企业必须完全满足所有标<font color=red>★★★</font>的项"
   })
-; 企业达标等级
-(def dd-en-grade
-  {
-   1 "一级"
-   2 "二级"
-   3 "三级"
-   })
-; 考评机构的考评资格
-(def dd-org-grade
+; 企业达标等级、考评机构资格资格
+(def dd-grade
   {
    1 "一级"
    2 "二级"
@@ -263,6 +256,13 @@
    :en-backup "企业变更申请"
    :pn-train "考评员培训考试记录"
    :hot "实名举报信息"
+   })
+; 证书年限
+(def dd-cert-year
+  {
+   :pn 5 
+   :org 5 
+   :en 3
    })
 ; 数据项英文、中文对照
 (def dd-meta
@@ -291,7 +291,7 @@
    :exam-score "考试分数"
    :from "属地"
    :fulltime "专兼职"
-   :grade "级别"
+   :grade "等级"
    :info "举报人信息"
    :legalp "法人代表"
    :major "专业"
@@ -306,7 +306,7 @@
    :pnumber "专职考评员人数"
    :pnumber2 "高级技术职称考评员人数"   
    :province "省份"
-   :qual "评审机构资质" 
+   :qual "资格证件"
    :reason "原因"
    :resp "受理结果" ; resp: 第一步mot选1个考评机构；resp-eval：第二步org进行考评；resp-review：第三步mot进行审核
    :resp-eval "考评结果"
@@ -426,7 +426,7 @@
    ["单位名称" :name {:require true :v "" :title "一般为：学校/交通相关学会/协会/研究所"}]
    ["组织机构代码" :orgcode {:require true}]
    ["法人代表" :legalp {:require true}]
-   ["评审机构资质" :qual {:t dd-org-grade :v "甲类"}]
+   ["资质等级" :grade {:t dd-grade :v 1}]
    ["专业范围" :type {:t dd-type :v 1 :title "todo: 改为可以多选，或者每个专业申请一次"}]
    ["专职考评员人数" :pnumber {:v 7 :title "一级≥7名；二级≥5名；三级≥3名。"}]
    ["高级技术职称考评员人数" :pnumber2 {:v 3 :title "一级≥3名；二级≥2名；三级≥1名。"}]

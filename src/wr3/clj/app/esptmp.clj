@@ -209,3 +209,54 @@
 [16	3	1	①根据企业生产经营实际，建立相应的安全管理体系，规范安全生产管理，形成长效机制。	1	20	51]
 ])
 
+(require 'wr3.clj.datagen)
+(use 'wr3.clj.n 'wr3.clj.s)
+(use 'wr3.clj.app.espconf)
+
+(defn- t1
+  "造org表的数据字段" 
+  []
+  (with-mdb2 "esp"
+    (let [rs (fetch :org) name3 (wr3.clj.datagen/rand-name) ]
+      (doseq [r rs] (let [m {:_id ""
+                             :name ""
+                             :legalp (name3)
+                             :admin 13
+                             :mobile (format "13%s" (apply str (random-n 9 9))) }]
+                      (update! :org r (dissoc (into m r) :legelp)) ))) ))
+
+(defn- gen-pn-cid-
+  "考评员证书号格式为：YYYY—C—NA—XXXXX。YYYY表示年份，C表示类别，NA表示发证机关, XXXXX表示编号"
+  [type]
+  (format "2011-%s-%s-%05d" type (-> (rand-nth (vec dd-admin)) first) (rand-int 100000)))
+
+(defn- gen-org-cid-
+  "考评员证书号格式为：YYYY—C—NA—甲XXXXX。YYYY表示年份，C表示类别，NA表示发证机关, XXXXX表示编号"
+  [r]
+  (let [nam (:name r)
+        c (if (has? nam "港") "G" "D")
+        grade (rand-nth ["乙" "丙"])
+        admin (:admin r)
+        admin (to-int admin)
+        na (subs (dd-admin admin) 0 2)]
+    (format "2012-%s-%s-%s%04d" c na grade (rand-int 10000))))
+  
+(use 'wr3.clj.nosql)
+(use 'somnium.congomongo)
+
+(defn- t1 []
+(with-mdb2 "esp"
+  (doseq [[i n t] m1]
+    (insert! :indic1 {:i i :name (name n) :type2 t}))))
+
+(defn- t2 []
+(with-mdb2 "esp"
+  (doseq [[i j n t] m2]
+    (insert! :indic2 {:i i :j j :name (name n) :type2 t}))))
+
+(defn- t3 []
+(with-mdb2 "esp"
+  (doseq [[i j k n star s t] m3]
+    (insert! :indic3 {:i i :j j :k k :name (name n) :star star :score s :type2 t}))))
+
+;(t3)

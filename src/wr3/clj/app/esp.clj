@@ -240,7 +240,7 @@
                                         :_issue [:a {:href (format "/c/esp/cert-issue/%s/%s" (:issue m) (:_id row)) :target "_blank"} "发证"]
                                         :type (or (dd-type (to-int v0)) v)
                                         :type2 (or (dd-type2 (to-int v0)) v)
-                                        :grade (or (dd-en-grade (to-int v0)) v)
+                                        :grade (or (dd-grade (to-int v0)) v)
                                         :fulltime (if v0 "专职" "<font color=gray>兼职</font>")
                                         :contract0 (format-date- v)
                                         :contract1 (if v0 (format-date- v0) "<b>目前在职</b>")
@@ -258,7 +258,7 @@
                                         :content (if (> (count v) 20) (str (subs v 0 20) " ……") v)
                                         :stand (html "自评分：" [:b (:sum v0)] "；" 
                                                      "等级：" (when-let [grd (:grade v0)] 
-                                                             [:b (dd-en-grade (to-int grd))]) "；"
+                                                             [:b (dd-grade (to-int grd))]) "；"
                                                      (when-let [report (:report v0)] [:a {:href report} "自评报告"])) ; 企业达标自评
                                         (:resp :resp-eval :resp-review) (resp-format- v0)
                                         v)])) ]) } )))
@@ -370,10 +370,9 @@
              [:td (case k ; 显示转换，如：有些代码可以用字典得到名称
                     :type (or (dd-type (to-int v)) v) 
                     :type2 (or (dd-type2 (to-int v 11)) v) 
-                    :grade (or (dd-en-grade (to-int v)) v)
+                    :grade (or (dd-grade (to-int v)) v)
                     :belong (str v (when-let [n ((get au/users v) :name)] (format " (%s)" n)))
                     :fulltime (if v "专职" "兼职")
-                    :qual (or (dd-org-grade (to-int v)) v)
                     :admin (or (dd-admin (str v)) v)
                     :orgid (eui-combo {:id "orgid" :name "orgid"} (zipmap v (with-orgid- v)))
                     :orgid1 [:a {:href (str "/c/esp/docv/org/" v) :target "_blank"} "查看"]
@@ -448,7 +447,7 @@
                             [:input {:name "enid" :type "hidden" :value enid}])))
          [:h2 [:label "请选择申请达标级别："] (eui-combo {:id "grade" :name "grade"  :onchange "esp_stand_grade()"
                                                 :value (fsetv :grade 1) }
-                                               (if is-type2-42? (dissoc dd-en-grade 3) dd-en-grade))] 
+                                               (if is-type2-42? (dissoc dd-grade 3) dd-grade))] 
          (eui-tip [:span#tip (dd-stand-tip (fsetv :grade 1))
                    (when is-type2-42? "<br/>注：城市轨道交通运输企业由于安全要求高，只能申请一二级达标，不能申请三级达标。")])
          [:table.wr3table {:border 1}
@@ -543,27 +542,34 @@
         "en" (let [rs (with-esp- (fetch :en-apply :where {:resp-review "yes"}))]
                (result-html- rs [] [:name :resp :resp-eval :resp-review :respdate-review :_id :_issue] 
                              {:form "docv/en-apply" :issue "en-apply"}))
-        nil)
-      )))
+        "org" (let [rs (with-esp- (fetch :org-apply :where {:resp "yes"}))]
+                (result-html- rs [] [:name :resp :respdate :_id :_issue] 
+                              {:form "docv/org-apply" :issue "org-apply"}))
+        nil) )))
 
 (defn cert-issue
-  "制发证书"
+  "制发证书
+  @ids ids[0] typ 'en-apply' 'org-apply' 'pn-apply'; ids[1] xx-apply表中文档的object-id字符串 "
   [ids request]
-  (let [[typ oid] ids
-        tb (keyword typ)
+  (let [[apply-type oid] ids
+        tb (keyword apply-type)
         r (with-oid- tb oid)
+        type-dd ({:en-apply dd-type2 :org-apply dd-type} tb)
+        type-value ({:en-apply (:type2 r) :org-apply (:type r)} tb)
         fields [["证书编号" "cid" (en-cert-id {:admin (:admin r)})]
                 ["有效期开始日期" "date" (date)]
-                ["企业名称" "name" (:name r)]
-                ["经营类别" "type2" (dd-type2 (to-int (:type2 r)))]
-                ["达标等级" "grade" (dd-en-grade (to-int (:grade r)))]]]
+                ["名称" "name" (:name r)]
+                ["类型类别" "type" (get type-dd (to-int type-value))]
+                ["达标/资质等级" "grade" (dd-grade (to-int (:grade r)))]]]
     (html-body 
-      (eui-tip "注意：请核查内容是否有误。")
+      (eui-tip "提示：1、请核查内容是否有误；2、打印一正三副；3、请在打印机设置中调整至A3、合适的页边距后保存设置。")
       [:form#fm1 {:action "/c/esp/cert-print" :method "post"}
-       [:table.wr3table {:border 1} [:caption "证书内容"]
+       [:table.wr3table {:border 1} [:caption (format "【%s】证书内容" (dd-form tb)) ]
         (for [[s nam v] fields]
           [:tr [:th {:style "text-align:left"} s "："] 
-           [:td (eui-text {:name nam :value v :style "width:300px"})]]) ][:br][:br]
+           [:td (eui-text {:name nam :value v :style "width:300px"})]]) ] [:br][:br]
+       [:input {:name "apply-type" :type "hidden" :value apply-type}]
+       [:label "正本/副本选择："](eui-combo {:name "copy"} {"正本" "—— 打印正本 ——" "副本" "—— 打印副本 ——"} ) [:br][:br] 
        (eui-button {:onclick "$('#fm1')[0].reset()"} "重置") (space 10)
        (eui-button {:onclick "$('#fm1').submit()"} "查看、打印证书")])))
 
@@ -571,22 +577,26 @@
   "查看打印操作"
   [request]
   (let [vars (query-vars2 request)
+        apply-type (:apply-type vars)
         date (:date vars)
         date-end (date-add date 3 0 0)
-        f1 (fn [x y] {:style (format "position:absolute;left:%d;top:%d;font-size:19pt;background-color:white" x y)})
-        f2 (fn [x y] {:style (format "position:absolute;left:%d;top:%d;font-family:黑体;font-size:21pt;width:450px" x y)})
-        f3 (fn [x y] {:style (format "position:absolute;left:%d;top:%d;font-size:20pt;background-color:white;width:230px" x y)})]
+        copy (:copy vars)
+        css1 "position:absolute;left:%d;top:%d;font-size:19pt"
+        css2 "position:absolute;left:%d;top:%d;font-family:黑体;font-size:21pt;width:450px"
+        css3 "position:absolute;left:%d;top:%d;font-size:20pt;width:230px"
+        css4 "position:absolute;left:%d;top:%d;font-size:51pt;color:#9fa0a0"
+        f (fn [css x y] {:style (format css x y)}) ]
     (html
       [:body {:style "margin:0px; font-family: 宋体; font-size:21pt"}
-       [:div {:style (str "background:url('/img/esp/cert-en.jpg'); "
-                          "border:0px solid red; width:1654px; height:1169px")} ]
-       [:div (f1 250 785) (:cid vars)]
-       [:div (f1 250 832) (format-date-cert- date) " 至 " (format-date-cert- date-end)]
-       [:div (f2 1080 285) (:name vars)]
-       [:div (f2 1080 407) (:type2 vars)]
-       [:div (f2 1080 530) (:grade vars)]
-       [:div (f3 1262 926) (format-date-cert- date)]
-       ])))
+       [:div {:style (format "background:url('/img/esp/cert-%s.jpg');border:1px solid red;width:1654px;height:1169px"
+                             (left apply-type "-"))} ]
+       [:div (f css1 250  785) (:cid vars)]
+       [:div (f css1 250  832) (format-date-cert- date) " 至 " (format-date-cert- date-end)]
+       [:div (f css2 1080 285) (:name vars)]
+       [:div (f css2 1080 407) (:type vars)]
+       [:div (f css2 1080 530) (:grade vars)]
+       [:div (f css3 1262 926) (format-date-cert- date)] 
+       [:div (f css4 1105 635) [:b "（" [:span {:style "font-family:黑体"} copy] "）"]] ])))
 
 (defn report
   "service: 考评机构、企业的年度工作报告；
@@ -779,7 +789,17 @@
   "根据目前最后一个序列号，得到下一个不含'4'的序列号。 例子：
   (en-cert-sid 444444) ; 500000
   (take 1000 (iterate en-cert-sid 1)) ; (1 2 3 5 6 7 8 9 10 11 12 13 15 ..) "
-  [max] (find-first #(not (has-digit4- %)) (iterate inc (inc max))))
+  [max] (let [sid (find-first #(not (has-digit4- %)) (iterate inc (inc max)))]
+          (if (<= sid 999999) sid (en-cert-sid 0))))
+
+(defn- en-cert-id
+  "生成企业的达标证书号"
+  ([m]
+    (let [year (or (:year m) (year))
+          admin (or (:admin m) "01")
+          max (or (:max m) 0)]
+      (format "%s-%s-%06d" year admin (en-cert-sid max))))
+  ([] (en-cert-id nil)))
 
 ;;;-------------------------------------------------------------------------------------------------------- pn  考评员
 (def pn---------- nil)
@@ -1339,7 +1359,7 @@
                         :dim-top-name "企业级别"
                         :dim-left-name "主管机构"
                         :f-dim-left (fn [v] (dd-admin v))
-                        :f-dim-top (fn [v] (str (dd-en-grade (to-int v)) "企业"))}) )))
+                        :f-dim-top (fn [v] (str (dd-grade (to-int v)) "企业"))}) )))
 
 (defn mot-admin
   "service: 主管机关向下级主管机关委托代办工作
@@ -1378,73 +1398,10 @@
     "举报信息已经保存"))
   
 ;;------------------------------------------------- test
-(require 'wr3.clj.datagen)
-
-(defn- t1
-  "造org表的数据字段" 
-  []
-  (with-mdb2 "esp"
-    (let [rs (fetch :org) name3 (wr3.clj.datagen/rand-name) ]
-      (doseq [r rs] (let [m {:_id ""
-                             :name ""
-                             :legalp (name3)
-                             :admin 13
-                             :mobile (format "13%s" (apply str (random-n 9 9))) }]
-                      (update! :org r (dissoc (into m r) :legelp)) ))) ))
-
-(defn- gen-pn-cid-
-  "考评员证书号格式为：YYYY—C—NA—XXXXX。YYYY表示年份，C表示类别，NA表示发证机关, XXXXX表示编号"
-  [type]
-  (format "2011-%s-%s-%05d" type (-> (rand-nth (vec dd-admin)) first) (rand-int 100000)))
-
-(defn- gen-org-cid-
-  "考评员证书号格式为：YYYY—C—NA—甲XXXXX。YYYY表示年份，C表示类别，NA表示发证机关, XXXXX表示编号"
-  [r]
-  (let [nam (:name r)
-        c (if (has? nam "港") "G" "D")
-        grade (rand-nth ["乙" "丙"])
-        admin (:admin r)
-        admin (to-int admin)
-        na (subs (dd-admin admin) 0 2)]
-    (format "2012-%s-%s-%s%04d" c na grade (rand-int 10000))))
-
-(defn- en-cert-id
-  "生成企业的达标证书号"
-  ([m]
-    (let [year (or (:year m) (year))
-          admin (or (:admin m) "01")
-          max (or (:max m) 0)]
-      (format "%s-%s-%06d" year admin (en-cert-sid max))))
-  ([] (en-cert-id nil)))
-  
-;注：文件大小不能太大，1616行？或者？个字节
-
-(use 'wr3.clj.app.esptmp)
-(defn- t1 []
-(with-mdb2 "esp"
-  (doseq [[i n t] m1]
-    (insert! :indic1 {:i i :name (name n) :type2 t}))))
-
-(defn- t2 []
-(with-mdb2 "esp"
-  (doseq [[i j n t] m2]
-    (insert! :indic2 {:i i :j j :name (name n) :type2 t}))))
-
-(defn- t3 []
-(with-mdb2 "esp"
-  (doseq [[i j k n star s t] m3]
-    (insert! :indic3 {:i i :j j :k k :name (name n) :star star :score s :type2 t}))))
-
+;--- 注：文件大小不能大于64k字节，否则报错
 ;(with-mdb2 "esp" (destroy! :org-backup {:content {:$exists false}}))
-;(t3)
-;(update- :pn-train {:name "张文件1"} (fn [row] {:uid "pn1"}))
-;(with-oid- :en-apply "4faa19f6b920d899978c1bb2")
-;(with-mdb2 "esp" (destroy! :en-stand {:enid {:$exists true}}))
-;(update- :en-apply {:oid {:$exists true}} (fn [row] (dissoc row :oid)) :replace)
-;(update- :en-stand {:_id (object-id "4fceeaebb9207badd6a1a7a7")} (fn [r] {:uid  "en3"}))
-;(with-esp- (fetch :en-stand :where {:enid {:$exists true}}))
-;(update- :en-apply {:name "中国远洋物流公司"} (fn [r] {:enid "4f84e337b9201f14a1fe3717"}))
 ;(with-mdb2 "esp" (update! :en-apply {:uid "en1"} {:$set {:score0 989}}))
-;(update- :en-apply {:uid "en1" :type2 "11"} (fn [r] {:score0 989}))
 ;(with-esp- (fetch :en-apply :where {:type2 {:$in [11 "11"]}}))
-;(en-cert-id {:year 2011 :admin 26 :max 386})
+;(update- :pn-train {:name "张文件1"} (fn [row] {:uid "pn1"}))
+;(update- :org-apply {} (fn [r] (merge (dissoc r :qual) {:grade 1}))  :replace)
+;(en-cert-id {:year 2011 :admin 26 :max 100000})
