@@ -1,5 +1,5 @@
 (ns ^{:doc "
-  wr3的系统级service，完成登录校验，勿删！仅控制应用服务器session范围内的东西。
+  wr3的系统级公共service，完成登录校验，勿删！仅控制应用服务器session范围内的东西。
   request传入的参数一般为 ?uid=foo&pwd=bar
   session中写入的值为：wr3user, wr3role（逗号分隔的角色字符串）, wr3action（登录页面提交验证的action）, wr3url（登录后前往的页面）
   "   

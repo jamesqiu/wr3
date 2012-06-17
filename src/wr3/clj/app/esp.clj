@@ -10,7 +10,7 @@
 (use 'hiccup.core)
 (use 'wr3.clj.web 'wr3.clj.tb 'wr3.clj.s 'wr3.clj.n 'wr3.clj.chart 'wr3.clj.u)
 (use 'somnium.congomongo 'wr3.clj.nosql 'wr3.clj.chart)
-(import 'wr3.upload.FileUpload 'wr3.upload.File 'wr3.util.Charsetx)
+(import 'wr3.util.Charsetx)
 
 (require '[wr3.clj.app.auth :as au])
 
@@ -63,92 +63,12 @@
                    "not-found"))
     (index-all)))
 
-(defn- fileupload-field-
-  "文件上传相关的2个字段：（1）一个hidden字段，上传成功文件后显示文件链接；（2）一个上传按钮，弹出真正的文件选取上传； 
-  @nam 字段名称如'简历' 
-  @sid 字段id、name如'resume'
-  @v 初始赋值 
-  @m 字段的其他属性如 {:id .. :name .. :title ..}  "
-  [nam sid v m] 
-  (html 
-    (eui-text (merge m {:id sid :name sid :type "hidden" :value (or v "")}))
-    [:span (when (not (nullity? v))
-             (html [:a {:href v :target "_blank"} "查看"] (space 3)))]
-    (eui-button {:onclick (format "fileupload('%s', '%s')" (str nam) sid)} "上传文件..")))
-
-(defn- fileupload-dialog-
-  "文件上传的dialog及其js事件函数"
-  []
-  (html (eui-dialog "fileupload" {:closed "true" :href "/c/esp/fileupload"})
-        [:script "fileupload_bt()"]))
-
 ;;; 文件上传的设计：
 ;;;   js函数fileupload(name,sid)弹出对话框（传入input hidden字段中文名及对应id或name），
 ;;;   保存在 /file 下文件名为 uid-[timestamp].xx ，把该文件名传给自定义name的input hidden字段
-(defn fileupload
-  "文件上传弹出窗口的内容
-  @id 弹出窗口对应的父按钮前文件字段的id或者name"
-  []
-  (html 
-    [:form {:name "fm_fileupload" :id "fm_fileupload" :method "POST" :action (format "/c/esp/filesave") 
-            :enctype "multipart/form-data" :target "ifrm_fileupload"}
-     (eui-text {:name "f_fileupload" :id "f_fileupload" :type "file"}) 
-     (eui-tip "选择好文件后请按确定进行上传")
-     ] 
-    [:iframe {:name "ifrm_fileupload" :style "display:none"}] ))
-   
-(defn filesave
-  "文件上传form提交后的处理：1、保存文件；2、保存文件后调用js函数fileupload_ok()"
-  [request]
-  (let [fu (doto (FileUpload.) (.initialize request) .upload)
-        myfile (.getFile (.getFiles fu) 0)
-        fname0 (.getFileName myfile)
-        fsize (.getSize myfile)
-        wr3user (wr3user request)
-        fname1 (format "/file/%s-%s.%s" wr3user (System/currentTimeMillis) (rightback fname0 "."))
-        ]
-    (when (not (.isMissing myfile))
-      (do
-        (.saveAs myfile (.getRealPath request fname1)) 
-        (html-body
-          [:h1 (format "文件名: %s (大小：%s)" fname0 fsize)]
-          "文件上载完成"
-          [:script (format "parent.fileupload_ok('%s')" fname1)])))))
-
-(defn- input-form-
-  "统一录入表单，用于 pn-input, en-input, org-input 函数
-  @cfg 表单录入项的配置
-  @m 含 {:title .. :form ..} 的其他定制化参数, :title为标题，:form 为区别标识如 'en', 'pn', 'org' "
-  [cfg m]
-  (let [css-label "font-family:微软雅黑; font-size:14px; vertical-align:center; height: 35px; border-bottom:1px dotted gray"]
-    (html
-      [:form {:method "POST" :action "/c/esp/input-save"}
-       [:table {:align "left" :style "margin-left: 30px"}
-        [:caption {:style "padding: 5px"} [:h1 (m :title)]]
-        (for [[nam id {t :t v :v require :require title :title}] cfg]
-          (let [sid (name id)
-                attr {:id sid :name sid :value v :title title}]
-            [:tr 
-             [:td {:style css-label} [:label (str nam "：")]]
-             [:td {:style "border-bottom:1px dotted gray"}
-              (cond 
-                (true? require)  (eui-text     (into attr {:required "true" :style "width: 250px"}))
-                (= t 'textarea)  (eui-textarea attr v)
-                (= t 'file)      (fileupload-field- nam sid v attr)
-                (= t 'email)     (eui-email    attr)
-                (map? t)         (eui-combo    attr t)
-                (vector? t)      (eui-combo    attr (apply array-map (flatten (for [e t] [e e]))))
-                :else            (eui-text     (into attr {:style "width: 250px"})))
-              ]]))
-        [:tfoot [:tr [:td {:colspan 2 :align "center" :style "padding: 15px"} 
-                      (eui-button {:onclick (format "esp_input_save('%s')" (m :form))} " 保 存 ") (space 5)
-                      (eui-button {:onclick (format "esp_input_submit('%s')" (m :form))} "提交申请") (space 5)
-                      (eui-button {:onclick "$('form').get(0).reset()"} " 取 消 ") ]]]]]
-      (fileupload-dialog-) )))
 
 (defn- input-save-submit-
   "service: 共用函数，考评员、考评机构、企业申请表提交保存或更新
-  被 input-form- 进行ajax调用
   @id form名称如'pn' 'en' 'org' "
   [id request submit?]
   (let [vars (query-vars request)
@@ -159,8 +79,7 @@
     (with-mdb "esp" 
       (update! tb1 {:uid uid} m) ; 保存到基本信息表
       (when submit?  ; 保存到申请表 
-        (insert! tb2 (into m {:date (datetime)})))
-      )
+        (insert! tb2 (into m {:date (datetime)}))) )
     (format "已%s %s 的申请表。" (if submit? "提交" "保存") (vars "name") )))
 
 (defn input-save
@@ -238,6 +157,7 @@
                                         :_id [:a {:href (format "/c/esp/%s/%s" (:form m) v) :target "_blank"} "查看"]
                                         :_select [:input {:type "checkbox" :group "select" :sid (:_id row)}]
                                         :_issue [:a {:href (format "/c/esp/cert-issue/%s/%s" (:issue m) (:_id row)) :target "_blank"} "发证"]
+                                        :_cdate-end (date-add (:cdate row) (dd-cert-year (:type m)) 0 0)
                                         :type (or (dd-type (to-int v0)) v)
                                         :type2 (or (dd-type2 (to-int v0)) v)
                                         :grade (or (dd-grade (to-int v0)) v)
@@ -310,13 +230,22 @@
   @type :pn :en :org "
   [request type]
   (let [uid (wr3user request)
+        ntype (name type)
         cfg0 ({:pn cfg-apply-pn :en cfg-apply-en :org cfg-apply-org} type)
         nam (dd-cert type)
         r (first (with-uid- type uid))
         cfg (if r 
               (for [[n id m] cfg0] [n id (merge m (if (id r) {:v (id r)} {}))])
               cfg0)]
-    (input-form- cfg {:form (name type) :title (format "<font color=blue>%s</font> 申请表" nam)})))
+    (html
+      (input-form 
+        cfg 
+        {:title (format "<font color=blue>%s</font> 申请表" nam)
+         :buttons (html
+                    (eui-button {:onclick (format "esp_input_save('%s')" ntype)} " 保 存 ") (space 5)
+                    (eui-button {:onclick (format "esp_input_submit('%s')" ntype)} "提交申请") (space 5)
+                    (eui-button {:onclick "$('form').get(0).reset()"} " 取 消 ")) })
+      (fileupload-dialog)) ))
 
 (defn- search-field-
   "@tb :pn | :en | :org 等等
@@ -463,8 +392,9 @@
                               :value (fsetv :sum "0")}] (space 5) 
          (eui-button {:href "javascript:esp_get_score()"} "计算分数") (space 10)
          (if enid "评估报告：" "自评报告：") 
-         (fileupload-field- "自评报告" "report" (:report m) {}) (space 10)
-         (eui-button {:onclick (format "esp_stand_save(%s)" type2)} "提 交") ] (fileupload-dialog-) (repeat 10 [:br]) )))
+         (fileupload-field "自评报告" "report" (:report m) {}) (space 10)
+         (eui-button {:onclick (format "esp_stand_save(%s)" type2)} "提 交") ] 
+        (fileupload-dialog) (repeat 10 [:br]) )))
   ([type2] (stand- type2 nil {})))
 
 (defn stand
@@ -512,13 +442,7 @@
         (eui-tip (format "目前还没有%s证书，对于已有证书系统会自动提醒换证（%s年到期前3个月）。" cname y))
         (html
           [:h2 (format "目前已有的 《%s》：" cname)]
-          (for [r rs] 
-            (let [cid (:cid r)
-                  cdate (if-let [d (:cdate r)] d (str (subs cid 0 4) "-1-1"))
-                  cdate-end (date-add (:cdate r) y -3 0)]
-            (html (eui-button {:href (format "/c/esp/docv/%s/%s" (name tb) (:_id r)) :target "_blank"}
-                              (format "证书号：%s" cid)) (space 5)
-                  (format "发证时间：%s，换证时间：<u><b>%s</b></u>" cdate cdate-end [:br] )))))))))
+          (result-html- rs [] [:cid :cdate :_cdate-end :_id] {:type tb :form (str "docv/" id)}) )))))
 
 (defn cert-renew-resp
   "service: 主管机关对考评员、考评机构、企业的换证申请受理
@@ -547,6 +471,24 @@
                               {:form "docv/org-apply" :issue "org-apply"}))
         nil) )))
 
+(defn- has-digit4- [n] (some #(= \4 %) (str n)))
+
+(defn- cert-sid 
+  "得到en、org证书下一个序号，根据目前最后一个序列号，得到下一个不含'4'的序列号（6位左补零）。 例子：
+  (cert-sid 444444) ; 500000
+  (take 1000 (iterate cert-sid 1)) ; (1 2 3 5 6 7 8 9 10 11 12 13 15 ..) "
+  [max] (let [sid (find-first #(not (has-digit4- %)) (iterate inc (inc max)))]
+          (if (<= sid 999999) sid (cert-sid 0))))
+
+(defn- cert-id
+  "生成en、org的达标证书和资质证书号，形如yyyy-ta-xxxxxx"
+  ([m]
+    (let [year (or (:year m) (year))
+          admin (or (:admin m) "01")
+          max (or (:max m) 0)]
+      (format "%s-%s-%06d" year admin (cert-sid max))))
+  ([] (cert-id nil)))
+
 (defn cert-issue
   "制发证书
   @ids ids[0] typ 'en-apply' 'org-apply' 'pn-apply'; ids[1] xx-apply表中文档的object-id字符串 "
@@ -556,7 +498,7 @@
         r (with-oid- tb oid)
         type-dd ({:en-apply dd-type2 :org-apply dd-type} tb)
         type-value ({:en-apply (:type2 r) :org-apply (:type r)} tb)
-        fields [["证书编号" "cid" (en-cert-id {:admin (:admin r)})]
+        fields [["证书编号" "cid" (cert-id {:admin (:admin r)})]
                 ["有效期开始日期" "date" (date)]
                 ["名称" "name" (:name r)]
                 ["类型类别" "type" (get type-dd (to-int type-value))]
@@ -613,10 +555,10 @@
       [:h1 (year) " 年度工作报告"]
       [:form {:method "POST" :action "/c/esp/report-save"}
        [:label "年度报告："]
-       (fileupload-field- "年度工作报告" sid (:freport r) {})
+       (fileupload-field "年度工作报告" sid (:freport r) {})
        [:br][:br]
        (eui-button {:onclick (format "esp_report_save('%s')" tb-report)} "保 存") (space 5) ]
-      (fileupload-dialog-)
+      (fileupload-dialog)
       [:h2 "已经上传的所有年度工作报告："]
       (result-html- rs '["年度" "上报时间" "查看"] [:year :date :freport]) )))
 
@@ -782,24 +724,6 @@
       (eui-button {:onclick f-yes :iconCls "icon-ok"} s-yes) (space 10)
       (eui-button {:onclick f-no :iconCls "icon-cancel"} s-no) br2 br2 )))
 
-
-(defn- has-digit4- [n] (some #(= \4 %) (str n)))
-
-(defn- en-cert-sid 
-  "根据目前最后一个序列号，得到下一个不含'4'的序列号。 例子：
-  (en-cert-sid 444444) ; 500000
-  (take 1000 (iterate en-cert-sid 1)) ; (1 2 3 5 6 7 8 9 10 11 12 13 15 ..) "
-  [max] (let [sid (find-first #(not (has-digit4- %)) (iterate inc (inc max)))]
-          (if (<= sid 999999) sid (en-cert-sid 0))))
-
-(defn- en-cert-id
-  "生成企业的达标证书号"
-  ([m]
-    (let [year (or (:year m) (year))
-          admin (or (:admin m) "01")
-          max (or (:max m) 0)]
-      (format "%s-%s-%06d" year admin (en-cert-sid max))))
-  ([] (en-cert-id nil)))
 
 ;;;-------------------------------------------------------------------------------------------------------- pn  考评员
 (def pn---------- nil)
@@ -1404,4 +1328,4 @@
 ;(with-esp- (fetch :en-apply :where {:type2 {:$in [11 "11"]}}))
 ;(update- :pn-train {:name "张文件1"} (fn [row] {:uid "pn1"}))
 ;(update- :org-apply {} (fn [r] (merge (dissoc r :qual) {:grade 1}))  :replace)
-;(en-cert-id {:year 2011 :admin 26 :max 100000})
+;(cert-id {:year 2011 :admin 26 :max 100000})

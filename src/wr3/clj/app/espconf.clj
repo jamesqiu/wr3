@@ -270,6 +270,7 @@
    :_id "详情"
    :_issue "证书"
    :_select "选择"
+   :_cdate-end "证书到期日"
    :admin "主管机关"
    :advice "处理意见"
    :advice-eval "考评意见"
@@ -446,7 +447,7 @@
 (def cfg-apply-en ; en-input-form 
   [
    ["企业名称" :name {:require true :v "xxx"}]
-   ["申请等级" :grade {:t dd-en-grade :v 1}]
+   ["申请等级" :grade {:t dd-grade :v 1}]
    ["法人代表" :legalp]
    ["生产经营类别" :type2 {:t dd-type2 :v "s1" :title "可多选"}]
    ["主管机关" :admin {:t dd-admin :title "一级不用选（部）；二级选34个机构；三级选二级、三级机构；每个类型对应自己的主管机关"}]

@@ -2859,10 +2859,10 @@ function esp_report_save(form) {
 //------------------------ 3个通用函数：文件上传。@see esp.clj/fileupload, esp.clj/filesave
 /**
  * 打开进行文件上传的一个dialog
- * @param nam 字段中文名
- * @param sid "hidden字段id或name"
+ * @param nam 文件上传字段的中文名
+ * @param sid 保存文件上传结果（全文件url）的"hidden"字段的id或name
  */
-function fileupload(nam, sid) {
+function fileupload_dlg_open(nam, sid) {
 	// 标记hidden字段的属性 uploading="1"，第一次增加该属性，之后改变；一个页面有多个上传按钮时还可标记识别
 	$('form input[uploading="1"]').attr('uploading', "0")
 	$('form input[name="'+sid+'"]').attr('uploading', '1')
@@ -2873,7 +2873,7 @@ function fileupload(nam, sid) {
 		alert('请先处理完已经打开的上传文件对话框！')
 	} else {
 		dlg.dialog1('open').dialog1('setTitle', '请选择本地'+nam+'文件进行上传：')
-			.dialog1('refresh', '/c/esp/fileupload')
+			.dialog1('refresh', '/c/pub/fileupload')
 	}
 }
 
@@ -3134,4 +3134,29 @@ function esp_pn_train_save(uid) {
 function esp_backup(tb, oid) {
 	var url = '/c/esp/backup-resp-save/'+tb+'/'+oid+'?advice='+textarea_val('advice')
 	ajax_post(url)
+}
+
+/**
+ * BJCA 提交前验证
+ * @returns {Boolean}
+ */
+function LoginForm_onsubmit() {
+	alert('onsubmit')
+	var ret;
+	var strContainerName = LoginForm.UserList.value;
+	var strPin = LoginForm.UserPwd.value;
+	if(strPin.length<4||strPin.length>16){
+		alert("密码长度应该在4-16位之间");
+		return false;
+	}
+	ret = XTXAPP.AddSignInfo(strPin);
+	//ret = Login(LoginForm,strContainerName,strPin);
+	LoginForm.UserPwd.value = "";
+	LoginForm.strRandom.value='NDYxNjY1NTEwNzc0NTk1NTM4NTcxOTY0';
+	alert('ret='+ret)
+	if(!ret) {
+		return false;
+	} else {
+		return true;
+	}
 }

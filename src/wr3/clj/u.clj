@@ -155,10 +155,19 @@
   `(println (or (source-fn2 '~n) (str "Source not found"))))
 
 (defmacro debug 
-  "打印变量名及其值"
+  "打印多个变量名及其值 (debug v1 v2 v3) "
   ([v] `(println "------" '~v ":" ~v))
-  ([v1 v2] `(println "-----" '~v1 ":" ~v1 "," '~v2 ":" ~v2))
-  ([v1 v2 v3] `(println "-----" '~v1 ":" ~v1 "," '~v2 ":" ~v2 "," '~v3 ":" ~v3)))
+  ([v & next]
+    `(let [m1# ~v]
+       (when m1# (do (debug ~v) (debug ~@next)) ) )))
+
+(defmacro debug-str
+  "打印多个变量名及其值到字符串，如 (debug-vs v1 v2 v3) "
+  ([v] `(str '~v ":" ~v "\n"))
+  ([v & next]
+    `(let [m1# ~v]
+       (when m1# (str (debug-str ~v) (debug-str ~@next)) ) )))
+
 
 (defn ?
   "如果v非nil则返回v，为nil则返回default。

@@ -597,3 +597,57 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
     (frame-foot cfg) ))
   
 ;---------------------------------- eui frame layout (-end-)
+
+(defn fileupload-field
+  "文件上传相关的2个字段：（1）一个hidden字段，上传成功文件后显示文件链接；（2）一个上传按钮，弹出真正的文件选取上传； 
+  @nam 字段名称如'简历' 
+  @sid 字段id、name如'resume'
+  @v 初始赋值 
+  @m 字段的其他属性如 {:id .. :name .. :title ..}  "
+  [nam sid v m] 
+  (html 
+    (eui-text (merge m {:id sid :name sid :type "hidden" :value (or v "")}))
+    [:span (when (not (nullity? v))
+             (html [:a {:href v :target "_blank"} "查看"] (space 3)))]
+    (eui-button {:onclick (format "fileupload_dlg_open('%s', '%s')" (str nam) sid)} "上传文件..")))
+
+(defn fileupload-dialog
+  "生成初始不可见的文件保存对话框的html，由上传按钮的 js 函数唤出。"
+  []
+  (html (eui-dialog "fileupload" {:closed "true" :href "/c/pub/fileupload"})
+        [:script "fileupload_bt()"]))
+
+(defn input-form
+  "统一录入表单，根据如cfg文件来确定字段。 
+  @cfg 表单录入项的配置，['字段显示字符串' :字段名称 {字段属性}]：
+    [ [\"字段Label\" :field-name {:require true :t 'file :title \"字段说明\"}]
+      [\"性别\" :sex {:t [\"男\" \"女\"]}] ...]
+    字段属性中：:require true/false 表示是否必填
+                :t 表示类型，不写表示text，vector和map表示下拉列表，其他特殊：'textarea 'file 'email
+  @m 含 {:action :title :buttons :others ..} 的其他定制化参数, 
+    :action为执行保存的url；
+    :title为标题，
+    :buttons 为提交保存取消等自定义按钮 
+    :others 其他自定义属性
+  注意：如果有{:t 'file}的字段，记着在后面放置 (fileupload-dialog)  "
+  [cfg m]
+  (let [css-label "font-family:微软雅黑;font-size:14px;vertical-align:center;height:35px;border-bottom:1px dotted gray"]
+    (html
+      [:form {:method "POST" :action (:action m)}
+       [:table {:align "left" :style "margin-left: 30px"}
+        [:caption {:style "padding: 5px"} [:h1 (m :title)]]
+        (for [[nam id {t :t v :v require :require title :title}] cfg]
+          (let [sid (name id)
+                attr {:id sid :name sid :value v :title title}]
+            [:tr 
+             [:td {:style css-label} [:label (str nam "：")]]
+             [:td {:style "border-bottom:1px dotted gray"}
+              (cond 
+                (true? require)  (eui-text     (into attr {:required "true" :style "width: 250px"}))
+                (= t 'textarea)  (eui-textarea attr v)
+                (= t 'file)      (fileupload-field nam sid v attr)
+                (= t 'email)     (eui-email    attr)
+                (map? t)         (eui-combo    attr t)
+                (vector? t)      (eui-combo    attr (apply array-map (flatten (for [e t] [e e]))))
+                :else            (eui-text     (into attr {:style "width: 250px"}))) ]]))
+        [:tfoot [:tr [:td {:colspan 2 :align "center" :style "padding: 15px"} (:buttons m) ]]]]] )))

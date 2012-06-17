@@ -8,7 +8,6 @@ var bgcolor="DDDDDD"; //背景色
 
 //可编辑内容结束
 
-
 var pics="", mylinks="", texts="";
 pics='images/01.jpg|images/02.jpg|images/03.jpg|images/04.jpg|images/05.jpg'
-mylinks='#|#|#|#|#';
+mylinks='http://www.mot.gov.cn/zhuzhan/ft2012/biaozhunjianshe/ |http://www.mot.gov.cn/zizhan/siju/anquanjiandusi/fengcaijijin/201008/t20100831_722931.html |http://gotoreal.com/tmp/ |http://gotoreal.com/tmp/ |http://gotoreal.com/tmp/';
