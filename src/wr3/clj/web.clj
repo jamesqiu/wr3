@@ -633,7 +633,7 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   [cfg m]
   (let [css-label "font-family:微软雅黑;font-size:14px;vertical-align:center;height:35px;border-bottom:1px dotted gray"]
     (html
-      [:form {:method "POST" :action (:action m)}
+      [:form {:id "fm1" :method "POST" :action (:action m)}
        [:table {:align "left" :style "margin-left: 30px"}
         [:caption {:style "padding: 5px"} [:h1 (m :title)]]
         (for [[nam id {t :t v :v require :require title :title}] cfg]

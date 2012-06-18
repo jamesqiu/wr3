@@ -3080,7 +3080,7 @@ function esp_mot_en_apply(oid, yes_or_no) {
 }
 
 /**
- * mot处理企业申请
+ * mot处理en,org,en申请
  * @type "pn" "org" "en"
  * @oid 文档object-id
  * @yes_or_no 'yes' or 'no'

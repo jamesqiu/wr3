@@ -156,7 +156,10 @@
                                       (case col
                                         :_id [:a {:href (format "/c/esp/%s/%s" (:form m) v) :target "_blank"} "查看"]
                                         :_select [:input {:type "checkbox" :group "select" :sid (:_id row)}]
-                                        :_issue [:a {:href (format "/c/esp/cert-issue/%s/%s" (:issue m) (:_id row)) :target "_blank"} "发证"]
+                                        :_issue [:a {:href (case (:issue m)
+                                                             "pn-apply" (format "/c/esp/cert-issue-pn/%s" (:_id row))
+                                                             (format "/c/esp/cert-issue/%s/%s" (:issue m) (:_id row)))
+                                                     :target "_blank"} "发证"]
                                         :_cdate-end (date-add (:cdate row) (dd-cert-year (:type m)) 0 0)
                                         :type (or (dd-type (to-int v0)) v)
                                         :type2 (or (dd-type2 (to-int v0)) v)
@@ -428,12 +431,13 @@
     "已经保存"))
   
 (defn cert-renew
-         "service：考评员、考评机构、企业的证书换证
+  "service：考评员、考评机构、企业的证书换证
   @id 'pn' 'org' 'en' 转换为:pn :org :en "
   [id request]
   (let [tb (keyword id)
+        tb-apply (keyword (str id "-apply"))
         uid (wr3user request)
-        rs (with-esp- (fetch tb :where {:uid uid :cid {:$exists true}}))
+        rs (with-esp- (fetch tb-apply :where {:uid uid :cid {:$exists true}}))
         y (case tb :pn 5 :org 5 :en 3 1) ; 有效期年份
         cname (dd-cert tb)]
     (html
@@ -442,7 +446,22 @@
         (eui-tip (format "目前还没有%s证书，对于已有证书系统会自动提醒换证（%s年到期前3个月）。" cname y))
         (html
           [:h2 (format "目前已有的 《%s》：" cname)]
-          (result-html- rs [] [:cid :cdate :_cdate-end :_id] {:type tb :form (str "docv/" id)}) )))))
+          (result-html- rs [] [:cid :cdate :_cdate-end :_id] {:type tb :form (str "cert-renew-doc/" id)}) )))))
+
+(defn cert-renew-doc
+  "app: pn、en、org显示换证操作
+  @ids ids[0]: 'pn','org','en'; ids[1]: object-id "
+  [ids]
+  (let [[id oid] ids
+        tb (keyword (str id "-apply"))]
+  (doc- tb oid 
+        {:after (html [:br](eui-tip "请注意填写标注与换证相关的内容！") [:br]
+                      (eui-button {:href (format "/c/esp/cert-renew-input/%s" id)} "申请换证") )})))
+
+(defn cert-renew-input
+  ""
+  [id request]
+  (html-body (apply-input- request (keyword id))))
 
 (defn cert-renew-resp
   "service: 主管机关对考评员、考评机构、企业的换证申请受理
@@ -469,58 +488,106 @@
         "org" (let [rs (with-esp- (fetch :org-apply :where {:resp "yes"}))]
                 (result-html- rs [] [:name :resp :respdate :_id :_issue] 
                               {:form "docv/org-apply" :issue "org-apply"}))
+        "pn" (let [rs (with-esp- (fetch :pn-apply :where {:resp "yes"}))]
+               (result-html- rs [] [:name :resp :respdate :_id :_issue]
+                             {:form "docv/pn-apply" :issue "pn-apply"}))
         nil) )))
 
 (defn- has-digit4- [n] (some #(= \4 %) (str n)))
-
-(defn- cert-sid 
-  "得到en、org证书下一个序号，根据目前最后一个序列号，得到下一个不含'4'的序列号（6位左补零）。 例子：
-  (cert-sid 444444) ; 500000
-  (take 1000 (iterate cert-sid 1)) ; (1 2 3 5 6 7 8 9 10 11 12 13 15 ..) "
+(defn- cert-sid-max 
+  "得到保存在:cert表中的最大证书号。
+  @id :pn :en :org 
+  @admin 主管机关代码如：'01' '02' '34' "
+  [id admin]
+  (if-let [r (with-mdb2 "esp" (fetch-one :cert :where {:sid (name id) :admin admin}))]
+    (:max r) 0))
+  
+(defn- cert-sid-next 
+  "得到pn、en、org证书下一个序号，根据目前最后一个序列号，得到下一个不含'4'的序列号（6位左补零）。 例子：
+  (cert-sid-next 444444) ; 500000
+  (take 1000 (iterate cert-sid-next 1)) ; (1 2 3 5 6 7 8 9 10 11 12 13 15 ..) "
   [max] (let [sid (find-first #(not (has-digit4- %)) (iterate inc (inc max)))]
-          (if (<= sid 999999) sid (cert-sid 0))))
+          (if (<= sid 999999) sid (cert-sid-next 0))))
 
 (defn- cert-id
-  "生成en、org的达标证书和资质证书号，形如yyyy-ta-xxxxxx"
+  "生成en、org的达标证书和资质证书号，形如yyyy-ta-xxxxxx
+  @m {:year 2005 :admin '01' :max 0 :type 1} 
+    其中:year 发证年份，:admin 主管机关，:max 当前最大号，:type证书类型参数只有pn才有，表明业务大类型"
   ([m]
     (let [year (or (:year m) (year))
           admin (or (:admin m) "01")
-          max (or (:max m) 0)]
-      (format "%s-%s-%06d" year admin (cert-sid max))))
+          max (or (:max m) 0)
+          sid (cert-sid-next max)]
+      (if-let [type (:type m)]
+        (format "%s-%s-%s-%06d" year type admin sid)
+        (format "%s-%s-%06d" year admin sid))))
   ([] (cert-id nil)))
 
+(defn cert-issue-pn
+  "pn制发证书
+  @id xx-apply表中文档的object-id字符串 "
+  [id request]
+  (let [r (with-oid- :pn-apply id)
+        uid (:uid r)
+        max (cert-sid-max :pn (:admin r))
+        cfg [["姓 名" :name {:v (:name r)}]
+             ["身份证号" :pid {:v (:pid r)}]
+             ["证书号" :cid {:v (cert-id {:admin (:admin r) :type (:type r) :max max})}]
+             ["有效期开始日期" :date {:v (date)}] ]] 
+    (html-body
+      (input-form cfg {:action (str "/c/esp/cert-print-pn/" id)
+                       :title (format "【%s】内容" (dd-cert :pn))
+                       :buttons (html [:input {:name "uid" :type "hidden" :value uid}]
+                                      (eui-button {:onclick "$('#fm1')[0].reset()"} "重置") (space 10)
+                                      (eui-button {:onclick "$('#fm1').submit()" :iconCls "icon-ok"} "确定发放证书"))}) )))
+
+(defn cert-print-pn
+  "打印/保存证书"
+  [id request]
+  (let [vars (query-vars2 request)
+        cid (:cid vars)
+        date (:date vars)
+        [year type admin sid] (split cid "-")]
+    (with-mdb2 "esp" (update! :cert {:sid "pn" :admin admin} {:$set {:max (to-int sid)}})) ; 更新max值
+    (update- :pn-apply {:_id (object-id id)} (fn [r] {:cid cid :cdate date})) 
+    (html-body
+      [:h1 "已发证书：" [:font {:color "blue"} cid]][:br][:br]
+      (eui-button {:href "#" :onclick "window.close();"} "关闭") )))
+
 (defn cert-issue
-  "制发证书
-  @ids ids[0] typ 'en-apply' 'org-apply' 'pn-apply'; ids[1] xx-apply表中文档的object-id字符串 "
+  "en, org制发证书
+  @ids ids[0] typ 'en-apply' 'org-apply' ; ids[1] en-apply或者org-apply表中文档的object-id字符串 "
   [ids request]
   (let [[apply-type oid] ids
-        tb (keyword apply-type)
+        tb (keyword apply-type) ; :en-apply :org-apply 
         r (with-oid- tb oid)
-        type-dd ({:en-apply dd-type2 :org-apply dd-type} tb)
-        type-value ({:en-apply (:type2 r) :org-apply (:type r)} tb)
-        fields [["证书编号" "cid" (cert-id {:admin (:admin r)})]
-                ["有效期开始日期" "date" (date)]
-                ["名称" "name" (:name r)]
-                ["类型类别" "type" (get type-dd (to-int type-value))]
-                ["达标/资质等级" "grade" (dd-grade (to-int (:grade r)))]]]
+        max (cert-sid-max (left apply-type "-") (:admin r))
+        uid (:uid r)
+        type-dd (if (= tb :en-apply) dd-type2 dd-type)
+        type-value (if (= tb :en-apply) (:type2 r) (:type r)) 
+        cfg [["证书编号" :cid {:v (cert-id {:admin (:admin r) :max max})}]
+             ["有效期开始日期" :date {:v (date)}]
+             ["名称" :name {:v (:name r)}]
+             ["类型类别" :type {:v (get type-dd (to-int type-value))}]
+             ["达标/资质等级" "grade" {:v (dd-grade (to-int (:grade r)))}]
+             ["正本/副本选择" :copy {:t {"正本" "—— 打印正本 ——" "副本" "—— 打印副本 ——"}}]] ]
     (html-body 
       (eui-tip "提示：1、请核查内容是否有误；2、打印一正三副；3、请在打印机设置中调整至A3、合适的页边距后保存设置。")
-      [:form#fm1 {:action "/c/esp/cert-print" :method "post"}
-       [:table.wr3table {:border 1} [:caption (format "【%s】证书内容" (dd-form tb)) ]
-        (for [[s nam v] fields]
-          [:tr [:th {:style "text-align:left"} s "："] 
-           [:td (eui-text {:name nam :value v :style "width:300px"})]]) ] [:br][:br]
-       [:input {:name "apply-type" :type "hidden" :value apply-type}]
-       [:label "正本/副本选择："](eui-combo {:name "copy"} {"正本" "—— 打印正本 ——" "副本" "—— 打印副本 ——"} ) [:br][:br] 
-       (eui-button {:onclick "$('#fm1')[0].reset()"} "重置") (space 10)
-       (eui-button {:onclick "$('#fm1').submit()"} "查看、打印证书")])))
+      (input-form cfg {:action (str "/c/esp/cert-print/" oid)
+                       :title (format "【%s】证书内容" (dd-form tb))
+                       :buttons (html [:input {:name "apply-type" :type "hidden" :value apply-type}]
+                                      (eui-button {:onclick "$('#fm1')[0].reset()"} "重置") (space 10)
+                                      (eui-button {:onclick "$('#fm1').submit()"} "查看、打印证书") ) }) )))
 
 (defn cert-print
   "查看打印操作"
-  [request]
+  [id request]
   (let [vars (query-vars2 request)
-        apply-type (:apply-type vars)
+        apply-type (:apply-type vars) ; "en-apply" "org-apply
+        en-org (left apply-type "-") ; "en" "org"
+        cid (:cid vars)
         date (:date vars)
+        [year admin sid] (split cid "-")
         date-end (date-add date 3 0 0)
         copy (:copy vars)
         css1 "position:absolute;left:%d;top:%d;font-size:19pt"
@@ -528,6 +595,8 @@
         css3 "position:absolute;left:%d;top:%d;font-size:20pt;width:230px"
         css4 "position:absolute;left:%d;top:%d;font-size:51pt;color:#9fa0a0"
         f (fn [css x y] {:style (format css x y)}) ]
+    (with-mdb2 "esp" (update! :cert {:sid en-org :admin admin} {:$set {:max (to-int sid)}})) ; 更新max值
+    (update- (keyword apply-type) {:_id (object-id id)} (fn [r] {:cid cid :cdate date})) 
     (html
       [:body {:style "margin:0px; font-family: 宋体; font-size:21pt"}
        [:div {:style (format "background:url('/img/esp/cert-%s.jpg');border:1px solid red;width:1654px;height:1169px"
@@ -1311,7 +1380,8 @@
        [:label [:b "举报人信息等："]] (eui-textarea {:name "info"} "姓 名：\n身份证号：\n联系方式：\n\n其 他：\n") [:br][:br]
        [:label [:b "填写举报内容："]] (eui-textarea {:name "content" :style "width: 500px; height: 300px"} "") [:br][:br]
        [:label [:b "选择主管机关："]] (eui-combo {:name "admin"} dd-admin) [:br][:br]
-       (eui-button {:onclick "esp_hot_submit()"} "提 交")] )))
+       (eui-button {:onclick "esp_hot_submit()"} "提 交")] 
+      [:script "document.title='举报热线'"])))
   
 (defn hot-save
   "app: "
@@ -1323,9 +1393,11 @@
   
 ;;------------------------------------------------- test
 ;--- 注：文件大小不能大于64k字节，否则报错
-;(with-mdb2 "esp" (destroy! :org-backup {:content {:$exists false}}))
+;(with-mdb2 "esp" (destroy! :cert {:cdate "2012-6-18"}))
 ;(with-mdb2 "esp" (update! :en-apply {:uid "en1"} {:$set {:score0 989}}))
 ;(with-esp- (fetch :en-apply :where {:type2 {:$in [11 "11"]}}))
 ;(update- :pn-train {:name "张文件1"} (fn [row] {:uid "pn1"}))
-;(update- :org-apply {} (fn [r] (merge (dissoc r :qual) {:grade 1}))  :replace)
-;(cert-id {:year 2011 :admin 26 :max 100000})
+;(update- :cert {:cid "2012-5-01-000003"} (fn [r] {:uid "pn2"}))
+;(cert-id {:year 2011 :admin "26" :max 1 :type 2})
+;(insert- :cert {:sid "pn" :admin "02" :max 0})
+;(cert-sid-max :pn "01")
