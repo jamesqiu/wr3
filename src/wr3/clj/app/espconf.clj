@@ -13,6 +13,11 @@
 ;; :menu            2层菜单条，位于上方
 ;; :left-or-right   "left" or "right"
 
+
+(defn title- 
+  "设置浏览器的title"
+  [s] [:script (format "document.title='%s'" s)])
+
 ;; 交通运输主管部门界面配置
 (def cfg-frame-mot
   {:name "esp"
@@ -69,6 +74,8 @@
           ["使用帮助"          "icon-help"   "help_bt"]
           ]
          ]   
+   :frame-main (html [:h2 "主管机关用户主界面"]
+                     (title- "主管机关管理系统（试行）"))
    })
 
 ;; 考评员界面配置
@@ -84,7 +91,8 @@
           ["使用帮助" "icon-help" "pn-help" "/static/esp/about-pn.html"]
           ]
          ] 
-   :frame-main (html [:script "layout_load_center('/static/esp/about-pn.html')"])
+   :frame-main (html [:script "layout_load_center('/static/esp/about-pn.html')"]
+                     (title- "考评员在线申请系统（试行）"))
    })
 
 ;; 考评机构界面配置
@@ -115,6 +123,8 @@
           ["考评情况汇总表" "icon-list" "org-en-eval"] 
           ]
          ]   
+   :frame-main (html [:h2 "考评机构用户主界面"]
+                     (title- "考评机构管理系统（试行）"))
    })
 
 ;; 交通运输企业界面配置
@@ -133,6 +143,8 @@
           ["申请换证" "icon-list"    "cert-renew/en"] 
           ]
          ]   
+   :frame-main (html [:h2 "交通运输企业用户主界面"]
+                     (title- "企业在线填报管理系统（试行）"))
    })
 
 ; 主界面子系统菜单
