@@ -18,6 +18,7 @@
 (defn auth
   "该函数被 CljServlet 调用，用于本应用各函数的权限控制 "
   [request fname ids & args]
+  (println "---" (.getHeader request "User-Agent"))
   (let [uid (wr3user request) 
         role (wr3role request)
         id (first ids)]

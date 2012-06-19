@@ -569,4 +569,29 @@ form.app input[type=text] {
 	background-color: #036;
 }
 
+/*--------------- 用于登录页面 -----------------*/
+.login_body {
+	background-image: url("/img/idp-main.png");
+	background-repeat: no-repeat;
+	background-position: center;
+	background-attachment: fixed;
+}
 
+.login_form {
+	border: 1px solid #1861ae;
+	font-family: Consolas,宋体;
+	font-size: 14px;
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	background-color: #1861ae;
+	color: lightgray;
+	margin-left: -110px;
+	margin-top: -20px;
+	padding: 5px;
+}
+
+.login_form input {
+	font-size: 14px;
+	margin: 3px;
+}

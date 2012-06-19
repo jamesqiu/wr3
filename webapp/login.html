@@ -6,46 +6,21 @@
 <script type="text/javascript" src="/js/login.js"></script>
 
 <style>
-body {
-	background-image: url("/img/idp-main.png");
-	background-repeat: no-repeat;
-	background-position: center;
-	background-attachment: fixed;
-}
-
-form {
-	border: 1px solid #1861ae;
-	font-family: Consolas,宋体;
-	font-size: 14px;
-	position: absolute;
-	left: 50%;
-	top: 50%;
-	background-color: #1861ae;
-	color: lightgray;
-	margin-left: -110px;
-	margin-top: -20px;
-	padding: 5px;
-}
-
-form input {
-	font-size: 14px;
-	margin: 3px;
-}
-
+/*-- 样式 .login_body .login_form 在main.css中定义 --*/
 form input[name='wr3user'] {
 	color: gray;
 }
 </style>
 
 </head>
-<body>
+<body class="login_body">
 	<script>
 		if (window.top.location.href.search(/\/login\.html$/) == -1)
 			window.top.location.href = '/login.html';
 	</script>
 	
 	<img src="/img/idp-webfirst.png" style="position: absolute; top: 50%; left: 50%; margin-top: -80px; margin-left: -110px;" />
-	<form id="fm1" class="ui-corner-all" method="post" action="." onsubmit="return check();" style="vertical-align: middle">
+	<form id="fm1" class="login_form ui-corner-all" method="post" action="." onsubmit="return check();" style="vertical-align: middle">
 		用 户 : <input name="uid" type="text" value="在此输入用户名" class="ui-corner-all"></input> <br /> 
 		密 码 : <input name="pwd" type="password" value="" class="ui-corner-all"></input> <br />
 		<p align="center" style="padding: 6px">

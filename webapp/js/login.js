@@ -1,8 +1,14 @@
 /**
- * .js file for index.html 
- * @see ../index.html 
+ * .js file for login.html 
+ * @see ../login.html 
  */
 $(function() {
+	// 如果要验证的是esp应用，并且是ie，跳到UKey验证页面
+	$.get("/c/auth/url", function(data) {
+		if ((data.indexOf('/c/esp/')==0) && ($.browser.msie)) {
+			window.top.location.href = '/c/espreg/ca';
+		}
+	})
 
 	// 便于输入用户名和密码
 	$('input[name="uid"]').select().change(function() {
@@ -26,7 +32,7 @@ $(function() {
 	$.ajaxSetup({cache:false})
 	$.get("/c/auth/who", function(data) {
 		var json = $.parseJSON(data)
-		var who = (data==null) ?  "尚未登录！" : ("当前用户："+json.uid+"("+json.name+")")
+		var who = (json==null) ?  "尚未登录！" : ("当前用户："+json.uid+"("+json.name+")")
 		$('#wr3user').text(who)
 	})
 });

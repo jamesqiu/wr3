@@ -10,9 +10,9 @@
      (defn foo [name age] ...) 
        -- foo函数自动获取到name=james, age=30这两个值；也可以有3个自动绑定的名称(id ids request)：
      (defn foo [id ids request name age] ...) 
-       -- foo函数自动获取到 id=01, ids='(01 012), request=request, name=james, age=30
+       -- foo函数自动获取到 id=01, ids='(01 012), request=request, name=james, age=30 
       "}
-  wr3.clj.CljServlet
+     wr3.clj.CljServlet
   (:gen-class 
     :extends javax.servlet.http.HttpServlet))
 

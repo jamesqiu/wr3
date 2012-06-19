@@ -78,6 +78,5 @@
     (html-body
       (map #(html [:div (:name %) ": " [:br] "--- " (:doc %)]) docs))
     ))
-
 ;(ok? "user" "pass")
     

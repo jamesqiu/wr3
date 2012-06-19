@@ -2839,6 +2839,7 @@ function esp_search(v, n) {
 function esp_onload() {
 	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
 	app_linkbutton_css() // 所有link按钮点击后字变红色
+//	alert($.browser.mozilla) // msie opera safari
 }
 
 function esp_input_save(form) {
@@ -3141,7 +3142,6 @@ function esp_backup(tb, oid) {
  * @returns {Boolean}
  */
 function LoginForm_onsubmit() {
-	alert('onsubmit')
 	var ret;
 	var strContainerName = LoginForm.UserList.value;
 	var strPin = LoginForm.UserPwd.value;
@@ -3153,7 +3153,6 @@ function LoginForm_onsubmit() {
 	//ret = Login(LoginForm,strContainerName,strPin);
 	LoginForm.UserPwd.value = "";
 	LoginForm.strRandom.value='NDYxNjY1NTEwNzc0NTk1NTM4NTcxOTY0';
-	alert('ret='+ret)
 	if(!ret) {
 		return false;
 	} else {

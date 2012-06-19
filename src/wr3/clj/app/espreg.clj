@@ -49,17 +49,21 @@
         strRandom (.genRandom sed 24)
         sr (session! request "Random" strRandom) ]
     (html-body
-      [:h1 "strRandom(session:Random)=" strRandom]
-      [:form {:method "post" :ID "LoginForm" :name "LoginForm" :action "/c/espreg/ca-submit"
+      {:class "login_body"}
+      [:img {:src "/img/idp-webfirst.png" :style "position: absolute; top: 50%; left: 50%; margin-top: -80px; margin-left: -110px;"}]
+      [:form {:method "post" :ID "LoginForm" :name "LoginForm" :action "/c/espreg/ca-submit" :class "login_form ui-corner-all"
               :onsubmit "return LoginForm_onsubmit()"}
-       [:table
-        [:tr [:td "选择证书"] [:td [:select {:id "UserList" :name "UserList" :style "width:200px"}]]]
-        [:tr [:td "选择口令"] [:td [:input {:id "UserPwd" :name "pwd1" :type "password" :size 16 :maxlength 16}]]]
-        [:tr [:td {:colspan 2} [:input {:type "submit" :value "提交"}]]] ]
+       [:center [:div {:style "color:yellow;margin-bottom:9px"} "提示：请先将系统专用UKey证书插入计算机USB口。"]]
+       "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:200px" :class "ui-corner-all"} ""] [:br]
+       "选择口令：" [:input {:id "UserPwd" :name "pwd1" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
+       [:p {:align "center" :style "padding:6px"}
+        [:input {:type "submit" :value " 提 交 " :class "ui-state-default ui-corner-all" :style "font-weight:bold;color:green"}]]
+       [:center [:img {:alt "nasoft" :src "/img/nasoft-rnd.png"}]]
        [:input {:type "hidden" :ID "UserSignedData" :name "UserSignedData"}]
        [:input {:type "hidden" :ID "UserCert" :name "UserCert"}]
        [:input {:type "hidden" :ID "ContainerName" :name "ContainerName"}]
        [:input {:type "hidden" :ID "strRandom" :name "strRandom"}] ]
+      [:script "document.title='标准化系统证书登录' "]
       activex)))
 
 (def dd-retValue
@@ -88,7 +92,8 @@
     (html-body
       (str vars)[:hr]
       (str (replace-all (debug-str sed clientCert UserSignedData certPub ranStr retValue uniqueIdStr uniqueId signedByte rt) 
-                        "\n" "<br/>")) )))
+                        "\n" "<br/>")) 
+      )))
 
 ;(defmacro and
 ;  ([] true)
@@ -96,8 +101,3 @@
 ;  ([x & next]
 ;   `(let [and# ~x]
 ;      (if and# (and ~@next) and#))))
-
-(def v1 10)
-(def v2 20)
-(def v3 30)
-(print (let [v1 100 v2 200 v3 300] (debug-str v1 v2 v3)))
