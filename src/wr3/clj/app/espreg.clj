@@ -101,3 +101,8 @@
 ;  ([x & next]
 ;   `(let [and# ~x]
 ;      (if and# (and ~@next) and#))))
+
+; 00359131-X 00002106-3
+;(import wr3.bank.OrgID)
+;(OrgID/toid "00359131")
+;(OrgID/isid "00359131-X")
