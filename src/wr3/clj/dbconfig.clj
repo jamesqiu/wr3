@@ -37,7 +37,13 @@
 
 ;;------------------------ 用户自定义数据源
 (use 'wr3.clj.s)
-(def dbnames {
+(def dbnames 
+  {
+  :esp {:driver (:sqlserver drivers) ; 临时测试
+        :url (gstring (:sqlserver urls) {:ip "gotoreal.com:1433" :db "wabacusdemo3"})
+        :username "sa"
+        :password "Nasoft62790202"}
+
   :abs {:driver (:sqlserver drivers)
         :url (gstring (:sqlserver urls) {:ip "localhost:1433" :db "abs"})
         :username "sa"

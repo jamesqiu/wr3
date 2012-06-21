@@ -1,6 +1,8 @@
 (ns wr3.clj.app.espreg)
 
 (use 'wr3.clj.web 'wr3.clj.n 'wr3.clj.s 'wr3.clj.u)
+(use 'wr3.clj.db)
+(use 'hiccup.core)
 (import cn.org.bjca.client.security.SecurityEngineDeal)
 
 (defn index
@@ -78,6 +80,7 @@
   "BJCA 插入证书密码提交后认证"
   [request]
   (let [vars (query-vars2 request)
+        ; <bjca>
         sed (SecurityEngineDeal/getInstance "SM")
         clientCert (:UserCert vars)
         UserSignedData (:UserSignedData vars)
@@ -85,15 +88,36 @@
         ranStr (:strRandom vars)
         retValue (.validateCert sed clientCert)
         uniqueIdStr (.getCertInfo sed clientCert 17)
-        uniqueId (.getCertInfoByOid sed clientCert "2.16.840.1.113732.2")
+        uniqueId (.getCertInfoByOid sed clientCert "1.2.156.112562.2.1.1.1") ; JJ638610457 
         signedByte (.base64Decode sed UserSignedData)
         rt (.verifySignedData sed clientCert (.getBytes ranStr) signedByte) ; 认证结果
+        ; </bjca>
+        PaperType (subs uniqueId 0 2)
+        PaperID (let [s (subs uniqueId 2)] (if (= PaperType "JJ") (str (subs s 0 8) "-" (subs s 8)) s ))
+        wr3url (session request "wr3url")
+        rs (select-row "esp" (format "SELECT PaperID,CommonName,usertype FROM userregister where PaperType='%s' and PaperID='%s' " 
+                     PaperType PaperID))
         ]
-    (html-body
-      (str vars)[:hr]
-      (str (replace-all (debug-str sed clientCert UserSignedData certPub ranStr retValue uniqueIdStr uniqueId signedByte rt) 
-                        "\n" "<br/>")) 
-      )))
+    (debug wr3url)
+    (cond
+      (not rt) "证书认证失败"
+      (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。"
+      :else (do (session! request "wr3user" PaperID)
+              (session! request "wr3role" "org")
+              (html (format "%s（%s）认证成功！" (:commonname rs) PaperID)
+                   [:script (format "window.location.href='%s' " wr3url)]))
+      )
+    (if rt
+      (if rs (html (format "%s（%s）认证成功！" (:commonname rs) PaperID)
+                   [:script (format "window.location.href='%s' " wr3url)])
+        "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。")
+      )
+;      (str vars)[:hr]
+;      (str uniqueId) [:hr]
+;      (str (replace-all (debug-str sed clientCert UserSignedData certPub ranStr retValue uniqueIdStr uniqueId signedByte rt) 
+;                        "\n" "<br/>"))[:hr] 
+;      (str (session request "wr3url"))
+      ))
 
 ;(defmacro and
 ;  ([] true)
@@ -104,5 +128,10 @@
 
 ; 00359131-X 00002106-3
 ;(import wr3.bank.OrgID)
-;(OrgID/toid "00359131")
-;(OrgID/isid "00359131-X")
+;(dotimes [i 50]
+;  (let [s8 (format "%08d" (random 99999999))]
+;  (println (OrgID/toid s8))))
+;(OrgID/toid "00359131") ; 34448380-;
+;(OrgID/isid "61032343-X")
+
+

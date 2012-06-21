@@ -4,8 +4,12 @@ import wr3.util.Stringx;
 
 /**
  * 全国组织机构代码，如 00359131-X 00002106-3
+ * 全国组织机构代码由八位数字（或大写拉丁字母）本体代码和一位数字（或大写拉丁字母）校验码组成
+ * C9=11 - MOD(∑Ci(i=1→8)*Wi,11)
+ * Ci: '0'->0 '9'->9 'A'->10 'Z'->35 
+ * Wi: {3, 7, 9, 10, 5, 8, 4, 2}
+ * 当C9的值为10时，校验码应用大写的拉丁字母X表示；当C9的值为11时校验码用0表示。
  * @author james 2012-6-20
- *
  */
 public class OrgID {
 
@@ -44,8 +48,12 @@ public class OrgID {
 		for (int i = 0; i < 8; i++) {
 			sum += c2n(s8.charAt(i))*wi[i];
 		}
-		int n = 11 - sum%11;
-		return (n==10) ? 'X' : (char)(n+'0');
+		int c9 = 11 - sum%11;
+		switch (c9) {
+			case 10: return 'X';
+			case 11: return '0';
+			default: return (char)(c9+'0');
+		} 
 	}
 	
 	public static String toid(String s8) {
