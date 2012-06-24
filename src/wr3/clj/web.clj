@@ -524,7 +524,7 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
     [:span {:class (second (:style cfg))} (:title cfg)]
     [:div {:style "position: absolute; right: 10px; top: 8px; color: gray"} "当前用户: " 
      [:span#wr3user {:style "color:red; font-weight:bold"} ".."] (space 3)
-     [:script "app_user()"]
+     [:script (format "app_user('%s')" (:name cfg))]
      [:a {:href "#" :onclick (format "app_exit('/%s')" (:name cfg))} "退出"]]
     ; 搜索条
     (when (:searcher cfg)

@@ -7,6 +7,10 @@
 (use 'hiccup.core)
 (import 'wr3.upload.FileUpload 'wr3.upload.File) ; filesave 函数用到
         
+;;; 文件上传的设计：
+;;;   js函数fileupload(name,sid)弹出对话框（传入input hidden字段中文名及对应id或name），
+;;;   保存在 /file 下文件名为 uid-[timestamp].xx ，把该文件名传给自定义name的input hidden字段
+
 (defn fileupload
   "service: 文件上传弹出dialog的内容，提交按钮由js函数 fileupload_bt() 定义。
   @action 执行文件保存的service url，如'?action=/c/esp/filesave' "

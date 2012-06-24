@@ -1,9 +1,10 @@
 (ns wr3.clj.app.espreg)
 
 (use 'wr3.clj.web 'wr3.clj.n 'wr3.clj.s 'wr3.clj.u)
-(use 'wr3.clj.db)
-(use 'hiccup.core)
+(use 'wr3.clj.db 'wr3.clj.nosql)
+(use 'hiccup.core 'somnium.congomongo 'clojure.contrib.json)
 (import cn.org.bjca.client.security.SecurityEngineDeal)
+(import wr3.util.Stringx)
 
 (defn index
   ""
@@ -16,19 +17,18 @@
                      (format "【%s】注册申请" k)]]]))))
 
 (def cfg-pn
-  [["单位名称" "name" {:width}]
-   ])
+  [["姓名" :name {:require true}]
+   ["身份证" :pid]
+   ["手机号" :mobile]
+   ["地址" :address]
+   ["证件上传" :pfile {:t 'file}]])
 
 (defn pn
   "个人注册信息"
   []
-  (let [cfg [["姓名" :name {:require true}]
-             ["身份证" :pid]
-             ["手机号" :mobile]
-             ["地址" :address]
-             ["证件上传" :pfile {:t 'file}]]]
+  (let []
     (html-body
-      (input-form cfg {:title "考评员个人信息注册"
+      (input-form cfg-pn {:title "考评员个人信息注册"
                        :buttons [:div (eui-button {} "保存") (space 5)
                                       (eui-button {} "取消")]})
       (fileupload-dialog))))
@@ -78,9 +78,10 @@
       activex)))
 
 (defn- check1
-  "验证方法1：ca服务器验证后注册数据库验证"
+  "验证方法1：ca服务器验证后外部注册数据库验证"
   [request]
   (let [vars (query-vars2 request)
+        ;<bjca>
         sed (SecurityEngineDeal/getInstance "SM")
         clientCert (:UserCert vars)
         UserSignedData (:UserSignedData vars)
@@ -91,7 +92,7 @@
         uniqueId (.getCertInfoByOid sed clientCert "1.2.156.112562.2.1.1.1") ; JJ638610457 
         signedByte (.base64Decode sed UserSignedData)
         rt (.verifySignedData sed clientCert (.getBytes ranStr) signedByte) ; 认证结果
-
+        ;</bjca>
         PaperType (subs uniqueId 0 2)
         PaperID (let [s (subs uniqueId 2)] (if (= PaperType "JJ") (str (subs s 0 8) "-" (subs s 8)) s ))
         wr3url (session request "wr3url")
@@ -100,16 +101,16 @@
     (cond
       (not rt) "证书认证失败"
       (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。"
-      :else (do (session! request "wr3user" PaperID)
-              (session! request "wr3role" "org")
+      :else (do (session! request "wr3user" (str (:usertype rs) "-" PaperID))
+              (session! request "wr3role" (:usertype rs))
               (html (format "%s（%s）认证成功！" (:commonname rs) PaperID)
                    [:script (format "window.location.href='%s' " wr3url)])) ) ))
 
-(defn ca-submit
-  "BJCA 插入证书密码提交后认证"
+(defn- check2
+  "验证方法2：ca服务器验证后esp数据库验证"
   [request]
   (let [vars (query-vars2 request)
-        ; <bjca>
+        ;<bjca>
         sed (SecurityEngineDeal/getInstance "SM")
         clientCert (:UserCert vars)
         UserSignedData (:UserSignedData vars)
@@ -120,20 +121,54 @@
         uniqueId (.getCertInfoByOid sed clientCert "1.2.156.112562.2.1.1.1") ; JJ638610457 
         signedByte (.base64Decode sed UserSignedData)
         rt (.verifySignedData sed clientCert (.getBytes ranStr) signedByte) ; 认证结果
-        ; </bjca>
-        PaperType (subs uniqueId 0 2)
-        PaperID (let [s (subs uniqueId 2)] (if (= PaperType "JJ") (str (subs s 0 8) "-" (subs s 8)) s ))
+        ;</bjca>
+        PaperType (subs uniqueId 0 2) ; 'JJ' 'SF'
+        PaperID (let [s (subs uniqueId 2)] (if (= PaperType "JJ") (str (subs s 0 8) "-" (subs s 8)) s )) ; pid
         wr3url (session request "wr3url")
-        rs (select-row "esp" (format "SELECT PaperID,CommonName,usertype FROM userregister where PaperType='%s' and PaperID='%s' " 
-                     PaperType PaperID))
-        ]
-    (cond
-      (not rt) "证书认证失败"
-      (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。"
-      :else (do (session! request "wr3user" PaperID)
-              (session! request "wr3role" "org")
-              (html (format "%s（%s）认证成功！" (:commonname rs) PaperID)
-                   [:script (format "window.location.href='%s' " wr3url)])) ) ))
+        rs (with-mdb2 "esp" (fetch-one :user :where {:pid PaperID}))]
+    (html
+      (cond
+        (not rt) "证书认证失败"
+        (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。"
+        :else (do (session! request "wr3user" (str (:role rs) "-" PaperID))
+                (session! request "wr3role" (:role rs))
+                (html (format "%s（%s）认证成功！" (:name rs) PaperID)
+                      [:script (format "window.location.href='%s' " wr3url)])) ) )))
+
+(defn- check3
+  "验证方法3：不使用ca服务器直接读取ukey中的pid信息，esp数据库验证"
+  [request]
+  (let [vars (query-vars2 request)
+        clientCert (:UserCert vars)
+        UserSignedData (:UserSignedData vars)
+        ranStr (:strRandom vars)
+        dec (Stringx/base64dec clientCert)
+        idx (.indexOf dec "\2\1\1\1")
+        PaperType (subs dec (+ idx 8) (+ idx 10))
+        PaperID (if (= PaperType "JJ") 
+                  (str (subs dec (+ idx 10) (+ idx 18)) "-" (subs dec (+ idx 18) (+ idx 19) )) 
+                  (subs dec (+ idx 10) (+ idx 28)))
+        wr3url (session request "wr3url")
+        rs (with-mdb2 "esp" (fetch-one :user :where {:pid PaperID})) ]
+    (html
+      (if (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。"
+        (do (session! request "wr3user" (str (:role rs) "-" PaperID))
+          (session! request "wr3role" (:role rs))
+          (html (format "%s（%s）认证成功！" (:name rs) PaperID)
+                [:script (format "window.location.href='%s' " wr3url)])) ))))
+
+(defn ca-submit
+  "BJCA 插入证书密码提交后认证"
+  [request]
+  (check3 request))
+
+(defn who
+  "service: 返回session中名为'wr3user'的当前已登录用户的json对象{:uid .. :name .. :roles ..}，未登录则返回'null' "
+  [request]
+  (if-let [uid (wr3user request)]
+    (let [user (with-mdb2 "esp" (fetch-one :user :where {:uid uid}))]
+      (json-str {:uid uid :name (:name user) :roles (:role user)}))
+    "null"))
 
 ;(defmacro and
 ;  ([] true)
@@ -149,5 +184,3 @@
 ;  (println (OrgID/toid s8))))
 ;(OrgID/toid "00359131") ; 34448380-;
 ;(OrgID/isid "61032343-X")
-
-

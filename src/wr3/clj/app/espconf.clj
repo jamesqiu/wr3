@@ -66,7 +66,8 @@
           ]
          ["下级机构管理"           "icon-pen" ; title id
           ["统计分析"          "icon-list"    "mot-olap"] ; title icon id 
-          ["委托代办"          "icon-list"    "mot-admin"] ; title icon id 
+          ["机构维护"          "icon-list"    "mot-admin"] ; title icon id 
+          ["委托代办"          "icon-list"    "mot-give"] ; title icon id 
           ]
          ["系统管理及帮助"     "icon-search"
           ["装载更新配置"     "icon-search" "reload" "/c/console/reload/app.espconf"]

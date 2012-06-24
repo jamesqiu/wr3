@@ -2760,9 +2760,11 @@ function grade_exit() {
 /**
  * 将 div#wr3user 替换成登录名
  */
-function app_user() {
+function app_user(app_name) {
 	// 显示用户登录信息
-	$.get('/c/auth/who', function(data) {
+	var url = (app_name=='esp') ? '/c/espreg/who' : 'c/auth/who';
+	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
+	$.get(url, function(data) {
 		var json = $.parseJSON(data)
 		if (json) {
 			$('#wr3user').text(json.name)

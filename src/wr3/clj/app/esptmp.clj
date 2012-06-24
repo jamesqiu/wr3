@@ -1,4 +1,4 @@
-(ns wr3.clj.app.esptmp)
+(ns ^{:doc 临时处理考核指标的入库} wr3.clj.app.esptmp)
 
 (def m1 '[
 [1	一、安全目标35分	51]
@@ -210,8 +210,10 @@
 ])
 
 (require 'wr3.clj.datagen)
-(use 'wr3.clj.n 'wr3.clj.s)
 (use 'wr3.clj.app.espconf)
+(use 'wr3.clj.nosql)
+(use 'somnium.congomongo)
+
 
 (defn- t1
   "造org表的数据字段" 
@@ -241,9 +243,6 @@
         na (subs (dd-admin admin) 0 2)]
     (format "2012-%s-%s-%s%04d" c na grade (rand-int 10000))))
   
-(use 'wr3.clj.nosql)
-(use 'somnium.congomongo)
-
 (defn- t1 []
 (with-mdb2 "esp"
   (doseq [[i n t] m1]

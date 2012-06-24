@@ -1385,6 +1385,8 @@ public class Stringx {
 		System.out.println(s);
 
 		System.out.println(ss2set("a", " a ", "A", null, ""));
+		
+		System.out.println("\u00EF\u00BF\u00BD\u0032\2\1\1\1");
 	}
 
 }
