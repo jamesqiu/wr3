@@ -18,7 +18,7 @@
 
 ;;;-------------------------------------------------------------------------------------------------------- 公共函数
 (defn auth
-  "该函数被 CljServlet 调用，用于本应用各函数的权限控制 "
+  "该 CljServlet 调用，用于本应用各函数的权限控制 "
   [request fname ids & args]
   (let [uid (wr3user request) 
         role (wr3role request)
@@ -39,19 +39,8 @@
         :else false))))
 
 (defn- index-all
-  "app: 所有子系统的进入界面，临时，最后应该被一个不用登录即可访问的静态页面替代"
-  []
-  (html-body
-    [:div {:style "text-align: center; margin: 100px; border: 1px solid blue; width:992px"}
-     [:img {:src "/img/esp/esp.jpg"}]
-     [:table {:align "center"}
-      (for [[nam id meta] cfg-subsys ] 
-        [:tr [:td [:h1 [:a {:href (format "%s/c/esp/index/%s" webapp id) :title meta}
-                        (str "进入 " nam )]]]])] [:br]
-     [:div {:align "left"}
-      (eui-tip "任何单位和个人对考评机构的考评行为，有权向主管机关进行实名举报，主管机关会及时受理、组织调查处理，并为举报人保密。")]
-     (eui-button {:href "/c/esp/hot" :target "_blank" :title ""} "实名举报")
-     [:div {:style "width:100%; height:50px; margin-top:30px; background-color:#48f"}]]))
+  "@deprecated: by /esp/index.html"
+  [] (html [:script "window.location.href = '/esp/' "]))
   
 (defn index
   "@id 为nil时显示入口页面；为 pn,org,en,mot 时为子系统layout入口"
@@ -91,7 +80,7 @@
   (input-save-submit- id request true))
 
 (defmacro with-esp-
-  "共用函数：查询出esp的序列化数据"
+  "查询出esp的数据并序列化之"
   [fetch-op]
   `(with-mdb2 "esp" (vec ~fetch-op)))
 
@@ -102,13 +91,13 @@
   (with-mdb2 "esp" (fetch-by-id tb (object-id oid))))
   
 (defn- with-uid-
-  "共用函数：得到序列化的数据表中指定uid的记录
+  "得到数据表中指定uid的多条记录，并序列化之
   @tb 数据表如 :pn :pn-apply "
   [tb uid]
   (with-esp- (fetch tb :where {:uid uid})))
 
 (defn- data-
-  "取出数据表所有记录并持久化。
+  "取出数据表所有记录（1000条以内）并持久化。
   @tb :pn | :en | :org
   @todo 超过100条增加分页 "
   [tb]
@@ -118,20 +107,20 @@
   "传入wr3user的uid，得到name"
   [uid]
   (if-let [rs (with-mdb2 "esp" (fetch-one :user :only [:name] :where {:uid uid}))]
-    (:name rs)
-    uid))
+    (:name rs) uid))
 
+(defn- format-date-by
+  "共用函数：格式化形如“2011-5-4”的日期"
+  [s fmt]
+  (let [[yyyy m d] (split s "-")] (format fmt yyyy (to-int m) (to-int d))))
+  
 (defn- format-date-
-  "共用函数：格式化日期，2011-5-4 -> 2011-05-04 便于显示和文本排序"
-  [s]
-  (let [[yyyy m d] (split s "-")]
-    (format "%s-%02d-%02d" yyyy (to-int m) (to-int d))))
+  "2011-5-4 -> 2011-05-04 便于显示和文本排序"
+  [s] (format-date-by "%s-%02d-%02d"))
 
 (defn- format-date-cert-
-  "共用函数：格式化日期，2011-5-4 -> '2011年5月4日' 便于显示和文本排序"
-  [s]
-  (let [[yyyy m d] (split s "-")]
-    (format "%s年 %02d月 %02d日" yyyy (to-int m) (to-int d))))
+  "2011-5-4 -> '2011年 05月 04日' 在证书上显示"
+  [s] (format-date-by "%s年 %02d月 %02d日"))
 
 (defn- resp-format-
   "格式化'yes' 'no'的显示，用于函数(result-html- ..)， (doc- ..)
@@ -465,7 +454,7 @@
                       (eui-button {:href (format "/c/esp/cert-renew-input/%s" id)} "申请换证") )})))
 
 (defn cert-renew-input
-  ""
+  "采用申请表单，但录入一些换证特定的字段"
   [id request]
   (html-body (apply-input- request (keyword id))))
 
@@ -516,7 +505,7 @@
           (if (<= sid 999999) sid (cert-sid-next 0))))
 
 (defn- cert-id
-  "生成en、org的达标证书和资质证书号，形如yyyy-ta-xxxxxx
+  "生成en、org的达标证书和资质证书号，形如yyyy-ta-xxxxxx；pn的资格证，形如yyyy-c-ta-xxxxxx。
   @m {:year 2005 :admin '01' :max 0 :type 1} 
     其中:year 发证年份，:admin 主管机关，:max 当前最大号，:type证书类型参数只有pn才有，表明业务大类型"
   ([m]
@@ -799,7 +788,6 @@
       (eui-button {:onclick f-yes :iconCls "icon-ok"} s-yes) (space 10)
       (eui-button {:onclick f-no :iconCls "icon-cancel"} s-no) br2 br2 )))
 
-
 ;;;-------------------------------------------------------------------------------------------------------- pn  考评员
 (def pn---------- nil)
 
@@ -835,8 +823,6 @@
           (result-html- rs '["培训证书" "培训类型" "培训日期" "培训学时" "考试日期" "考试分数" "查看"]
                         [:train-id :type :train-start :train-hour :exam-date :exam-score :_id] {:form "docv/pn-train"})) ) )))
 
-
-
 ;;;-------------------------------------------------------------------------------------------------------- org 考评机构
 (def org---------- nil)
 
@@ -863,8 +849,7 @@
     [:h1 "考评员档案管理"]
     (eui-button {:plain "true" :iconCls "icon-sum"} "安全生产标准化考评员汇总表、登记表") [:br]
     (eui-button {:plain "true" :iconCls "icon-list"} "考评员学历和专业技术能力证明汇总表") [:br]
-    (eui-button {:plain "true" :iconCls "icon-file"} "考评员培训情况汇总表（何时培训，多长时间，取得何种培训合格证书）") [:br]
-    ))
+    (eui-button {:plain "true" :iconCls "icon-file"} "考评员培训情况汇总表（何时培训，多长时间，取得何种培训合格证书）") [:br] ))
 
 (defn org-pn
   "service: 本考评机构机构的所有考评员 "
@@ -884,8 +869,7 @@
 
 (defn org-refine
   []
-  (html
-    (eui-tip "暂无整改通知")))
+  (html (eui-tip "暂无整改通知")))
 
 (defn org-hire-view
   "app: 考评员情况，能否聘用
@@ -932,8 +916,7 @@
   @id 证书号cid "
   [id request]
   (let [cid id]
-    (do
-      (update- :pn {:cid cid} (fn [r] {:contract1 (date)}))
+    (do (update- :pn {:cid cid} (fn [r] {:contract1 (date)}))
       "已解聘")))
 
 (defn org-pn-train
@@ -1081,8 +1064,7 @@
       (eui-tip "请在如下的考评机构列表中自行选择两个。")
       (result-html- rs [] [:name :admin :_id :_select] {:form "docv/org"}) [:br]
       (eui-button {:onclick "esp_en_select_org()"} "提 交")
-      [:script (format "esp_en_selected('%s')" (join (:orgid r) ","))]
-      )))
+      [:script (format "esp_en_selected('%s')" (join (:orgid r) ","))] )))
 
 (defn en-select-org-save
   "service: 保存企业所选2个考评机构的object-id "
@@ -1122,8 +1104,7 @@
       (eui-tip "提示：可点击右上角搜索框，按考评员姓名或者证书号模糊查询。")
       (barf rt {:title "各地域考评员分布情况" :x "省份" :y "考评员人数"})
       (pief rt2 {:title "各专业类型考评员数量统计" :x "专业类型" :y "考评员人数"}) 
-      (linef rt3 {:title "考评员学历统计" :x "学历" :y "考评员人数"}) 
-      )))
+      (linef rt3 {:title "考评员学历统计" :x "学历" :y "考评员人数"}) )))
 
 (defn mot-en-olap
   "service: 企业统计分析"
@@ -1135,8 +1116,7 @@
     (html
       [:h1 "各省一级企业数量分析"]
       (barf (apply array-map (flatten m1)) {:x "省份" :y "一级企业数量"})
-      (pief (apply array-map (flatten m1)) {})
-      )))
+      (pief (apply array-map (flatten m1)) {}) )))
 
 ;;-- mot-(pn en org)-apply[-resp]
 (defn- mot-apply-
@@ -1231,8 +1211,8 @@
       [:h1 "实名投诉举报申请受理"]
       (if (empty? rs)
         (eui-tip "暂无投诉举报")
-        (result-html- rs ["举报时间" "举报人信息" "主管机关" "详情"] [:date :info :admin :_id] {:form "mot-hot-doc"})
-        ))))
+        (result-html- rs ["举报时间" "举报人信息" "主管机关" "详情"] [:date :info :admin :_id] 
+                      {:form "mot-hot-doc"}) ))))
 
 (defn mot-hot-doc
   "app: 主管机关查看并受理举报信息"
@@ -1406,13 +1386,8 @@
   
 ;;------------------------------------------------- test
 ;--- 注：文件大小不能大于64k字节，否则报错
-;(with-mdb2 "esp" (destroy! :user {:role "pot"}))
-;(with-mdb2 "esp" (update! :en-apply {:uid "en1"} {:$set {:score0 989}}))
 ;(with-esp- (fetch :user :where {:uid {:$in ["en1" "en2" "org1" "org2" "pn1" "pn2" "mot1" "mot2"]}}))
-;(update- :pn-train {:name "张文件1"} (fn [row] {:uid "pn1"}))
-;(update- :user {:name "张树森"}  {:name "张树森", :org "北京市交通委员会", :tel "010-57078877"} :replace)
-;(cert-id {:year 2011 :admin "26" :max 1 :type 2})
-;(insert- :cert {:sid "pn" :admin "02" :max 0})
-;(cert-sid-max :pn "01")
-;(update- :user {:uid {:$in ["en1" "en2" "org1" "org2" "pn1" "pn2" "mot1" "mot2"]}}
-;         (fn [r] {:name (str "测试" (:name r))}))
+;(with-mdb2 "esp" (destroy! :user {:role "pot"}))
+;(update- :en {:admin "14 "} {:admin "14"})
+;(insert- :user {:name "任晓", :pid "411221198506187535", :role "pn", :mobile "13718582871", :uid "pn-411221198506187535"})
+
