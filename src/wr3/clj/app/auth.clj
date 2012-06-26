@@ -11,20 +11,20 @@
 (use 'clojure.contrib.json)
 
 (def users 
-  {"admin" {:name "管理员" :pwd "810016a5056c4f3f7dd74b3ff02b8f5e" :roles "root,user"} 
-   "user" {:name "用户" :pwd "1a1dc91c907325c69271ddf0c944bc72" :roles "user"} ; 密码为"pass"        
-   "guest" {:name "访客" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "guest"} ; 密码为""
-   ; esp 交通运输企业安全生产标准化管理系统需要的用户
-   "pn1" {:name "考评员1" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "pn"}
-   "pn2" {:name "考评员2" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "pn"}
-   "en1" {:name "企业1" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "en"}
-   "en2" {:name "企业2" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "en"}
-   "org1" {:name "考评机构1" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "org"}
-   "org2" {:name "考评机构2" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "org"}
-   "mot1" {:name "交通部用户1" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "mot"}
-   "mot2" {:name "交通部用户2" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "mot"}
-   "pot1" {:name "交通厅用户1" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "pot"}
-   "pot2" {:name "交通委用户2" :pwd "d41d8cd98f00b204e9800998ecf8427e" :roles "pot"}
+  {"admin" {:name "管理员" :pwd "0fbce6c74ff376d18cb352e7fdc6273b" :roles "root,user"} ; "9***" 
+   "user" {:name "用户" :pwd "1a1dc91c907325c69271ddf0c944bc72" :roles "user"} ; "pass"        
+   "guest" {:name "访客" :pwd "098f6bcd4621d373cade4e832627b4f6" :roles "guest"} ; "test"
+   ; esp 交通运输企业安全生产标准化管理系统需要的用户，密码空格
+   "pn1" {:name "考评员1" :pwd "7215ee9c7d9dc229d2921a40e899ec5f" :roles "pn"}
+   "pn2" {:name "考评员2" :pwd "7215ee9c7d9dc229d2921a40e899ec5f" :roles "pn"}
+   "en1" {:name "企业1" :pwd "7215ee9c7d9dc229d2921a40e899ec5f" :roles "en"}
+   "en2" {:name "企业2" :pwd "7215ee9c7d9dc229d2921a40e899ec5f" :roles "en"}
+   "org1" {:name "考评机构1" :pwd "7215ee9c7d9dc229d2921a40e899ec5f" :roles "org"}
+   "org2" {:name "考评机构2" :pwd "7215ee9c7d9dc229d2921a40e899ec5f" :roles "org"}
+   "mot1" {:name "交通部用户1" :pwd "7215ee9c7d9dc229d2921a40e899ec5f" :roles "mot"}
+   "mot2" {:name "交通部用户2" :pwd "7215ee9c7d9dc229d2921a40e899ec5f" :roles "mot"}
+   "pot1" {:name "交通厅用户1" :pwd "7215ee9c7d9dc229d2921a40e899ec5f" :roles "pot"}
+   "pot2" {:name "交通委用户2" :pwd "7215ee9c7d9dc229d2921a40e899ec5f" :roles "pot"}
    })
 
 (defn- ok?

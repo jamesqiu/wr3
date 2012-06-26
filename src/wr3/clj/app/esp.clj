@@ -116,11 +116,11 @@
   
 (defn- format-date-
   "2011-5-4 -> 2011-05-04 便于显示和文本排序"
-  [s] (format-date-by "%s-%02d-%02d"))
+  [s] (format-date-by s "%s-%02d-%02d"))
 
 (defn- format-date-cert-
   "2011-5-4 -> '2011年 05月 04日' 在证书上显示"
-  [s] (format-date-by "%s年 %02d月 %02d日"))
+  [s] (format-date-by s "%s年 %02d月 %02d日"))
 
 (defn- resp-format-
   "格式化'yes' 'no'的显示，用于函数(result-html- ..)， (doc- ..)

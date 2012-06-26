@@ -7,6 +7,11 @@
 (use 'hiccup.core)
 (use 'somnium.congomongo)
 
+(defn auth
+  "该 CljServlet 调用，用于本应用各函数的权限控制 "
+  [request fname ids & args]
+  (if (wr3user request) true false))
+  
 (defn index
   "app: 本地mongodb的管理界面"
   []
