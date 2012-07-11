@@ -26,6 +26,7 @@
 (def length count)
 (def ++ inc)
 (def -- dec)
+(def fmt format)
 
 ; (reduce [f val coll]) 就是 Scala 的 foldLeft
 (def fold-left reduce)

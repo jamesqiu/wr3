@@ -386,6 +386,84 @@
 (defn fp3 [pa pb] (* pa pb))
 (defn fp4 [c1 g] (reduce g c1))
   
-(binding-params "fp4" {"p1" 10 "pa" 20 "pb" 30 "g" pow "c1" [2 3 4]})
+;(binding-params "fp4" {"p1" 10 "pa" 20 "pb" 30 "g" pow "c1" [2 3 4]})
 
-;ccc
+;-------------- 数独
+(comment " 数独规格，除了每行列不同，还必须每3x3格必须含1～9
+@m 8x8矩阵
+@i 行号
+@j 列号
+@e 元素
+@r 某行
+@c 计数count
+
+")
+(def m0
+  [[8 0 0 0 0 0 0 0 0]
+   [0 0 3 6 0 0 0 0 0]
+   [0 0 0 0 9 0 2 0 0]
+   [0 5 0 0 0 7 0 0 0]
+   [0 0 0 0 4 5 7 0 0]
+   [0 0 0 1 0 0 0 3 0]
+   [0 0 1 0 0 0 0 6 8]
+   [0 0 8 5 0 0 0 1 0]
+   [0 9 0 0 0 0 4 0 0]])
+
+(defn no0? "m矩阵的i行是否不含0"
+  ([m i] (not (some #(= % 0) (nth m i))))
+  ([m] (when m 
+         (let [rows (count m)] (every? #(no0? m %) (range rows))))))
+
+(defn n-ij "m矩阵中i行j列不是0的所有数的set"
+  [m i j]
+  (let [n-i (remove zero? (nth m i))
+        n-j (remove zero? (map #(nth % j) m))]
+    (set (concat n-i n-j))))
+
+(defn rand-e "m中i行j列的一个随机数，填不出来则为nil"
+  [m i j]
+  (let [full-set (set (range 1 (inc (count m)))) 
+        r (vec (clojure.set/difference full-set (n-ij m i j)))]
+    (if (empty? r) nil (rand-nth r))))
+  
+(defn put-e "m矩阵的i行j列随机填一个合理的数字，填不出返回nil"
+  [m i j] 
+  (when m
+    (let [e0 (nth (nth m i) j)
+          e1 (if (zero? e0) (rand-e m i j) e0)]
+      (if e1 (assoc-in m [i j] e1) nil))))
+
+(defn put-r1 "m中i行随机填一次合适的随机数，填不出返回nil"
+  [m i]
+  (when m
+    (let [r (nth m i)]
+      (reduce #(put-e %1 i %2) m (range (count m))))))
+
+(defn put-r
+  [m i]
+  (loop [c 0] (let [m1 (put-r1 m i)] (if (or m1 (> c 1000)) m1 
+                                       (recur (inc c))))))
+
+(defn put-m "m中随机填满，填不出返回nil"
+  [m]
+  (when m
+    (reduce #(put-r %1 %2) m (range (count m))) ))
+
+(defn print-m [m] (doseq [r m] (println r)) (println "------"))
+;;----------------
+(def m2 [[1 0 0]
+         [2 0 1]
+         [0 0 0]])
+
+(defn shudu [m0]
+  (loop [m m0 c 0] 
+    (let [m1 (put-m m)]
+      (if (or (> c 10) (no0? m)) (print-m m)
+        (recur (if m1 m1 m0) (inc c))))))
+
+;(print-m (put-rand (put-rand m0 2 8) 0 1))
+;(put-r m0 8)
+;(shudu m0)
+
+
+

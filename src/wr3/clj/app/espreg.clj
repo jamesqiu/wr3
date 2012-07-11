@@ -160,7 +160,7 @@
 (defn ca-submit
   "BJCA 插入证书密码提交后认证"
   [request]
-  (check3 request))
+  (check1 request))
 
 (defn who
   "service: 返回session中名为'wr3user'的当前已登录用户的json对象{:uid .. :name .. :roles ..}，未登录则返回'null' "

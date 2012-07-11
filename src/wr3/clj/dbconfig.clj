@@ -40,7 +40,7 @@
 (def dbnames 
   {
   :esp {:driver (:sqlserver drivers) ; 临时测试
-        :url (gstring (:sqlserver urls) {:ip "gotoreal.com:1433" :db "wabacusdemo3"})
+        :url (gstring (:sqlserver urls) {:ip "localhost:1433" :db "wabacusdemo3"})
         :username "sa"
         :password "Nasoft62790202"}
 

@@ -58,6 +58,11 @@
   [request cname]
   (wr3.util.Servletx/cookie request cname))
 
+(defn http-header
+  "得到浏览器的信息如： {'Host' 'localhost' 'Connection' 'keep-alive' ..} "
+  [request]
+  (into {} (for [k (enumeration-seq (.getHeaderNames request))] [k (.getHeader request k)])))
+
 ;;; ------------ query var map 处理
 (defn query-vars
   "获得request的queryString中的key-value，以hash-map形式返回.
@@ -651,3 +656,9 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
                 (vector? t)      (eui-combo    attr (apply array-map (flatten (for [e t] [e e]))))
                 :else            (eui-text     (into attr {:style "width: 250px"}))) ]]))
         [:tfoot [:tr [:td {:colspan 2 :align "center" :style "padding: 15px"} (:buttons m) ]]]]] )))
+
+(defn set-title 
+  "用js更改浏览器的title"
+  [s] [:script (format "document.title='%s'" s)])
+
+;;;---------------------------- jquery mobile

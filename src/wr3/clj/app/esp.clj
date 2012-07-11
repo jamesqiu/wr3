@@ -122,7 +122,7 @@
   "2011-5-4 -> '2011年 05月 04日' 在证书上显示"
   [s] (format-date-by s "%s年 %02d月 %02d日"))
 
-(defn- resp-format-
+(defn resp-format-
   "格式化'yes' 'no'的显示，用于函数(result-html- ..)， (doc- ..)
   @yes-or-no 'yes' or 'no' "
   [yes-or-no]
@@ -1326,15 +1326,26 @@
       [:label "意 见： "] (eui-textarea {} "") [:br][:br]
       (eui-button {} "提 交") )))
 
+(defn cross-data
+  "生成cross-table所需的data，如：[[left1 top1 v1] [left2 top2 v2] ...]
+  @rs: 数据库查询结果集
+  @fs: 字段列表，如[:admin :grade]或者 [:admin :grade :value]
+  @count? 对没有value的2列数据进行计数统计 "
+  [rs fs]
+  (if (= 2 (count fs)) 
+    (for [r rs] [((first fs) r) ((second fs) r) 1])
+    (for [r rs] (vec (map #(get r %) fs)))))
+
 (defn mot-olap
   "service: 主管机关对下级机关的综合分析"
   []
   (let [rt1 (with-esp- (fetch :en :only [:admin :grade]))
         rt2 (sort (for [e (frequencies (for [{admin :admin grade :grade} rt1] [admin grade]))] 
-                    [(ffirst e) (-> e first second str) (second e)]))]
+                    [(ffirst e) (-> e first second str) (second e)]))
+        data (cross-data rt1 [:admin :grade])]
     (html
       [:h1 "各级交通管理部门管辖企业分析"]
-      (cross-table rt2 {:caption "主管机构各级企业数量统计表"
+      (cross-table data {:caption "主管机构各级企业数量统计表"
                         :dim-top-name "企业级别"
                         :dim-left-name "主管机构"
                         :f-dim-left (fn [v] (dd-admin v))
@@ -1374,7 +1385,7 @@
        [:label [:b "填写举报内容："]] (eui-textarea {:name "content" :style "width: 500px; height: 300px"} "") [:br][:br]
        [:label [:b "选择主管机关："]] (eui-combo {:name "admin"} dd-admin) [:br][:br]
        (eui-button {:onclick "esp_hot_submit()"} "提 交")] 
-      [:script "document.title='举报热线'"])))
+      (set-title "举报热线"))))
   
 (defn hot-save
   "app: "
@@ -1389,5 +1400,9 @@
 ;(with-esp- (fetch :user :where {:uid {:$in ["en1" "en2" "org1" "org2" "pn1" "pn2" "mot1" "mot2"]}}))
 ;(with-mdb2 "esp" (destroy! :user {:role "pot"}))
 ;(update- :en {:admin "14 "} {:admin "14"})
-;(insert- :user {:name "任晓", :pid "411221198506187535", :role "pn", :mobile "13718582871", :uid "pn-411221198506187535"})
-
+;(insert- :user  {:name "岳传志0628", :pid "110104198001010116", :role "pn", :mobile "13581601845", :uid "pn-110104198001010116"})
+(let [fs [:admin :grade]
+      rs (with-esp- (fetch :en :only fs :limit 10 :skip 90))
+      rt (for [r rs] [((first fs) r) ((second fs) r) 1])
+      ]
+  (cross-data rs fs))

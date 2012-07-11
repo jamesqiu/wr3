@@ -10,6 +10,7 @@ echo   ru Pinyin                汉字全拼、简拼
 echo   ru Goodname              中文^<--^>变量名称
 echo   ru Dict                  中文^<--^>英文
 echo   ru FontImage             文字^<--^>透明图
+echo   ru Tokenizer             中文分词
 echo   bin\cn.bsh               中文字符转码测试
 echo   bin\md5.bsh              求字符串md5
 echo   bin\dbconf.bsh           查询RDB的所有配置，及单个配置的详细信息

@@ -1,22 +1,7 @@
 (ns wr3.clj.app.espconf)
 
 (use 'hiccup.core)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; layout
-
-;; cfg-frame-xxx 说明：
-;; :name            应用名称，用于javascript函数的前缀，如 function demo_xxx()
-;; :style           上方色调，["layout_north" "layout_title"]（蓝色）或 ["layout_north1" "layout_title1"]（金色）
-;; :title           应用名称，位于上方
-;; :searcher        搜索框的label，位于右上方
-;; :nav             导航条，位于左边；第一级为标题（title icon），第二级为链接（title icon id [url]），url可为地址，或js函数(todo)
-;; :menu            2层菜单条，位于上方
-;; :left-or-right   "left" or "right"
-
-
-(defn title- 
-  "设置浏览器的title"
-  [s] [:script (format "document.title='%s'" s)])
+(use 'wr3.clj.web)
 
 ;; 交通运输主管部门界面配置
 (def cfg-frame-mot
@@ -76,7 +61,7 @@
           ]
          ]   
    :frame-main (html [:h2 "主管机关用户主界面"]
-                     (title- "主管机关管理系统（试行）"))
+                     (set-title "主管机关管理系统（试行）"))
    })
 
 ;; 考评员界面配置
@@ -93,7 +78,7 @@
           ]
          ] 
    :frame-main (html [:script "layout_load_center('/static/esp/about-pn.html')"]
-                     (title- "考评员在线申请系统（试行）"))
+                     (set-title "考评员在线申请系统（试行）"))
    })
 
 ;; 考评机构界面配置
@@ -125,7 +110,7 @@
           ]
          ]   
    :frame-main (html [:h2 "考评机构用户主界面"]
-                     (title- "考评机构管理系统（试行）"))
+                     (set-title "考评机构管理系统（试行）"))
    })
 
 ;; 交通运输企业界面配置
@@ -145,7 +130,7 @@
           ]
          ]   
    :frame-main (html [:h2 "交通运输企业用户主界面"]
-                     (title- "企业在线填报管理系统（试行）"))
+                     (set-title "企业在线填报管理系统（试行）"))
    })
 
 ; 主界面子系统菜单
