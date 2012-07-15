@@ -1,5 +1,6 @@
 (ns ^{:doc 
-      "企业安全生产标准化管理系统 Enterprise Safety Production Standardization。 
+      "企业安全生产标准化管理系统 Enterprise Safety Production Standardization。
+  后来的文档中有这么叫的“安全生产标准化（work safety standardization）” 
   pn：考评员person，en：企业enterprise，org：考评机构organization，mot：交通部Ministry Of Transport
   pot：省级交通厅/委/局 Pronvince department Of Transport
   暂定的企业达标证书格式：2012-type-grade-admin-%05d "
@@ -1401,8 +1402,3 @@
 ;(with-mdb2 "esp" (destroy! :user {:role "pot"}))
 ;(update- :en {:admin "14 "} {:admin "14"})
 ;(insert- :user  {:name "岳传志0628", :pid "110104198001010116", :role "pn", :mobile "13581601845", :uid "pn-110104198001010116"})
-(let [fs [:admin :grade]
-      rs (with-esp- (fetch :en :only fs :limit 10 :skip 90))
-      rt (for [r rs] [((first fs) r) ((second fs) r) 1])
-      ]
-  (cross-data rs fs))

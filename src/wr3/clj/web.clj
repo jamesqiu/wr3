@@ -639,18 +639,19 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   (let [css-label "font-family:微软雅黑;font-size:14px;vertical-align:center;height:35px;border-bottom:1px dotted gray"]
     (html
       [:form {:id "fm1" :method "POST" :action (:action m)}
-       [:table {:align "left" :style "margin-left: 30px"}
+       [:table {:style "margin-left: 30px"}
         [:caption {:style "padding: 5px"} [:h1 (m :title)]]
         (for [[nam id {t :t v :v require :require title :title}] cfg]
           (let [sid (name id)
-                attr {:id sid :name sid :value v :title title}]
+                attr {:id sid :name sid :value v :title title 
+                      :required (if (true? require) "true" nil)}] ; 通用attrib
             [:tr 
              [:td {:style css-label} [:label (str nam "：")]]
              [:td {:style "border-bottom:1px dotted gray"}
               (cond 
-                (true? require)  (eui-text     (into attr {:required "true" :style "width: 250px"}))
                 (= t 'textarea)  (eui-textarea attr v)
                 (= t 'file)      (fileupload-field nam sid v attr)
+                (= t 'date)      (eui-datebox  attr)
                 (= t 'email)     (eui-email    attr)
                 (map? t)         (eui-combo    attr t)
                 (vector? t)      (eui-combo    attr (apply array-map (flatten (for [e t] [e e]))))

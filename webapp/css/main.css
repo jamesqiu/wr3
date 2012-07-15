@@ -4,7 +4,7 @@
 body {
 	background: #fff;
 	font-family: tahoma, arial, verdana;
-	font-size: 12px;
+	font-size: 14px;
 	margin: 5px 15px 10px 15px;
 }
 
@@ -24,11 +24,11 @@ h1 {
 }
 
 h2 {
-	font-size: 14px;
+	font-size: 15px;
 }
 
 td,th {
-	font-size: 12px;
+	font-size: 14px;
 }
 
 /*
@@ -39,7 +39,7 @@ ul {
 input,select,textarea {
 	background-color: #fcfcfc;
 	border: 1px solid #ccc;
-	font: 12px verdana, arial, helvetica, sans-serif, 微软雅黑;
+	font: 14px verdana, arial, helvetica, sans-serif, 微软雅黑;
 	/* margin: 2px 0; */
 	padding: 2px 4px;
 }

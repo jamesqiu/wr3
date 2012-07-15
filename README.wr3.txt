@@ -111,6 +111,7 @@ A: 主要为了区分第一、二版的WebReport，另一个原因是因为中�
 	-congomongo.jar        mongodb的wrapper
 	-core.incubator.jar    mongodb的依赖包
 	-data.json.jar         mongodb的依赖包
+	-jline.jar             支持Clojure repl的tab autocomplete
 
   jetty.jar                内嵌servlet/web服务器，把tool等做成web应用
     -jetty-util.jar        必须，否则编译出错

@@ -3161,3 +3161,12 @@ function LoginForm_onsubmit() {
 		return true;
 	}
 }
+
+/**
+ * 福建考评员表单提交保存
+ */
+function espfj_input_submit(form) {
+	var url = '/c/espfj/input-submit/'+form +'?' + $("form").serialize() 
+	ajax_post(url)
+}
+
