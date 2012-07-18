@@ -132,7 +132,23 @@
     "no" "<font color=red>不同意</font>" 
     "<font color=gray>尚未受理</font>"))
 
-(defn- result-html-
+(defn pass-direct-format
+  [on-off]
+  (case on-off
+    "on" "直接颁发"
+    "否"))
+
+(defn types-names
+  "把形如 '1&2&5' 或者 '3'的多个或者1个类型转换成名称显示 "
+  [types]
+  (if (integer? types) 
+    (dd-type types)
+    (if (nullity? types) types
+      (let [ss (split types "&")
+            nn (map #(or (dd-type (to-int %)) %) ss)]
+        (join nn ", ")))))
+
+(defn result-html-
   "共用函数：对没有特殊要求的结果进行列表展示
   @rt Clojure.sql结果集 [{:c1 v :c2 v ..} ..]
   @head 表头名称 [活期余额 业务类型 币种 日期]，如果(empty? head)如[] nil，则使用dd-meta自动从cols参数得到head
@@ -152,22 +168,24 @@
                        [:td (td-align v0) 
                         (case col
                           :_id [:a {:href (format "/c/esp/%s/%s" (:form m) v) :target "_blank"} "查看"]
+                          :_id-fj [:a {:href (format "/c/espfj/%s/%s" (:form m) (:_id row)) :target "_blank"} "查看"] ; 福建
                           :_select [:input {:type "checkbox" :group "select" :sid (:_id row)}]
                           :_issue [:a {:href (case (:issue m)
                                                "pn-apply" (format "/c/esp/cert-issue-pn/%s" (:_id row))
                                                (format "/c/esp/cert-issue/%s/%s" (:issue m) (:_id row)))
                                        :target "_blank"} "发证"]
                           :_cdate-end (date-add (:cdate row) (dd-cert-year (:type m)) 0 0)
-                          :type (or (dd-type (to-int v0)) v)
+                          :type (types-names v)
                           :type2 (or (dd-type2 (to-int v0)) v)
                           :grade (or (dd-grade (to-int v0)) v)
                           :fulltime (if v0 "专职" "<font color=gray>兼职</font>")
                           :contract0 (format-date- v)
                           :contract1 (if v0 (format-date- v0) "<b>目前在职</b>")
                           :uid (wr3user-name v0)
+                          :role (if-let [dd (:admin m)] (get dd v) v) ; espfj 角色
                           :freport [:a {:href v0 :target "_blank"} "查看"]
                           :info (replace-all v "\r\n" "<br/>")
-                          :admin (or (dd-admin v) v)
+                          :admin (or (get (or (:admin m) dd-admin) v) v)
                           :respdate (if (nil? v0) "<font color=gray>尚未处理</font>" 
                                       (format "已于%s处理" v))
                           :cstate (if (nil? v0) "正常" "撤销") ; 考评机构证书状态
@@ -181,6 +199,7 @@
                                                [:b (dd-grade (to-int grd))]) "；"
                                        (when-let [report (:report v0)] [:a {:href report} "自评报告"])) ; 企业达标自评
                           (:resp :resp-eval :resp-review) (resp-format- v0)
+                          :pass-direct (pass-direct-format v)
                           v)])) ]) } )))
   ([rt head cols] (result-html- rt head cols {})))
 
@@ -279,14 +298,18 @@
         rs (with-esp- (fetch :org :only [:name] :where {:_id {:$in oids}}))]
     (map :name rs)))
 
-(defn- doc-
+(defn doc-
   "显示指定表中指定object-id的记录内容。
   @tb 表名如 :pn :en :org 
   @id object-id字符串如 '4f8ad8ef75e0ae9283368075' 
-  @m 定制化，参数 {:befor .. :after ..} :befor 在前面的html内容或者带rt参数的fn，
-  :after 在后面的html内容或者带rt参数的 (fn [rt] ..) "
+  @m 定制化，参数 {:befor .. :after ..} 
+    :befor 在前面的html内容或者带rt参数的fn，
+    :after 在后面的html内容或者带rt参数的 (fn [rt] ..) 
+    :rs 不使用从esp库的tb表查数据，给定数据。
+    :app 非esp的应用如'espfj'
+  "
   ([tb id m]
-    (let [rt (with-oid- tb id)]
+    (let [rt (or (:rs m) (with-oid- tb id))]
       (html-body
         (when-let [before (:before m)] (if (fn? before) (before rt) before))
         [:table.wr3table {:border 1}
@@ -296,18 +319,19 @@
             [:tr 
              [:th {:style "text-align: left"} (or (dd-meta k) k) "："] 
              [:td (case k ; 显示转换，如：有些代码可以用字典得到名称
-                    :type (or (dd-type (to-int v)) v) 
+                    :type (types-names v) 
                     :type2 (or (dd-type2 (to-int v 11)) v) 
                     :grade (or (dd-grade (to-int v)) v)
                     :belong (str v (when-let [n (wr3user-name v)] (format " (%s)" n)))
                     :fulltime (if v "专职" "兼职")
-                    :admin (or (dd-admin (str v)) v)
+                    :admin (or (get (or (:admin m) dd-admin) (str v)) v) ; espfj 可在m中指定 {:admin dd-admin-fj}
+                    :from (or (get (or (:from m) dd-province) v) v) ; espfj 可在m中指定 {:admin dd-province-fj}
                     :orgid (eui-combo {:id "orgid" :name "orgid"} (zipmap v (with-orgid- v)))
                     :orgid1 [:a {:href (str "/c/esp/docv/org/" v) :target "_blank"} "查看"]
                     :enid [:a {:href (str "/c/esp/docv/en/" v) :target "_blank"} "查看"]
                     (:info :content) (replace-all v "\r\n" "<br/>")
                     :reason (or (get (case tb :org-backup dd-org-backup :en-backup dd-en-backup) (to-int v)) v) ; 考评机构备案原因
-                    :safe [:a {:href v} "查看"] ; 考评机构安全生产组织架构
+                    (:safe :photo :perf2 :proof :proof2 :proof3) [:a {:href v} "查看"] ; 考评机构安全生产组织架构等
                     (:resp :resp-review) [:b (resp-format- v)]
                     v)] ])]
          [:tfoot 

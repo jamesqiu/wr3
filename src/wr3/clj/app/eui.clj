@@ -49,8 +49,10 @@
       {:selected "true"} "输入/选择"
       (html
         [:label "(eui-calendar)"] (eui-calendar)
-        [:br][:label "下拉框(eui-combo)："] 
+        [:br][:label "下拉框(eui-combo，需js)："] 
         (eui-combo {:id "s1"} '{01 java 02 ruby 03 python 04 clojure 05 scala})
+        [:br][:label "下拉框多选(eui-combo，需js)："] 
+        (eui-combo {:id "s2"} '{01 java 02 ruby 03 python 04 clojure 05 scala})
         [:br][:label "选日期(eui-datebox)："]
         (eui-datebox nil)
           [:br][:label "选时间(eui-datetimebox)："]

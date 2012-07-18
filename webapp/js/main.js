@@ -625,6 +625,7 @@ function task_onload() {
 function eui_onload() {
 	// 初始化下拉选择列表
 	$('#s1').combobox()
+	$('#s2').combobox({multiple:true})
 	// 显示右键菜单
 	$('#cmenu_button').click(function(e) {
 		$('#cm1').menu1('show',{
@@ -3160,6 +3161,14 @@ function LoginForm_onsubmit() {
 	} else {
 		return true;
 	}
+}
+
+/**
+ * 福建考评员申请
+ */
+function espfj_onload() {
+	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
+	$('#type').combobox({multiple:true, width:250})
 }
 
 /**

@@ -355,13 +355,13 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   ;(eui-datebox (merge {:class "easyui-datetimebox"} m)))
   
 (defn eui-combo
-  "得到一个下拉选择列表，需要在js中初始化: $('#id1').combobox()，参数：
+  "得到一个下拉选择列表，需要在js中初始化: $('#id1').combobox()，多选可以 $('#id1').combox({multiple:true}) ，参数：
   m: {:id 'id1' :value '02'} id是必须的, :value 缺省选中的value
   options: 如'{01 java 02 ruby 03 python}"
   [m options]
   (tags :select m nil (for [[k v] options] [:option (merge {:value k} (when (= k (:value m)) {:selected "true"})) v])))
 ;  (tags :select {:id id} nil (map #(vector :option {:value (key %)} (val %)) options)))
-  
+
 (defn eui-text
   "输入必填文本框, 
   有:required属性，无论值为true，false，都代表必须填写"

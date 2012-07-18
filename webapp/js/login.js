@@ -3,8 +3,13 @@
  * @see ../login.html 
  */
 $(function() {
+	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
+
 	// 如果要验证的是esp应用，并且是ie，跳到UKey验证页面
 	$.get("/c/auth/url", function(data) {
+		if (data.indexOf('/c/espfj/')==0) {
+			window.top.location.href = '/c/espfj/login';
+		}
 		if ((data.indexOf('/c/esp/')==0) && ($.browser.msie)) {
 			window.top.location.href = '/c/espreg/ca';
 		}
@@ -29,7 +34,6 @@ $(function() {
 		this.style.cursor = 'hand'
 	})
 	// 当前登录信息	
-	$.ajaxSetup({cache:false})
 	$.get("/c/auth/who", function(data) {
 		var json = $.parseJSON(data)
 		var who = (json==null) ?  "尚未登录！" : ("当前用户："+json.uid+"("+json.name+")")
@@ -44,7 +48,7 @@ function check() {
 		return false;
 	}
 	var url = window.location.href;
-	// 要提交验证form的action的地址，缺省为 /c/auth
+	// 要提交验证form的action的地址缺省为 /c/auth/login，可通过 ?action=.. 来定制。
 	var s = "?action="
 	var i = url.indexOf(s)
 	var action = (i==-1) ? "/c/auth/login?" : url.substring(i+s.length)

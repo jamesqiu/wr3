@@ -299,11 +299,18 @@
    :org "单位组织"
    :orgid "选择的2个考评机构"
    :orgid1 "指定的考评机构"
+   :pass-direct "直接颁发"
    :pcode "邮编"
+   :perf "专业工作业绩" 
+   :perf2 "专业工作业绩附件" 
+   :photo "照片"
    :pid "证件号"
    :pn "考评员"
    :pnumber "专职考评员人数"
    :pnumber2 "高级技术职称考评员人数"   
+   :proof "相关证明文件（身份证）"
+   :proof2 "相关证明文件（学历证书）"
+   :proof3 "相关证明文件（其他证书）"
    :province "省份"
    :qual "资格证件"
    :reason "原因"
@@ -313,6 +320,7 @@
    :respdate "受理日期"
    :respdate-eval "考评日期"
    :respdate-review "审核日期"
+   :resume "主要工作简历"
    :safe "安全生产组织架构"
    :score "分数"
    :score0 "自评分数"
@@ -323,6 +331,7 @@
    :stop "终止业务"
    :tel "电话"
    :title "职称"
+   :train "主要学习（培训）经历"
    :train-end "培训结束日期"
    :train-hour "培训学时"
    :train-id "培训合格证号"
@@ -393,9 +402,7 @@
   [
    ["姓名" :name {:require true}]
    ["身份证号" :pid {:t 'pid :require true :title "15位或18位身份证"}]
-   ["性别" :sex {:t ["男" "女"]}]
-   ["出生年月" :birth {:t 'date :title "注意：年龄原则上不得超过65周岁；格式如1980-5"}]
-   ["常住地" :from {:t dd-province}]
+   ["常住地" :from {:t dd-province :v "福建"}]
    ["照片" :photo {:t 'file :title "照片要求：……"}]
    ["工作单位" :org]
    ["职称" :title]
@@ -409,13 +416,14 @@
    ["所学专业" :major {:title "注意：必须具备交通运输相关专业大学专科以上学历"}]
    ["现从事专业" :prof]
    ["相关专业从业年份" :begindate {:v 5}]   
-   ["申请类别" :type {:t dd-type :v 1 :title "考评员申请的专业类型不得多于二种"}] ; 最多两类
-   ["主要学习（培<br/>训）经历" :train {:t 'textarea}]
+   ["申请专业类型（不得多于两种）" :type {:t dd-type :v 1 :title "考评员申请的专业类型不得多于二种"}] ; 最多两类
+   ["主要学习（培训）经历" :train {:t 'textarea}]
    ["主要工作简历" :resume {:t 'textarea}]
-   ["专业工作业绩" :perf {:t 'file}]
-   ["相关证明文件1（身份证）" :proof {:t 'file :title "二代身份证正反面（pdf, doc或者jpg格式）"}]
-   ["相关证明文件2（学历证书）" :proof2 {:t 'file :title "学历证书（pdf, doc或者jpg格式）"}]
-   ["相关证明文件3（其他证书）" :proof2 {:t 'file :title "其他各类培训合格证明的照片、编号页、发证机关印章页（pdf, doc或者jpg格式）"}]
+   ["专业工作业绩" :perf {:t 'textarea}]
+   ["专业工作业绩附件（可选）" :perf2 {:t 'file}]
+   ["相关证明文件（身份证）" :proof {:t 'file :title "二代身份证正反面（pdf, doc或者jpg格式）"}]
+   ["相关证明文件（学历证书）" :proof2 {:t 'file :title "学历证书（pdf, doc或者jpg格式）"}]
+   ["相关证明文件（其他证书）" :proof3 {:t 'file :title "其他各类培训合格证明的照片、编号页、发证机关印章页（pdf, doc或者jpg格式）"}]
    ["主管机关" :admin {:t (dissoc dd-admin "01") :title "请自选主管机关"}]
    ["换证原因<b>（仅换证申请）</b>" :renew {:t dd-renew}]
    ["继续教育证明<b>（仅换证申请）</b>" :edu2 {:t 'file}]

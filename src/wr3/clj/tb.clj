@@ -249,8 +249,8 @@
   attr: <table>属性如： {:style '..' :title '..'}
   f-head: 列头处理函数，例如 (fn [thead] (map-indexed (fn [i th] [:th th]) thead)) 
   f-row: 数据行处理函数，例如 (fn [row-index row] [:tr (map (fn [td] [:td td]) row)])
-  f-th: 行列头元素的处理函数如：(fn [col-index th] [:th i th])
-  f-td: 数据项处理函数如 (fn [row-index col-index [k v] row] [:td (merge {:col col-index} (td-align v)) v])
+  f-th: 行列头单个元素的处理函数如：(fn [col-index th] [:th i th])
+  f-td: 单个数据项处理函数如 (fn [row-index col-index [k v] row] [:td (merge {:col col-index} (td-align v)) v])
         其中row-index / col-index为0开始的行/列号，[k v]为列名和元素内容内容，row为元素所在行如 {:c1 v :c2 v ..}
   "
   ([result] (result-html result nil))
