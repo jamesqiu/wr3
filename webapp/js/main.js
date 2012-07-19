@@ -3168,14 +3168,45 @@ function LoginForm_onsubmit() {
  */
 function espfj_onload() {
 	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
-	$('#type').combobox({multiple:true, width:250})
+	$('#type').combobox({multiple:true, width:250,
+		onChange: function(v1, v0) {
+			if (v1.length>2) {
+				$('#typeText').val($('#type').combobox('getText'))
+				alert("注意：最多只能选择两种类型！")
+				$('#type').combobox('setValues', v0)
+			} else {
+				if (v1.length<2) $('#typeText').val('')				
+			}
+		},
+		onSelect: function(r) {
+			var typeText = $('#typeText').val()
+			if (typeText != '') {
+				$('#type').combobox('setText', typeText)				
+			}
+		}
+	})	
+}
+
+function espfj_input_submit_check() {
+	if ($('#name').val().trim()=='') {
+		alert('姓名为必填字段')
+		return false
+	}
+	var pidRegex = /^[1-9]\d{5}[1-9]\d{3}((0\d)|(1[0-2]))(([0|1|2]\d)|3[0-1])((\d{4})|\d{3}[xX])$/;
+	if (!pidRegex.test($('#pid').val())) {
+		alert('请填写符合格式的18位身份证号')
+		return false
+	}
+	return true;
 }
 
 /**
  * 福建考评员表单提交保存
  */
 function espfj_input_submit(form) {
-	var url = '/c/espfj/input-submit/'+form +'?' + $("form").serialize() 
-	ajax_post(url)
+	if (espfj_input_submit_check()) {
+		var url = '/c/espfj/input-submit/'+form +'?' + $("form").serialize() 
+		ajax_post(url)		
+	}
 }
 

@@ -3,7 +3,7 @@
 
 (use 'wr3.clj.s 'wr3.clj.n 'wr3.clj.u 'wr3.clj.web 'wr3.clj.tb)
 (use 'somnium.congomongo 'wr3.clj.nosql 'somnium.congomongo 'hiccup.core)
-(require '[wr3.clj.app.esp :as esp]) 
+(require '[wr3.clj.app.espc :as espc]) 
 (require '[wr3.clj.app.espconf :as conf]) 
 
 (def dd-province-fj
@@ -44,8 +44,14 @@
 (def cfg-pn
   (let [n (count conf/cfg-apply-pn)
         rt1 (take (- n 4) conf/cfg-apply-pn)
-        rt2 (assoc (vec rt1) 2 ["常住地" :from {:t dd-province-fj :v "1"}])]
-    (concat rt2 [["主管机关" :admin {:t dd-admin-fj :title "请自选主管机关"}]])))
+        rt2 (assoc (vec rt1) 2 ["常住地" :from {:t dd-province-fj :v "1"}])
+        rt3 (row-add rt2 6 ["职称证明文件" :titlefile {:t 'file}])
+        rt4 (row-add rt3 17 ["相关专业从业年份证明文件" :beginfile {:t 'file}])
+        rt5 (row-add rt4 17 ["证明人联系电话" :proofmobile {}])
+        rt6 (row-add rt5 17 ["证明人" :proofname {}])
+        rt7 (row-add rt6 17 ["证明单位" :prooforg {}])
+        ]
+    (concat rt7 [["主管机关" :admin {:t dd-admin-fj :title "请自选主管机关"}]])))
 
 (defn auth
   "该 CljServlet 调用，用于本应用各函数的权限控制 "
@@ -71,7 +77,11 @@
       [:center {:style "border: 1px solid #369"}
        [:h1 {:style "padding:20px; background-color:#369; color: white; font-size: 22px; margin-top:0px"} 
         "福建省交通运输厅——考评员在线报名系统"]
+       [:div {:align "left"} 
+        (eui-tip "请认真填写除如下可选字段外的所有信息：职称、职称证明文件、联系电话、传真号码、相关专业从业年份证明文件、
+                  专业工作业绩附件（可选）、相关证明文件（其他证书）")]
        [:div {:align "center" :style "border:0px solid red"}
+        [:input#typeText {:type "hidden" :value ""}] 
         (input-form 
           cfg-pn
           {:title "考评员资格申请表"
@@ -113,7 +123,7 @@
          (when (in? role ["1400" "1401"]) 
            [:a {:href "/c/espfj/users" :target "_blank"} "【管理用户】"]) ]
         [:h1 (format "考评员资格审批（%s）" (:name rs))]
-        (esp/result-html- rs2
+        (espc/result-html- rs2
                          ["主管机关" "报名日期" "姓名" "身份证" "报名类型" "处理结果" "直接颁发" "详情"]
                          [:admin :date :name :pid :type :resp :pass-direct :_id-fj]
                          {:admin dd-admin-fj :form "admin-resp"})
@@ -127,7 +137,7 @@
   "主管机关处理一个申请"
   [id request]
   (let [rs (with-mdb2 "espfj" (fetch-by-id :pn-apply (object-id id)))]
-    (esp/doc- :pn-apply id 
+    (espc/doc- :pn-apply id 
               {:rs rs :admin dd-admin-fj :from dd-province-fj
                :before [:h1 {:align "center"} "考评员资格审批"]
                :after (html 
@@ -219,7 +229,7 @@
   (let [rs (with-mdb2 "espfj" (vec (fetch :user :sort {:role 1} :where {:uid {:$ne "admin"}})))]
     (html-body
       [:center [:h1 "系统用户管理"]
-       (esp/result-html- rs
+       (espc/result-html- rs
                          ["用户角色" "用户名称" "用户ID" "详情"]
                          [:role :name :uid :_id-fj]
                          {:admin dd-admin-fj :form "user"})])))
@@ -262,7 +272,8 @@
         "del" (do (destroy! :user pn) (str "已删除用户" n))
         "update" (do (update! :user pn pn-new) (str "已保存用户" n))
         "未知动作" ))))
-  
+
 ;(with-mdb2 "espfj"
 ;  (doseq [[k v] (rest dd-admin-fj)]
 ;    (insert! :user {:name v :role k :uid k :pwd "7215ee9c7d9dc229d2921a40e899ec5f"})))
+

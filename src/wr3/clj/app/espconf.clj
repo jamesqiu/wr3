@@ -262,86 +262,6 @@
    :org 5 
    :en 3
    })
-; 数据项英文、中文对照
-(def dd-meta
-  {
-   :_id "详情"
-   :_issue "证书"
-   :_select "选择"
-   :_cdate-end "证书到期日"
-   :admin "主管机关"
-   :advice "处理意见"
-   :advice-eval "考评意见"
-   :advice-review "审核意见"
-   :begindate "相关专业从业时间"
-   :belong "所属考评机构"
-   :birth "出生日期"
-   :cdate "发证时间"
-   :cid "证书号"
-   :content "内容"
-   :contract0 "聘用日期"
-   :contract1 "解聘日期"
-   :ctype "证书类型"
-   :date "日期"
-   :death "死亡人数"
-   :edu "学历"
-   :enid "企业ID"
-   :exam-date "考试日期"
-   :exam-score "考试分数"
-   :from "属地"
-   :fulltime "专兼职"
-   :grade "等级"
-   :info "举报人信息"
-   :legalp "法人代表"
-   :major "专业"
-   :mobile "手机"
-   :name "名称"
-   :org "单位组织"
-   :orgid "选择的2个考评机构"
-   :orgid1 "指定的考评机构"
-   :pass-direct "直接颁发"
-   :pcode "邮编"
-   :perf "专业工作业绩" 
-   :perf2 "专业工作业绩附件" 
-   :photo "照片"
-   :pid "证件号"
-   :pn "考评员"
-   :pnumber "专职考评员人数"
-   :pnumber2 "高级技术职称考评员人数"   
-   :proof "相关证明文件（身份证）"
-   :proof2 "相关证明文件（学历证书）"
-   :proof3 "相关证明文件（其他证书）"
-   :province "省份"
-   :qual "资格证件"
-   :reason "原因"
-   :resp "受理结果" ; resp: 第一步mot选1个考评机构；resp-eval：第二步org进行考评；resp-review：第三步mot进行审核
-   :resp-eval "考评结果"
-   :resp-review "审核结果"
-   :respdate "受理日期"
-   :respdate-eval "考评日期"
-   :respdate-review "审核日期"
-   :resume "主要工作简历"
-   :safe "安全生产组织架构"
-   :score "分数"
-   :score0 "自评分数"
-   :score1 "考评分数"
-   :sex "性别"
-   :stand "达标评估"
-   :start "开始从事相应业务年份" 
-   :stop "终止业务"
-   :tel "电话"
-   :title "职称"
-   :train "主要学习（培训）经历"
-   :train-end "培训结束日期"
-   :train-hour "培训学时"
-   :train-id "培训合格证号"
-   :train-start "培训开始日期"
-   :type "类型"
-   :type2 "细类"
-   :uid "用户ID" ; 每个pn一个uid（可用身份证等）；每个en的所有登录用户同一个uid，每个org的所有登录用户同一个uid（可用机构代码等）
-   :workdate "参加工作日期"
-   :yyyy "年份"
-   })
 ; 各省名称，@deprecated
 (def dd-province
   (let [ls (map str '(北京 上海 广东 江苏 陕西 山东 新疆 湖南 黑龙江 湖北 安徽 浙江 四川 贵州 甘肃 福建 辽宁 重庆 天津 广西 吉林 
@@ -407,7 +327,7 @@
    ["工作单位" :org]
    ["职称" :title]
    ["通讯地址" :address]
-   ["邮  编" :pcode {:t 'pcode}]
+   ["邮编" :pcode {:t 'pcode}]
    ["联系电话" :tel]
    ["传真号码" :fax]
    ["手机号码" :mobile]
@@ -420,7 +340,7 @@
    ["主要学习（培训）经历" :train {:t 'textarea}]
    ["主要工作简历" :resume {:t 'textarea}]
    ["专业工作业绩" :perf {:t 'textarea}]
-   ["专业工作业绩附件（可选）" :perf2 {:t 'file}]
+   ["专业工作业绩附件" :perf2 {:t 'file}]
    ["相关证明文件（身份证）" :proof {:t 'file :title "二代身份证正反面（pdf, doc或者jpg格式）"}]
    ["相关证明文件（学历证书）" :proof2 {:t 'file :title "学历证书（pdf, doc或者jpg格式）"}]
    ["相关证明文件（其他证书）" :proof3 {:t 'file :title "其他各类培训合格证明的照片、编号页、发证机关印章页（pdf, doc或者jpg格式）"}]
@@ -442,7 +362,7 @@
    ["开始从事相应业务年份" :start {:v 2005}]
    ["主管机关" :admin {:t dd-admin}]
    ["办公地址" :address]
-   ["邮  编" :pcode {:t 'pcode}]
+   ["邮编" :pcode {:t 'pcode}]
    ["单位电话" :tel]
    ["传真号码" :fax]
    ["联系人" :contact]
@@ -471,3 +391,154 @@
    ["企业安全生产工作报告" :report {:t 'file :title "Word文档"}]
    ])
 ;---------------- end
+
+(defn- cfg-meta [cfg] (into {} (for [[v k & _] cfg] [k v])))
+; 数据项英文、中文对照
+(def ^{:doc "减少dd-meta和cfg-apply-pn|org|en中的重复定义"} dd-meta2
+  (merge
+    (cfg-meta cfg-apply-pn)
+    (cfg-meta cfg-apply-org)
+    (cfg-meta cfg-apply-en)
+    {
+     :_cdate-end "证书到期日"
+     :_id "详情"
+     :_issue "证书"
+     :_select "选择"
+     :advice "处理意见"
+     :advice-eval "考评意见"
+     :advice-review "审核意见"
+     :belong "所属考评机构"
+     :birth "出生日期"
+     :cdate "发证时间"
+     :cid "证书号"
+     :content "内容"
+     :contract0 "聘用日期"
+     :contract1 "解聘日期"
+     :ctype "证书类型"
+     :date "日期"
+     :death "死亡人数"
+     :enid "企业ID"
+     :exam-date "考试日期"
+     :exam-score "考试分数"
+     :fulltime "专兼职"
+     :grade "等级"
+     :info "举报人信息"
+     :mobile "手机"
+     :name "名称"
+     :org "单位组织"
+     :orgid "选择的2个考评机构"
+     :orgid1 "指定的考评机构"
+     :pass-direct "直接颁发"
+     :pn "考评员"
+     :province "省份"
+     :reason "原因"
+     :resp "受理结果"
+     :resp-eval "考评结果"
+     :resp-review "审核结果"
+     :respdate "受理日期"
+     :respdate-eval "考评日期"
+     :respdate-review "审核日期"
+     :score "分数"
+     :score0 "自评分数"
+     :score1 "考评分数"
+     :sex "性别"
+     :stand "达标评估"
+     :stop "终止业务"
+     :tel "电话"
+     :train-end "培训结束日期"
+     :train-hour "培训学时"
+     :train-id "培训合格证号"
+     :train-start "培训开始日期"
+     :type "业务类型"
+     :type2 "业务类别"
+     :uid "用户ID"
+     :workdate "参加工作日期"
+     :yyyy "年份"
+     }))
+
+; 数据项英文、中文对照（@deprecated：因与cfg-apply-pn|org|en 重复，用dd-meta代替，最后要移除）
+(def dd-meta
+  {
+   :_id "详情"
+   :_issue "证书"
+   :_select "选择"
+   :_cdate-end "证书到期日"
+   :admin "主管机关"
+   :advice "处理意见"
+   :advice-eval "考评意见"
+   :advice-review "审核意见"
+   :begindate "相关专业从业年份"
+   :belong "所属考评机构"
+   :birth "出生日期"
+   :cdate "发证时间"
+   :cid "证书号"
+   :content "内容"
+   :contract0 "聘用日期"
+   :contract1 "解聘日期"
+   :ctype "证书类型"
+   :date "日期"
+   :death "死亡人数"
+   :edu "文化程度"
+   :enid "企业ID"
+   :exam-date "考试日期"
+   :exam-score "考试分数"
+   :from "常住地"
+   :fulltime "专兼职"
+   :grade "等级"
+   :info "举报人信息"
+   :legalp "法人代表"
+   :major "所学专业"
+   :mobile "手机"
+   :name "名称"
+   :org "单位组织"
+   :orgid "选择的2个考评机构"
+   :orgid1 "指定的考评机构"
+   :pass-direct "直接颁发"
+   :pcode "邮编"
+   :perf "专业工作业绩" 
+   :perf2 "专业工作业绩附件" 
+   :photo "照片"
+   :pid "身份证号"
+   :pn "考评员"
+   :pnumber "专职考评员人数"
+   :pnumber2 "高级技术职称考评员人数"   
+   :proof "相关证明文件（身份证）"
+   :proof2 "相关证明文件（学历证书）"
+   :proof3 "相关证明文件（其他证书）"
+   :province "省份"
+   :qual "企业法人资格证件"
+   :reason "原因"
+   :resp "受理结果" ; resp: 第一步mot选1个考评机构；resp-eval：第二步org进行考评；resp-review：第三步mot进行审核
+   :resp-eval "考评结果"
+   :resp-review "审核结果"
+   :respdate "受理日期"
+   :respdate-eval "考评日期"
+   :respdate-review "审核日期"
+   :resume "主要工作简历"
+   :safe "安全生产组织架构"
+   :score "分数"
+   :score0 "自评分数"
+   :score1 "考评分数"
+   :sex "性别"
+   :stand "达标评估"
+   :start "开始从事相应业务年份" 
+   :stop "终止业务"
+   :tel "电话"
+   :title "职称"
+   :train "主要学习（培训）经历"
+   :train-end "培训结束日期"
+   :train-hour "培训学时"
+   :train-id "培训合格证号"
+   :train-start "培训开始日期"
+   :type "业务类型"
+   :type2 "业务类别"
+   :uid "用户ID" ; 每个pn一个uid（可用身份证等）；每个en的所有登录用户同一个uid，每个org的所有登录用户同一个uid（可用机构代码等）
+   :workdate "参加工作日期"
+   :yyyy "年份"
+   })
+
+;(use 'wr3.clj.s)
+;(into (sorted-map) (filter (fn [[k v]] (or (not (in? k (keys dd-meta2))) (not= (dd-meta2 k) v))) dd-meta))
+;(doseq [[k v] dd-meta]
+;  (when (and (in? k (keys dd-meta2)) (not= v (dd-meta2 k))) (println k (dd-meta2 k) "->" v)))
+;(count dd-meta) ; 76
