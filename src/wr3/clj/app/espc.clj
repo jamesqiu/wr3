@@ -246,7 +246,7 @@
         (wr3.util.Charsetx/hasChinese id) (search-field- tb :name id) 
         :else (search-field- tb :cid id) ))
 
-(defn- list-
+(defn list-
   "共用函数：列表显示pn、org、en
   @id name的pattern如'张' 
   @tb :pn :org :en "

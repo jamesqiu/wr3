@@ -929,10 +929,13 @@
              (fn [r] (merge vars {:respdate (datetime)})))
     "申请已处理"))
 
+
+
 (defn mot-en-review
   "主管机关对org评审过的企业考评结论审核"
   []
-  (let [rs (with-esp- (fetch :en-apply ))]
+  (let [rs (with-esp- (fetch :en-apply ))
+        rs2 (filter #(> (days (:respdate-review %)) 7) (with-esp- (fetch :en-apply :where {:resp-review "yes"})))]
     (html
       [:h1 "企业考评结论审核"]
       (eui-tip (str "企业考评结论受理：" 
@@ -945,7 +948,13 @@
         [:name :type2 :date :score0 :score1 :resp :resp-eval :resp-review :_id :_select]  ; todo: 考评机构评分score字段
         {:form "mot-en-review-doc"}) [:br]
       (eui-button {:onclick "esp_en_apply_resp()"} "同意，进行公示") [:br][:br]
-      [:h2 "公示期满可发证企业一览："] (eui-tip "无公示期满的企业") )))
+      [:h2 "公示期满可发证企业一览："] 
+      (if (empty? rs2)
+        (eui-tip "无公示期满的企业") 
+        (result-html- 
+          rs2 [] 
+          [:name :type2 :date :score0 :score1 :resp :resp-eval :resp-review :_id :_select] {:form "mot-en-review-doc"}))
+      )))
 
 (defn mot-en-review-doc
   "app: 受理企业考评结论审核
@@ -1178,3 +1187,11 @@
 ;      field :type
 ;      kk (sort < (with-mdb2 "esp" (distinct-values tb (name field) )))]
 ;  (for [k kk] {field k :count (with-mdb2 "esp" (fetch-count tb :where {field k}))}) )
+
+;(sort-by :admin
+;(with-mdb2 "esp"
+;  (group :pn-train 
+;         :key [:admin]
+;         :initial {:count 0} 
+;         :reducefn "function(obj,prev){prev.count++;}"))
+;)

@@ -53,7 +53,7 @@
    </OBJECT>")
 
 (defn ca
-  "BJCA test"
+  "BJCA test，win下需要配置文件：%USERPROFILE%\BJCAROOT\SVSClient.properties "
   [request]
   (let [sed (SecurityEngineDeal/getInstance "SM")
         strServerCert (.getServerCertificate sed)

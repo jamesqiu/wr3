@@ -149,7 +149,9 @@
                                                          {"yes" "同 意" "no" "不同意"})]
                          (eui-tip "符合免试申请条件者：")
                          (eui-text {:id "pass-direct" :name "pass-direct" :type "checkbox"}) (space 2) "直接颁发" 
-                         [:p (eui-button {:onclick "$('#fm1').submit()"} "提 交")]] )})))
+                         [:p (eui-button {:onclick "$('#fm1').submit()"} "提 交")]] 
+                        [:script "espfj_admin_resp()"]
+                        )}) ))
 
 (defn admin-resp-submit
   [request]

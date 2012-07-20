@@ -3164,7 +3164,7 @@ function LoginForm_onsubmit() {
 }
 
 /**
- * 福建考评员申请
+ * 考评员申请
  */
 function espfj_onload() {
 	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
@@ -3188,7 +3188,8 @@ function espfj_onload() {
 }
 
 function espfj_input_submit_check() {
-	if ($('#name').val().trim()=='') {
+//	if ($('#name').val().trim()=='') {
+	if ($('#name').val()=='') { // IE这个垃圾没有trim()函数
 		alert('姓名为必填字段')
 		return false
 	}
@@ -3210,3 +3211,13 @@ function espfj_input_submit(form) {
 	}
 }
 
+function espfj_admin_resp() {
+	$('#resp').change(function() {
+		if ($(this).val()=="no") {
+			$('#pass-direct').prop('checked',false).prop('disabled',true)
+		} else {
+			$('#pass-direct').prop('disabled',false)			
+		}
+	})
+	
+}

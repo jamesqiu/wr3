@@ -225,6 +225,10 @@
   @return 字符串如 2012-3-5 "
   ([y m d] (Datetime/date (Datetime/add y m d)))
   ([from y m d] (Datetime/date (Datetime/add (date-parse from) y m d))))
+(defn days 
+  "计算字符表示的日期与今天相隔的天数, today - d "
+  [d]
+  (Datetime/days (date-parse d) (date-parse (date))))
 
 ;; conj cons 函数对vector和list的行为不一致，很容易引起混乱，改造如下：
 (defn conj+ 
@@ -238,4 +242,4 @@
   cons+统一为和输入一致，(cons+ 1 '(2 3)) -> '(1 2 3), (cons+ 1 [2 3]) ->  [1 2 3]"
   [x coll] (if (vector? coll) (into (vector x) coll) (cons x coll)))
 
-
+(days "2012-7-21")

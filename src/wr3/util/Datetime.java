@@ -175,7 +175,7 @@ public class Datetime {
 	 */
 	public static int days(Calendar c0, Calendar c1) {
 		long diff = c1.getTimeInMillis() - c0.getTimeInMillis();
-		return (int)(diff/(1000*60*60*24));
+		return (int)(Math.round(diff/(1000.0*60*60*24)));
 	}
 
 	/**
@@ -310,11 +310,12 @@ public class Datetime {
 
 		System.out.println(date(parse("2010-02-13")));
 		System.out.println(lunar(2010,2,13));
-		System.out.printf("Today - (2010-2-13) = %d Ìì\n", days(calendar(2010,2,13), today()));
+		System.out.printf("Today - (2012-7-22) = %s Ìì\n", days(calendar(2012,7,22), today()));
 		
 		System.out.println(date(parse("2011-5-4")));
 		System.out.println(date(parse("2011-5-04")));
 		System.out.println(date(parse("2011-05-04")));
+		
 	}
 
 }
