@@ -47,12 +47,19 @@
   [tb uid]
   (with-esp- (fetch tb :where {:uid uid})))
 
+(defn tb-count
+  "得到tb的全记录数；或者tb中字段f符合匹配条件s的记录数。"
+  ([tb] (with-mdb2 "esp" (fetch-count tb)))
+  ([tb f s] (with-mdb2 "esp" (fetch-count tb :where {f (re-pattern (or s ""))}))))
+  
 (defn data-
   "取出数据表所有记录（1000条以内）并持久化。
-  @tb :pn | :en | :org
-  @todo 超过100条增加分页 "
-  [tb]
-  (with-esp- (fetch tb :limit 1000)))
+  @tb 如 :pn | :en | :org"
+  ([tb] (with-esp- (fetch tb :limit 100)))
+  ([tb m] 
+    (let [limit (or (:limit m) 100)
+          skip (or (:skip m) 0)]
+      (with-esp- (fetch tb :skip skip :limit limit)))))
 
 (defn- wr3user-name
   "传入wr3user的uid，得到name"
@@ -98,6 +105,11 @@
             nn (map #(or (dd-type (to-int % 1)) %) ss)]
         (join nn ", ")))))
 
+(defn org-name
+  "通过oid字符串得到org名称"
+  [oid]
+  (if-let [nam (:name (with-oid- :org oid))] nam oid))
+
 (defn result-html-
   "共用函数：对没有特殊要求的结果进行列表展示
   @rt Clojure.sql结果集 [{:c1 v :c2 v ..} ..]
@@ -138,6 +150,8 @@
                           :admin (or (get (or (:admin m) dd-admin) v) v)
                           :respdate (if (nil? v0) "<font color=gray>尚未处理</font>" 
                                       (format "已于%s处理" v))
+                          :respdate-review (if (nil? v0) "<font color=gray>尚未处理</font>" 
+                                             (format "已于%s处理" v))
                           :cstate (if (nil? v0) "正常" "撤销") ; 考评机构证书状态
                           :reason (or (get (case (:id m) 
                                              "org" dd-org-backup 
@@ -150,6 +164,7 @@
                                        (when-let [report (:report v0)] [:a {:href report} "自评报告"])) ; 企业达标自评
                           (:resp :resp-eval :resp-review) (resp-format- v0)
                           :pass-direct (pass-direct-format v)
+                          :orgid1 (org-name v)
                           v)])) ]) } )))
   ([rt head cols] (result-html- rt head cols {})))
 
@@ -210,7 +225,7 @@
                     :admin (or (get (or (:admin m) dd-admin) (str v)) v) ; espfj 可在m中指定 {:admin dd-admin-fj}
                     :from (or (get (or (:from m) dd-province) v) v) ; espfj 可在m中指定 {:admin dd-province-fj}
                     :orgid (eui-combo {:id "orgid" :name "orgid"} (zipmap v (with-orgid- v)))
-                    :orgid1 [:a {:href (str "/c/esp/docv/org/" v) :target "_blank"} "查看"]
+                    :orgid1 [:a {:href (str "/c/esp/docv/org/" v) :target "_blank"} (org-name v)]
                     :enid [:a {:href (str "/c/esp/docv/en/" v) :target "_blank"} "查看"]
                     (:info :content) (replace-all v "\r\n" "<br/>")
                     :reason (or (get (case tb :org-backup dd-org-backup :en-backup dd-en-backup) (to-int v)) v) ; 考评机构备案原因
@@ -235,25 +250,75 @@
 (defn- search-field-
   "@tb :pn | :en | :org 等等
   @f 字段 :name 中文名称或 :cid 证书号 
-  @s 字符串模式"
-  [tb f s]
-  (with-esp- (fetch tb :limit 1000 :where {f (re-pattern (or s ""))})))
+  @s 字符串模式
+  @m 参数{:skip .. :limit ..}"
+  ([tb f s] (search-field- tb f s nil))
+  ([tb f s m]
+    (let [limit (or (:limit m) 100)
+          skip (or (:skip m) 0)]
+      (with-esp- (fetch tb :skip skip :limit limit :where {f (re-pattern (or s ""))})) )))
 
 (defn- search-auto-
   "根据输入值是否带中文来搜名称或者证书号，为空则搜出全部"
-  [tb id]
-  (cond (nullity? id) (data- tb)
-        (wr3.util.Charsetx/hasChinese id) (search-field- tb :name id) 
-        :else (search-field- tb :cid id) ))
+  [tb id m]
+  (cond (nullity? id) (data- tb m)
+        (wr3.util.Charsetx/hasChinese id) (search-field- tb :name id m) 
+        :else (search-field- tb :cid id m) ))
 
+(defn pager-options
+  "每页100行记录的eui-combo的options，注意key是integer型。
+  如: ([0 \"第1页：1-100\"] [100 \"第2页：101-200\"] [200 \"第3页：201-201\"]) "
+  [n]
+  (let [pages (int (Math/ceil (/ n 100)))]
+    (map #(let [k (* % 100)
+                v (format "第%s页：%s-%s" (inc %) (inc k) (if (= % (dec pages)) n (* 100 (inc %))))] 
+            (vector k v))
+         (range pages))))
+
+(defn pager-html
+  "显示分页的部分html片段。
+  @count1 全部的记录条数
+  @skip 跳过多少条
+  @onchange js的onchange事件 "
+  [count1 skip onchange]
+  (html
+      [:label {:for "pagers"} (format "共 %s 页 %s 条，选择：" (int (Math/ceil (/ count1 100))) count1)] 
+      (eui-combo {:id "pagers" :name "pagers" :value skip :onchange onchange} (pager-options count1)) ))
+  
 (defn list-
   "共用函数：列表显示pn、org、en
   @id name的pattern如'张' 
   @tb :pn :org :en "
-  [id tb col-names col-ids]
+  [id tb col-names col-ids m]
   (let [nam (tb {:pn "考评员" :org "考评机构" :en "交通运输企业"})
-        rt (search-auto- tb id)]
+        count1 (tb-count tb)
+        rt (search-auto- tb id m)]
     (html
       [:h1 (format "%s 列表（%s 名）" nam (count rt))]
-      (result-html- rt col-names col-ids {:form (str "docv/" (name tb))}))))
+      (pager-html count1 (:skip m) (format "esp_pager('/c/esp/%s-list')" (name tb)))
+      (eui-button {:href (format "/c/esp/list-export/%s-export-%s列表.csv?content-type=text/csv&charset=GBK" (name tb) (dd-form tb))
+                   :style "margin:10px"} (format "文件导出（全部%s行）" count1))
+      (result-html- rt col-names col-ids {:form (str "docv/" (name tb))})
+      [:br] )))
 
+(def list-export-dd 
+  {:pn [:name :org :from]
+   :org [:name :province]
+   :en [:province :name :type :grade]
+   })
+
+(defn list-export
+  "导出列表"
+  []
+  (let [rs (with-esp- (fetch :en-apply :where {:cid {:$exists true}}))
+        frow (fn [r] (join (map #(wr3.util.Csv/toCsv %)
+                                [(:name r)
+                                 (dd-type2 (to-int (:type2 r)))
+                                 (dd-grade (to-int (:grade r)))
+                                 (org-name (:orgid1 r))]) 
+                           ","))]
+    (str
+      (join (map #(wr3.util.Csv/toCsv %) ["企业名称" "达标类别" "达标等级" "实施考评的考评机构"]) ",") "\r\n"
+      (join (for [r rs] (frow r) ) "\r\n"))))
+
+;(pager-options 201)

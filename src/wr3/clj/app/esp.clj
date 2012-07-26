@@ -246,7 +246,8 @@
   (let [title (format "%s制发" (dd-cert (keyword id)))]
     (html
       [:h1 title]
-      (eui-tip "系统可直接套打A3纸，也可生成电子证书。")
+      (eui-tip (if (= id "pn") "系统可导出列表，由专业打印机进行打印制发。"
+                 "系统可直接套打A3纸，也可生成电子证书。"))
       [:h2 "审核通过的申请："]
       (case id
         "en" (let [rs (with-esp- (fetch :en-apply :where {:resp-review "yes"}))]
@@ -322,8 +323,9 @@
       (eui-button {:href "#" :onclick "window.close();"} "关闭") )))
 
 (defn cert-issue
-  "en, org制发证书
-  @ids ids[0] typ 'en-apply' 'org-apply' ; ids[1] en-apply或者org-apply表中文档的object-id字符串 "
+  "en, org制发证书，生成新证书号。
+  @ids ids[0] typ 'en-apply' 'org-apply' ; ids[1] en-apply或者org-apply表中文档的object-id字符串 
+  todo：已经打印过证书的，是否用原来的号，还是新生成一个号？ "
   [ids request]
   (let [[apply-type oid] ids
         tb (keyword apply-type) ; :en-apply :org-apply 
@@ -433,7 +435,7 @@
       [:h1 (format "受理%s申请" cname)]
       (eui-tip tip)
       (result-html- rs []
-                    [:name (if (= id "en") :type2 :type) :date :resp :_id :_select] 
+                    [:name (if (= id "en") :type2 :type) :date :resp (if (= id "en") :respdate-review :respdate) :_id :_select] 
                     {:form form}) [:br]
       (when (= id "pn") 
         (eui-button {:onclick "esp_pn_apply_resp()"} "资格证书制发")) )))
@@ -576,8 +578,8 @@
 (defn pn-list
   "service: 考评员列表
   @id name的pattern如'张' "
-  [id]
-  (list- id :pn [] [:name :org :from :_id]))
+  [id skip]
+  (list- id :pn [] [:name :type :org :from :_id] {:skip (to-int skip 0)}))
 
 (defn pn-learn
   "service: 考评员培训、考试查询
@@ -611,8 +613,8 @@
 (defn org-list
   "service: 考评机构列表
   @id name的pattern如'学校' "
-  [id]
-  (list- id :org [] [:name :province :_id]))
+  [id skip]
+  (list- id :org [] [:name :grade :province :_id] {:skip (to-int skip 0)}))
 
 (defn org-pn-archive
   "service: 考评机构-考评员档案管理"
@@ -758,9 +760,10 @@
       (eui-tip "目前暂无") )))
 
 (defn org-en-archive
-  "service: 考评机构的企业档案管理"
+  "service: 考评机构的企业档案管理
+  todo: 只列出admin自己管的企业"
   []
-  (list- "山西" :en [] [:province :name :type :grade :_id]))
+  (list- "山西" :en [] [:province :name :type :grade :_id] {}))
  
 (defn org-en-eval
   "service: org查看en的考评情况汇总"
@@ -795,8 +798,8 @@
 (defn en-list
   "service: 企业列表
   @id name的pattern如'安徽' "
-  [id]
-  (list- id :en [] [:province :name :type :grade :_id]))
+  [id skip]
+  (list- id :en [] [:name :type :grade :province :_id] {:skip (to-int skip 0)}))
 
 (defn en-stand
   "service: 列出所有的达标标准"
@@ -956,6 +959,35 @@
           [:name :type2 :date :score0 :score1 :resp :resp-eval :resp-review :_id :_select] {:form "mot-en-review-doc"}))
       )))
 
+(defn mot-en-passed
+  "已达标企业列表（全国或本月）"
+  []
+  (let [rs (with-esp- (fetch :en-apply :where {:cid {:$exists true}}))]
+    (html
+      [:h2 "已达标企业："] 
+      (eui-button {:href "/c/esp/mot-en-export/en-export-达标企业列表.csv?content-type=text/csv&charset=GBK" 
+                   :target "_blank" :style "margin: 10px"} "导出电子表格")
+      (if (empty? rs)
+        (eui-tip "无已达标企业") 
+        (result-html- 
+          rs ["企业名称" "达标类别" "达标等级" "实施考评的考评机构" "详情"] 
+          [:name :type2 :grade :orgid1 :_id] {:form "mot-en-review-doc"}))
+      ))) 
+
+(defn mot-en-export
+  "导出列表"
+  []
+  (let [rs (with-esp- (fetch :en-apply :where {:cid {:$exists true}}))
+        frow (fn [r] (join (map #(wr3.util.Csv/toCsv %)
+                                [(:name r)
+                                 (dd-type2 (to-int (:type2 r)))
+                                 (dd-grade (to-int (:grade r)))
+                                 (org-name (:orgid1 r))]) 
+                           ","))]
+    (str
+      (join (map #(wr3.util.Csv/toCsv %) ["企业名称" "达标类别" "达标等级" "实施考评的考评机构"]) ",") "\r\n"
+      (join (for [r rs] (frow r) ) "\r\n"))))
+
 (defn mot-en-review-doc
   "app: 受理企业考评结论审核
   @id 企业申请文档的object-id "
@@ -1018,13 +1050,28 @@
         (html-body 
           (eui-tip "已保存" )
           (eui-button {:href "#" :onclick "window.close();"} "关闭") )))))
-                     
+
+(defn mot-pn-train-list
+  "service: 列出考评员培训考试列表"
+  [skip]
+  (let [count1 (tb-count :pn-train)
+        skip (to-int skip 0)
+        rt2 (with-esp- (fetch :pn-train :skip skip :limit 100 :sort {:train-start 1}))] 
+    (html
+      [:div#pn_train_list
+       [:h2 (format "已录入的考评员培训、考试记录（%s 条）：" count1)]
+       (pager-html count1 skip "esp_pn_train_list('/c/esp/mot-pn-train-list')")
+       (result-html- rt2 
+                     ["姓名" "培训合格证" "开始日期" "结束日期" "学时" "类型" "考试日期" "考试成绩"] 
+                     [:name :train-id :train-start :train-end :train-hour :type :exam-date :exam-score])])))
+
 (defn mot-pn-train
   "省级主管机关管理的考评员培训
   @see pn-learn 考评员自己的培训视图"
   [request]
-  (let [count (with-mdb2 "esp" (fetch-count :pn-train))
-        rt2 (with-esp- (fetch :pn-train :sort {:train-start 1}))
+  (let [
+;        count (with-mdb2 "esp" (fetch-count :pn-train))
+        rt2 (with-esp- (fetch :pn-train :only [:train-start] :sort {:train-start 1}))
         yyyymm (frequencies (map #(-> % :train-start (leftback "-")) rt2))]
     (html
       [:h1 "考评员培训工作"]
@@ -1034,11 +1081,15 @@
       (barf yyyymm {:title "各月份培训的考评员数量" :x "月份" :y "考评员人数"}) 
       [:h2 "尚无培训、考试记录的考评员："]
       (eui-tip "请点击查看考评员详情并录入培训、考试资料。") ; todo: 增加excel导入功能
-      (result-html- (data- :pn-apply) [] [:name :type :mobile :_id] {:form "mot-pn-train-doc"})
-      [:h2 (format "已录入的考评员培训、考试记录（%s 条）：" count)]
-      (result-html- rt2 
-                    ["姓名" "培训合格证" "开始日期" "结束日期" "学时" "类型"] 
-                    [:name :train-id :train-start :train-end :train-hour :type]))))
+      (result-html- (data- :pn-apply) [] [:name :type :mobile :_id] {:form "mot-pn-train-doc"})[:br]
+
+;      [:h2 (format "已录入的考评员培训、考试记录（%s 条）：" count)]
+;      (result-html- rt2 
+;                    ["姓名" "培训合格证" "开始日期" "结束日期" "学时" "类型" "考试日期" "考试成绩"] 
+;                    [:name :train-id :train-start :train-end :train-hour :type :exam-date :exam-score])
+      
+      (mot-pn-train-list 100)
+      )))
 
 (defn mot-pn-train-doc
   "mot录入考评员培训及考试结果"
@@ -1120,17 +1171,16 @@
 (defn mot-olap
   "service: 主管机关对下级机关的综合分析"
   []
-  (let [rt1 (with-esp- (fetch :en :only [:admin :grade]))
-        rt2 (sort (for [e (frequencies (for [{admin :admin grade :grade} rt1] [admin grade]))] 
-                    [(ffirst e) (-> e first second str) (second e)]))
-        data (cross-data rt1 [:admin :grade])]
+  (let [rt1 (with-mdb2 "esp" (mdb-group :en [:admin :grade]))
+        data (cross-data rt1 [:admin :grade :count])]
     (html
       [:h1 "各级交通管理部门管辖企业分析"]
       (cross-table data {:caption "主管机构各级企业数量统计表"
-                        :dim-top-name "企业级别"
-                        :dim-left-name "主管机构"
-                        :f-dim-left (fn [v] (dd-admin v))
-                        :f-dim-top (fn [v] (str (dd-grade (to-int v)) "企业"))}) )))
+                         :dim-top-name "企业级别"
+                         :dim-left-name "主管机构"
+                         :f-dim-left (fn [v] (dd-admin v))
+                         :f-dim-top (fn [v] (str (dd-grade (to-int v)) "企业"))
+                         :f-value (fn [v] (to-int v))}) )))
 
 (defn mot-admin
   "service: 管理本主管机关直接下级的主管机关
@@ -1180,7 +1230,7 @@
 ;--- 注：文件大小不能大于64k字节，否则报错
 ;(with-esp- (fetch :user :where {:uid {:$in ["en1" "en2" "org1" "org2" "pn1" "pn2" "mot1" "mot2"]}}))
 ;(with-mdb2 "esp" (destroy! :user {:role "pot"}))
-;(update- :en {:admin "14 "} {:admin "14"})
+;(update- :user {:uid "mot-00359131-X"} {:admin "14"})
 ;(insert- :user  {:name "岳传志0628", :pid "110104198001010116", :role "pn", :mobile "13581601845", :uid "pn-110104198001010116"})
 
 ;(let [tb :pn-train
@@ -1189,9 +1239,12 @@
 ;  (for [k kk] {field k :count (with-mdb2 "esp" (fetch-count tb :where {field k}))}) )
 
 ;(sort-by :admin
-;(with-mdb2 "esp"
+;(with-mdb2 "esp" 
 ;  (group :pn-train 
-;         :key [:admin]
-;         :initial {:count 0} 
-;         :reducefn "function(obj,prev){prev.count++;}"))
+;         :key [:type]
+;         :initial {:count 0 :exam-score 0}
+;         :reducefn (format "function(obj,prev){prev.count++; prev['exam-score'] += obj['exam-score'] }"))
+;  (mdb-sum :pn-train [:type :admin] [:train-hour :exam-score])
+;  )
 ;)
+;(print-seq (with-esp- (fetch :en :skip 760 :limit 100)))

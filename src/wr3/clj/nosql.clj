@@ -92,6 +92,28 @@
 
 (def mdb-get-id fetch-by-id)
 
+(defn mdb-group
+  "进行类似group by count(*)操作。注意：出来的数字全部变成64位float。
+  @tb 表名。
+  @dim group by的维度[:dim1 :dim2 ..]，不能名为count，否则冲突"
+  [tb dim]
+  (group tb 
+         :key (reverse dim)
+         :initial {:count 0} 
+         :reducefn "function(obj,prev){prev.count++;}"))
+
+(defn mdb-sum
+  "进行类似group by sum(..),count(*)操作。注意：出来的数字全部变成64位float。
+  @tb 表名。
+  @dim 维度，group by的field，如：[:dim1 :dim2 ..]，不能名为count，否则冲突
+  @indic 进行sum的指标 [:score :..] 不能名为count。 "
+  [tb dim indic]
+  (group tb 
+         :key (reverse dim)
+         :initial (merge {:count 0} (zipmap indic (repeat (count indic) 0))) 
+         :reducefn (format "function(obj,prev){prev.count++; %s }" 
+                            (apply str (map #(format "prev['%s']+=obj['%s']; " (name %) (name %)) indic)) )))
+
 ;------ 采用 mongodb 数据的应用
 
 (defn test-pinyin

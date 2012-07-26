@@ -2442,17 +2442,35 @@ function ems_layout2() {
 }
 
 /**
+ * 对某区域进行ajax内容转载。
+ * @param jq_element
+ * @param url
+ * @param func
+ * @see ajax_post
+ */
+function ajax_load(jq_element, url, func) {
+	
+	return jq_element
+		.html('<img src="/img/loading3.gif" />')
+	 	.load(url, function(data) {
+	  		$.parser.parse(jq_element) // easyui仅重绘ajax装载的内容
+	  		if (func) { func(data) }
+	  	})
+}
+
+/**
  * 用于 wr3.clj.app.veg
  * @param url
  */
 function layout_load_center(url, func) {
 	var div1 = $('div [region="center"]')
-	div1.html('<img src="/img/loading3.gif" />')
-	  	.load(url, function(data) {
-	  		$.parser.parse(div1) // easyui仅重绘ajax装载的内容
-	  		if (func) { func(data) }
-	  	})
-	  	.css('padding', '20px')				
+//	div1.html('<img src="/img/loading3.gif" />')
+//	  	.load(url, function(data) {
+//	  		$.parser.parse(div1) // easyui仅重绘ajax装载的内容
+//	  		if (func) { func(data) }
+//	  	})
+//	  	.css('padding', '20px')				
+	ajax_load(div1, url, func).css('padding', '20px')
 }
 
 /**
@@ -2999,7 +3017,7 @@ function esp_pn_apply_resp() {
 		}
 	})
 	if(sum==0) {
-		$.messager.alert('提示', '请打勾选择企业。', 'warning');
+		$.messager.alert('提示', '请打勾选择考评员。', 'warning');
 	} else {
 		$.messager.confirm('确认发证', '是否为所选'+sum+'个考评员制发资格证?', function(r){
 			if (r) $.messager.alert('通知', '已提交', 'info');
@@ -3065,6 +3083,7 @@ function textarea_val(id) {
 /**
  * 共用函数，ajax post一个url并alert结果
  * @param url
+ * @see ajax_load
  */
 function ajax_post(url) {
 	$.post(url, function(data) {
@@ -3140,6 +3159,16 @@ function esp_backup(tb, oid) {
 	ajax_post(url)
 }
 
+function esp_pager(url) {
+	var skip = $('#pagers').val()
+	layout_load_center(url+'?skip='+skip)
+}
+
+function esp_pn_train_list(url) {
+	var skip = $('#pagers').val()
+	ajax_load($('#pn_train_list'), (url+'?skip='+skip))
+}
+
 /**
  * BJCA 提交前验证
  * @returns {Boolean}
@@ -3188,8 +3217,8 @@ function espfj_onload() {
 }
 
 function espfj_input_submit_check() {
-//	if ($('#name').val().trim()=='') {
-	if ($('#name').val()=='') { // IE这个垃圾没有trim()函数
+//	if ($('#name').val().trim()=='') { // IE垃圾没有trim()函数
+	if ($.trim($('#name').val())=='') { 
 		alert('姓名为必填字段')
 		return false
 	}
@@ -3221,3 +3250,4 @@ function espfj_admin_resp() {
 	})
 	
 }
+

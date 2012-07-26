@@ -4,7 +4,7 @@
 (defn to-int 
   "转换为整数, 可以给一个缺省值"
   ([s] (if (number? s) (int s) (Integer/parseInt s)))
-  ([s n0] (try (Integer/parseInt s) (catch Exception e n0))))
+  ([s n0] (try (to-int s) (catch Exception e n0))))
 
 (defn to-double
   "转换为整数, 可以给一个缺省值"
@@ -145,5 +145,3 @@
   "fib数列f(n)=f(n-1)+f(n-2)的第1～n项, 如(fib 8)=(1 2 3 5 8 13 21 34)"
   ([a b] (lazy-cat [a] (fib b (+ a b))))
   ([n] (take n (fib 1 1))))
-
-

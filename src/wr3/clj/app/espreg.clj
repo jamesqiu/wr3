@@ -6,41 +6,19 @@
 (import cn.org.bjca.client.security.SecurityEngineDeal)
 (import wr3.util.Stringx)
 
-(defn index
-  ""
-  []
-  (let [cfg [["考评员个人" "pn"] ["考评机构、企业单位" "en"]]]
-  (html-body
-    (repeat 5 [:br])
-    (for [[k v] cfg]
-      [:center [:h1 [:a {:href (format "/c/espreg/%s" v) :style "font-family:微软雅黑;font-size:21pt"} 
-                     (format "【%s】注册申请" k)]]]))))
+;;;;------------------------- esp 无证书登录验证
+(defn check0
+  [uid pwd]
+  (println "-- check0 --")
+  {:name "hello1" :roles "mot"})
 
-(def cfg-pn
-  [["姓名" :name {:require true}]
-   ["身份证" :pid]
-   ["手机号" :mobile]
-   ["地址" :address]
-   ["证件上传" :pfile {:t 'file}]])
-
-(defn pn
-  "个人注册信息"
-  []
-  (let []
-    (html-body
-      (input-form cfg-pn {:title "考评员个人信息注册"
-                       :buttons [:div (eui-button {} "保存") (space 5)
-                                      (eui-button {} "取消")]})
-      (fileupload-dialog))))
-
+;;;;------------------------- BJCA 证书登录页面及验证
 ; bjca证书验证返回值代表的含义
 (def dd-retValue 
-  {
-   -1 "登录证书的根不被信任"
+  {-1 "登录证书的根不被信任"
    -2 "登录证书超过有效期"
    -3 "登录证书为作废证书" 
-   -4 "登录证书被临时冻结"
-   })
+   -4 "登录证书被临时冻结" })
 
 (def activex
   "<OBJECT ID=\"XTXAPP\" CLASSID=\"CLSID:3F367B74-92D9-4C5E-AB93-234F8A91D5E6\" height=1 style=\"HEIGHT: 1px; LEFT: 10px; TOP: 28px; WIDTH: 1px\" width=1 VIEWASTEXT>
@@ -53,7 +31,7 @@
    </OBJECT>")
 
 (defn ca
-  "BJCA test，win下需要配置文件：%USERPROFILE%\BJCAROOT\SVSClient.properties "
+  "BJCA test，win下需要配置文件：%USERPROFILE%\\BJCAROOT\\SVSClient.properties "
   [request]
   (let [sed (SecurityEngineDeal/getInstance "SM")
         strServerCert (.getServerCertificate sed)
@@ -169,13 +147,6 @@
     (let [user (with-mdb2 "esp" (fetch-one :user :where {:uid uid}))]
       (json-str {:uid uid :name (:name user) :roles (:role user)}))
     "null"))
-
-;(defmacro and
-;  ([] true)
-;  ([x] x)
-;  ([x & next]
-;   `(let [and# ~x]
-;      (if and# (and ~@next) and#))))
 
 ; 00359131-X 00002106-3
 ;(import wr3.bank.OrgID)

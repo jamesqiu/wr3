@@ -34,18 +34,22 @@
     (when (= (:pwd user) (wr3.util.Stringx/md5 pwd)) 
       (dissoc user :pwd))))
 
+(require 'wr3.clj.app.espreg)
 (defn login
   "service: 提供用户名和密码验证服务.
   成功则在session中写入用户名，roles等，并返回如：{:name '管理员', :roles 'root,user', :url '前往的页面url'}
   失败则返回'null'。"
   [id ids request uid pwd]
   (let [uid (or uid id)
-        pwd (or pwd (second ids))]
-    (if-let [rt (ok? uid pwd)]
+        pwd (or pwd (second ids))
+        wr3url (session request "wr3url")
+        f-check (if (.startsWith wr3url "/c/esp/") wr3.clj.app.espreg/check0 ok?)]
+    (if-let [rt (f-check uid pwd)]
       (do 
         (session! request "wr3user" uid)
         (session! request "wr3role" (rt :roles))
-        (json-str (into {:url (session request "wr3url") :uid uid} rt)))
+        (println "-- wr3url:" wr3url)
+        (json-str (into {:url wr3url :uid uid} rt)))
       "null")))
 
 (defn logout

@@ -27,12 +27,11 @@
           ]
          ["考评员" "icon-pen" ; title id
           ["考评员列表" "icon-list"    "pn-list"] ; title icon id 
-          ["培训、考试管理" "icon-list"    "mot-pn-train"] ; title icon id 
-          ["考评员统计查询"          "icon-list"    "mot-pn-olap"] ; title icon id 
           ["资格证书制发" "icon-list"    "cert-resp/pn"] ; title icon id 
-          ["考评员培训"          "icon-list"    "mot-pn-train"] ; title icon id 
-          ["考评员考试"          "icon-list"    "mot-pn-exam"] ; title icon id 
-          ["考评员资格撤销"      "icon-list"    "cert-cancel/pn"] ; title icon id 
+          ["考评员培训、考试" "icon-list"    "mot-pn-train"] ; title icon id 
+          ["考评员资格撤销" "icon-list"    "cert-cancel/pn"] ; title icon id 
+          ["考评员统计查询" "icon-list"    "mot-pn-olap"] ; title icon id 
+          ["考评员考试统计" "icon-list"    "mot-pn-exam"] ; title icon id 
           ]
          ["考评机构" "icon-pen" ; title id
           ["考评机构列表" "icon-list"  "org-list"] ; title icon id 
@@ -44,6 +43,7 @@
           ]
          ["交通运输企业"           "icon-pen" ; title id
           ["企业列表" "icon-list"  "en-list"] ; title icon id 
+          ["已达标企业" "icon-list"  "mot-en-passed"] ; title icon id 
           ["企业统计查询" "icon-list"  "mot-en-olap"] ; title icon id 
           ["附加考评" "icon-list"    "mot-en-recheck"] ; title icon id 
           ["达标证书撤销" "icon-list"    "cert-cancel/en"] ; title icon id 
