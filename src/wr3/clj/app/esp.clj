@@ -248,7 +248,9 @@
       [:h1 title]
       (eui-tip (if (= id "pn") "系统可导出列表，由专业打印机进行打印制发。"
                  "系统可直接套打A3纸，也可生成电子证书。"))
-      [:h2 "审核通过的申请："]
+      [:h2 "审核通过的申请：" ] 
+      (eui-button {:href "/c/esp/cert-resp-export/%s/exp-证书列表.csv?content-type=text/csv&charset=GBK" 
+                   :target "_blank" :style "margin:10px"} "导出电子表格")
       (case id
         "en" (let [rs (with-esp- (fetch :en-apply :where {:resp-review "yes"}))]
                (result-html- rs [] [:name :resp :resp-eval :resp-review :respdate-review :_id :_issue] 
@@ -260,6 +262,10 @@
                (result-html- rs [] [:name :resp :respdate :_id :_issue]
                              {:form "docv/pn-apply" :issue "pn-apply"}))
         nil) )))
+
+(defn cert-resp-export
+  [id request]
+  "todo")
 
 (defn- has-digit4- [n] (some #(= \4 %) (str n)))
 (defn- cert-sid-max 
@@ -866,32 +872,88 @@
 ;;;-------------------------------------------------------------------------------------------------------- mot 主管机关
 (def mot---------- nil)
 
-(defn mot-pn-olap
-  "service: 主管机关-考评员分析"
-  []
-  (let [rs (data- :pn)
-        region (for [r rs] (-> r :from (subs 0 2)))
-        rt (apply array-map (flatten (for [[v vv] (group-by #(str %) region)] [v (count vv)])))
-        rt1 (frequencies (map :type (with-esp- (fetch :pn :only [:type] :sort {:type 1}))))
-        rt2 (into {} (for [[k v] rt1] [(dd-type k) v]))
-        rt3 (frequencies (map :edu (with-esp- (fetch :pn :only [:edu] :sort {:edu 1}))))]
-    (html
-      (eui-tip "提示：可点击右上角搜索框，按考评员姓名或者证书号模糊查询。")
-      (barf rt {:title "各地域考评员分布情况" :x "省份" :y "考评员人数"})
-      (pief rt2 {:title "各专业类型考评员数量统计" :x "专业类型" :y "考评员人数"}) 
-      (linef rt3 {:title "考评员学历统计" :x "学历" :y "考评员人数"}) )))
+(defn- mot-role
+  "获取mot角色用户的admin代号，如'01' '14' ；没找到该用户或者不是mot角色则返回nil。"
+  [request]
+  (let [uid (wr3user request)
+        r (with-mdb2 "esp" (fetch-one :user :where {:uid uid}))]
+    (when r (:admin r))))
 
-(defn mot-en-olap
-  "service: 企业统计分析"
-  []
-  (let [rt (data- :en)
-        rt1 (group-by :province rt)
-        m (for [[p ls] rt1] [p (count ls)])
-        m1 (sort-by #(- (second %)) m)]
+(defn- mot-subs
+  "获取下一级主管机关列表"
+  [upper]
+  (map (juxt :code :name) (with-esp- (fetch :mot :where {:upper upper} :sort {:code 1}))))
+
+(defn mot-olap
+  "公共service: 主管机关进行pn、org、en的查询搜索和统计分析
+  @id 'pn' 'org' 'en' "
+  [id request]
+  (let [tb (keyword id) ; :pn :org :en
+        nam (dd-form tb) ; 考评员 考评机构 交通运输企业
+        admin (mot-role request)
+        dims (case tb :pn [:type :admin :edu] (:org :en) [:type :admin :grade])
+        option0 {"0" "-- 所有 --"}]
     (html
-      [:h1 "各省一级企业数量分析"]
-      (barf (apply array-map (flatten m1)) {:x "省份" :y "一级企业数量"})
-      (pief (apply array-map (flatten m1)) {}) )))
+      [:h1 nam "统计分析及查询搜索"]
+      [:a {:name "search"}] 
+      [:h2 "条件搜索：" [:a {:href "#dim"} "（跳转到：维度指标分析）"]]
+      [:form#fm1
+       [:label "主管机关："] (eui-combo {:name "admin"}
+                                   (sort (into option0 (if (= admin "01") dd-admin (mot-subs admin))))) (space 5)
+       [:label "业务类型："] (eui-combo {:name "type"} (into option0 dd-type)) (space 5)
+       (when (not= tb :pn) 
+         (html [:label ({:org "资质" :en "达标"} tb) "等级："] (eui-combo {:name "grade"} (into option0 dd-grade))))
+       [:br][:br]
+       [:label "姓名或者证书号："] (eui-text {:name "s" 
+                                      :onkeypress "if(event.keyCode==13||event.which==13){return false;}"}) (space 5)
+       (eui-button {:onclick (format "ajax_load($('#result'), '/c/esp/mot-search/%s?'+$('#fm1').serialize())" id) 
+                    :iconCls "icon-ok"} " 搜 索 ") (space 5) 
+       (eui-button {:onclick "$('#fm1')[0].reset()" :iconCls "icon-cancel"} " 取 消 ") ]
+      [:div#result] [:hr]
+      [:a {:name "dim"}] 
+      [:h2 nam "维度指标分析：" [:a {:href "#search"} "（跳转到：条件搜索）"]] [:label "点击如下维度进行统计："]
+      (for [dim dims] 
+        (html (eui-button {:onclick (format "ajax_load($('#result2'), '/c/esp/mot-dim/%s?dim=%s')" id (name dim))} 
+                          (dd-meta2 dim)) (space 5)))
+      [:div#result2 {:style "min-height:400px"}][:br][:br] )))
+
+(defn mot-search
+  "service: mot对pn、org、en的复杂条件搜索
+  @id 'pn' 'org' 'en' "
+  [id request]
+  (let [tb (keyword id) ; :pn :org :en
+        vars (query-vars2 request)
+        filters (case tb :pn [:admin :type] (:org :en) [:admin :type :grade])
+        col-ids (case tb :pn [:name :type :cid :admin] (:org :en) [:name :type :grade :cid :admin])
+        s (:s vars)
+        where (into {(if (wr3.util.Charsetx/hasChinese s) :name :cid) (re-pattern (:s vars))} 
+                    (map #(if (= "0" (% vars)) nil [% (% vars)]) filters))
+        rt (with-esp- (fetch tb :limit 100 :where where))
+        count (count rt)]
+    (html
+      (eui-tip (if (= 100 count) "提示：结果太多（≥100），请适当增加搜索条件。" 
+                 (format "搜索到 %s 条符合条件的结果。" count)))
+      (result-html- rt [] col-ids {}))))
+
+(defn mot-dim
+  "service: mot对pn、en、org的维度统计图表
+  @id 'pn' 'org' 'en' 
+  @dim 维度如'admin' 'grade' 'type' 'edu' "
+  [id dim request]
+  (let [tb (keyword id)
+        nam (dd-form tb)
+        dim (keyword dim)
+        dim-nam (dd-meta dim)
+        rt (with-esp- (mdb-group tb [dim]))
+        dd (case dim :admin dd-admin :grade dd-grade :type dd-type :edu str)
+        m (for [r rt] (let [v0 (dim r)
+                            v (case dim (:admin :edu) v0 (:grade :type) (to-int v0))] 
+                        [(dd v) (:count r)])) ]
+    (html
+      [:h3 (format "【%s】-【%s数量】分析图表：" dim-nam nam)]
+      (barf (apply array-map (flatten m)) {:x (str dim-nam) :y (str nam "数量")})
+      (pief (apply array-map (flatten m)) {})
+      (result-html- rt [dim-nam "数量小计"] [dim :count] {}))))
 
 ;;-- mot-(pn en org)-apply[-resp]
 (defn- mot-apply-
@@ -965,7 +1027,7 @@
   (let [rs (with-esp- (fetch :en-apply :where {:cid {:$exists true}}))]
     (html
       [:h2 "已达标企业："] 
-      (eui-button {:href "/c/esp/mot-en-export/en-export-达标企业列表.csv?content-type=text/csv&charset=GBK" 
+      (eui-button {:href "/c/esp/mot-en-export/exp-达标企业列表.csv?content-type=text/csv&charset=GBK" 
                    :target "_blank" :style "margin: 10px"} "导出电子表格")
       (if (empty? rs)
         (eui-tip "无已达标企业") 
@@ -1168,7 +1230,7 @@
     (for [r rs] [((first fs) r) ((second fs) r) 1])
     (for [r rs] (vec (map #(get r %) fs)))))
 
-(defn mot-olap
+(defn mot-sub-olap
   "service: 主管机关对下级机关的综合分析"
   []
   (let [rt1 (with-mdb2 "esp" (mdb-group :en [:admin :grade]))
@@ -1185,22 +1247,107 @@
 (defn mot-admin
   "service: 管理本主管机关直接下级的主管机关
   @todo "
-  []
-  (html
-    (eui-tip "管理本主管机关的直接下级主管机关。")))
+  [request]
+  (let [admin (mot-role request)
+        mot (with-mdb2 "esp" (fetch-one :mot :where {:code admin}))
+        rs (with-esp- (fetch :mot :where {:upper admin} :sort {:code 1}))]
+    (html
+      (eui-tip "管理本主管机关的直接下级主管机关。") 
+      [:h1 (format "【%s】的直接下级主管机关：" (:name mot))]
+      (when-not (= admin "01")
+        (eui-button {:href "/c/esp/mot-admin-doc" :target "_blank" :style "margin:10px"} "新增下级主管机关"))
+      (result-html- rs
+                    ["代码编号" "名称" "详情"]
+                    [:code :name :_id]
+                    {:form "mot-admin-doc"}))))
+
+(defn mot-admin-doc 
+  "@id id是用户oid字符串，没有id则表示新增用户操作"
+  [id request]
+  (let [rs (when id (with-mdb2 "esp" (fetch-by-id :mot (object-id id)))) ; 本机构 
+        upper (mot-role request)
+        mot (with-mdb2 "esp" (fetch-one :mot :where {:code upper}))] ; 上级机构
+    (html-body
+      [:h1 (fmt "主管机关管理（%s）" (or (:name rs) "增加新主管机关"))]
+      [:form#fm1 {:action "/c/esp/mot-admin-crud" :method "POST"}
+       [:input {:name "oid" :type "hidden" :value id}]
+       [:label {:for "upper"} "上级主管机关："]  
+       [:input {:name "upper" :value (or (:upper rs) upper) :readonly true :style "background-color:#e5e5e5"}] 
+       [:span (format " （注：%s-%s）" (:code mot) (:name mot))][:br]
+       [:label {:for "code"} "主管机关代码："] 
+       [:input {:name "code" :value (or (:code rs) (if (= upper "01") "" (str upper "xx")))}] 
+       [:span (format " （注：省级主管机关代码为两位数；地市级主管机关代码以省级主管机关代码开头，后接两位数编号。）" upper)][:br]
+       [:label {:for "name"} "主管机关名称："] 
+       [:input {:name "name" :value (or (:name rs) "")}][:br]
+       [:br]
+       (if (nil? id)
+         (html 
+           (eui-button {:onclick "$('#fm1').attr('action','/c/esp/mot-admin-crud/add').submit()"} "新加主管机关") (space 5))
+         (html
+           (eui-button {:onclick "$('#fm1').attr('action','/c/esp/mot-admin-crud/update').submit()"} "更新主管机关") (space 5) 
+           (eui-button {:onclick "$('#fm1').attr('action','/c/esp/mot-admin-crud/del').submit()"} "删除主管机关") (space 5) ))
+       (eui-button {:href "#" :onclick "window.close();"} "关闭") ] )))
+
+(defn mot-admin-crud
+  "mot下级主管机关的crud.
+  @crud 'add' 'del' 'update' "
+  [id request]
+  (with-mdb2 "esp"
+    (let [{oid :oid n :name code :code upper :upper} (query-vars2 request)
+          mot (fetch-by-id :mot (when-not (nullity? oid) (object-id oid)))
+          mot-new {:name n :code code :upper upper}]
+      (case id
+        "add" (if (fetch-one :mot :where {:code code})
+                (format "代码为 %s 的下级主管机关已经存在，请填写不同的代码" code)
+                (do (insert! :mot mot-new) (str "已增加新主管机关" n)))
+        "del" (do (destroy! :mot mot) (str "已删除该主管机关" n))
+        "update" (do (update! :mot mot mot-new) (str "已保存该主管机关" n))
+        "未知动作" ))))
+
+(defn mot-user
+  "得到mot指定admin的用户
+  @id :admin代码如'01' "
+  [id request]
+  (let [rs (when id (with-esp- (fetch :user :where {:admin id})))]
+    (if (empty? rs)
+      "（该下级主管机关尚无审核通过的注册用户。）" 
+      (html
+        (result-html- rs [] [:name :uid :_select] {:mot-user true}) [:br] 
+        (eui-button {:title "todo: 需求待明确"} "委托代办审核工作") ))))
 
 (defn mot-give
   "service: 主管机关向下级主管机关委托代办工作
   @todo "
-  []
-  (html
-    (eui-tip "向下级主管机关委托代办审核工作。")))
-
+  [request]
+  (let [admin (mot-role request)
+        rs (with-esp- (fetch :mot :where {:upper admin}))]
+    (html
+      (eui-tip "向下级主管机关委托代办审核工作。")
+      [:label {:for "admins"} "1、选择下级主管机关："] 
+      (eui-combo {:id "admins" :onchange "ajax_load($('#users'), '/c/esp/mot-user/'+$('#admins').val())"} 
+                 (map #(vector (:code %) (:name %)) rs)) [:br]
+      [:label {} "2、选择用户进行委托代办："][:br][:br]
+      [:div#users (mot-user (:code (first rs)) request)])))
+  
 (defn mot-org-refine
   []
   (html
     (eui-tip "Todo：选择考评机构下发整改通知。")))
   
+(defn mot-resp-sum
+  "service: 在主页面上显示待办事宜统计信息"
+  []
+  (let [items (map first (-> cfg-frame-mot :nav first rest rest))
+        sums [(tb-count :pn-apply) 0 
+              (tb-count :org-apply) (tb-count :org-backup) 0 
+              (tb-count :en-apply) (tb-count :en-apply) (tb-count :en-backup) 0
+              (tb-count :hot)]]
+    (html
+      (eui-tip "待办事宜中个项目的数量提示：")
+      [:ul (for [i (range (count items)) :let [item (nth items i) sum (nth sums i)]]
+             [:li {:style ""} 
+              [:h2 (format "%s （<font color=%s>%s</font>）" item (if (zero? sum ) "lightgray" "red") sum)]])] )))
+
 ;;;-------------------------------------------------------------------------------------------------------- hot 热线举报投诉
 (def hot---------- nil)
 
@@ -1229,22 +1376,8 @@
 ;;------------------------------------------------- test
 ;--- 注：文件大小不能大于64k字节，否则报错
 ;(with-esp- (fetch :user :where {:uid {:$in ["en1" "en2" "org1" "org2" "pn1" "pn2" "mot1" "mot2"]}}))
-;(with-mdb2 "esp" (destroy! :user {:role "pot"}))
-;(update- :user {:uid "mot-00359131-X"} {:admin "14"})
-;(insert- :user  {:name "岳传志0628", :pid "110104198001010116", :role "pn", :mobile "13581601845", :uid "pn-110104198001010116"})
-
-;(let [tb :pn-train
-;      field :type
-;      kk (sort < (with-mdb2 "esp" (distinct-values tb (name field) )))]
-;  (for [k kk] {field k :count (with-mdb2 "esp" (fetch-count tb :where {field k}))}) )
-
-;(sort-by :admin
-;(with-mdb2 "esp" 
-;  (group :pn-train 
-;         :key [:type]
-;         :initial {:count 0 :exam-score 0}
-;         :reducefn (format "function(obj,prev){prev.count++; prev['exam-score'] += obj['exam-score'] }"))
-;  (mdb-sum :pn-train [:type :admin] [:train-hour :exam-score])
-;  )
-;)
-;(print-seq (with-esp- (fetch :en :skip 760 :limit 100)))
+;(with-mdb2 "esp" (destroy! :mot {:code "1416"}))
+;(update- :org {:name "马鞍山市港口研究所"} {:type "3"})
+;(insert- :user  {:name "测试北京交委用户1", :role "mot", :uid "motbj", :admin "02", :pwd "7215ee9c7d9dc229d2921a40e899ec5f"})
+;(print-seq (with-esp- (fetch :en :limit 2 :where {:grade {:$exists 1}})))
+(zero? (long 0))

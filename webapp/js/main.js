@@ -3169,6 +3169,9 @@ function esp_pn_train_list(url) {
 	ajax_load($('#pn_train_list'), (url+'?skip='+skip))
 }
 
+function esp_mot_en_search() {
+	ajax_load($('#result'), '/c/esp/mot-en-search?'+$('#fm1').serialize())
+}
 /**
  * BJCA 提交前验证
  * @returns {Boolean}
@@ -3248,6 +3251,22 @@ function espfj_admin_resp() {
 			$('#pass-direct').prop('disabled',false)			
 		}
 	})
-	
 }
+
+/**
+ * 标记记录为删除
+ * @param flag 1表示删除，0表示恢复
+ */
+function espfj_admin_resp_del(flag) {
+	var msg = (flag==1) ? '删除此申请记录，放入垃圾箱？' : '恢复此申请记录？'
+	$.messager.confirm('请确认', msg, function(r){
+		if (r) {
+			var oid = $('#oid').val()
+			ajax_post('/c/espfj/admin-resp-del/'+oid+'?flag='+flag)
+		}
+	});
+}
+
+
+
 

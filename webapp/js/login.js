@@ -58,7 +58,7 @@ function check() {
 		if (json==null) {
 			alert("错误：用户密码错误！")			 
 		} else {
-			alert("前往："+json.url)
+//			alert("前往："+json.url)
 			if (json.url) {
 				window.location.href = json.url
 			} else {

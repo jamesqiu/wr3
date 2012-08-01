@@ -43,12 +43,13 @@
   (let [uid (or uid id)
         pwd (or pwd (second ids))
         wr3url (session request "wr3url")
-        f-check (if (.startsWith wr3url "/c/esp/") wr3.clj.app.espreg/check0 ok?)]
+        f-check (cond
+                  (.startsWith wr3url "/c/esp/") wr3.clj.app.espreg/check0 
+                  :else ok?) ]
     (if-let [rt (f-check uid pwd)]
       (do 
         (session! request "wr3user" uid)
         (session! request "wr3role" (rt :roles))
-        (println "-- wr3url:" wr3url)
         (json-str (into {:url wr3url :uid uid} rt)))
       "null")))
 

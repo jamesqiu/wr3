@@ -13,44 +13,45 @@
               ["考评机构搜索" "range_org" "icon-ok"]
               ["交通运输企业搜索" "range_en" "icon-tip"] ]
    :nav [
-         ["待办事宜" "icon-pen" ; title icon
+         ["待办事宜" "icon-arrow" ; title icon
           ["考评员申请受理" "icon-user"     "apply-resp/pn"] ; title icon id 
           ["考评员换证申请受理" "icon-user" "cert-renew-resp/pn"]  
           ["考评机构申请受理" "icon-earth"    "apply-resp/org"]  
           ["考评机构变更备案受理" "icon-earth" "backup-resp/org"] 
           ["考评机构换证申请受理" "icon-earth"    "cert-renew-resp/org"] 
-          ["企业初次申请受理" "icon-list"    "apply-resp/en"]  
-          ["企业考评结论审核" "icon-list"    "mot-en-review"]  
-          ["企业变更备案申请受理" "icon-list"    "backup-resp/en"]  
-          ["企业换证申请受理" "icon-list"    "cert-renew-resp/en"]  
+          ["企业初次申请受理" "icon-star"    "apply-resp/en"]  
+          ["企业考评结论审核" "icon-star"    "mot-en-review"]  
+          ["企业变更备案申请受理" "icon-star"    "backup-resp/en"]  
+          ["企业换证申请受理" "icon-star"    "cert-renew-resp/en"]  
           ["投诉举报受理" "icon-tip"    "mot-hot"]  
           ]
-         ["考评员" "icon-pen" ; title id
+         ["考评员" "icon-user" ; title id
           ["考评员列表" "icon-list"    "pn-list"] ; title icon id 
           ["资格证书制发" "icon-list"    "cert-resp/pn"] ; title icon id 
           ["考评员培训、考试" "icon-list"    "mot-pn-train"] ; title icon id 
           ["考评员资格撤销" "icon-list"    "cert-cancel/pn"] ; title icon id 
-          ["考评员统计查询" "icon-list"    "mot-pn-olap"] ; title icon id 
+          ["考评员统计查询" "icon-bar"    "mot-olap/pn"] ; title icon id 
           ["考评员考试统计" "icon-list"    "mot-pn-exam"] ; title icon id 
           ]
-         ["考评机构" "icon-pen" ; title id
+         ["考评机构" "icon-earth" ; title id
           ["考评机构列表" "icon-list"  "org-list"] ; title icon id 
           ["资质证书制发" "icon-list"    "cert-resp/org"] ; title icon id 
           ["问题整改" "icon-list"    "mot-org-refine"] ; title icon id 
           ["资质撤销" "icon-list"    "cert-cancel/org"] ; title icon id 
           ["年度工作报告"          "icon-list"    "report-view/org"] ; title icon id 
+          ["考评机构统计查询" "icon-bar"    "mot-olap/org"] ; title icon id 
           ["考评情况汇总表"          "icon-list"    "mot-org-eval"] ; title icon id 
           ]
-         ["交通运输企业"           "icon-pen" ; title id
+         ["交通运输企业"           "icon-star" ; title id
           ["企业列表" "icon-list"  "en-list"] ; title icon id 
           ["已达标企业" "icon-list"  "mot-en-passed"] ; title icon id 
-          ["企业统计查询" "icon-list"  "mot-en-olap"] ; title icon id 
+          ["企业统计查询" "icon-bar"  "mot-olap/en"] ; title icon id 
           ["附加考评" "icon-list"    "mot-en-recheck"] ; title icon id 
           ["达标证书撤销" "icon-list"    "cert-cancel/en"] ; title icon id 
           ["年度工作报告"          "icon-list"    "report-view/en"] ; title icon id 
           ]
          ["下级机构管理"           "icon-pen" ; title id
-          ["统计分析"          "icon-list"    "mot-olap"] ; title icon id 
+          ["统计分析"          "icon-list"    "mot-sub-olap"] ; title icon id 
           ["机构维护"          "icon-list"    "mot-admin"] ; title icon id 
           ["委托代办"          "icon-list"    "mot-give"] ; title icon id 
           ]
@@ -61,6 +62,8 @@
           ]
          ]   
    :frame-main (html [:h2 "主管机关用户主界面"]
+                     [:div#resp-sum] 
+                     [:script "ajax_load($('#resp-sum'), '/c/esp/mot-resp-sum');"]
                      (set-title "主管机关管理系统（试行）"))
    })
 
@@ -70,7 +73,7 @@
    :style (map #(str % 1) ["layout_north" "layout_title"])  ; "" 或者 "1"
    :title "交通运输企业安全生产标准化——考评员在线申请系统（试行）"
    :nav [
-         ["考评员" "icon-pen" ; title id
+         ["考评员" "icon-user" ; title id
           ["申请考评证书" "icon-list"    "pn-apply"] ; title icon id url 
           ["培训、考试情况" "icon-list"  "pn-learn"] 
           ["换证申请" "icon-list"  "cert-renew/pn"] 
@@ -87,7 +90,7 @@
    :style (map #(str % 1) ["layout_north" "layout_title"])  ; "" 或者 "1"
    :title "交通运输企业安全生产标准化——考评机构管理系统（试行）"
    :nav [
-         ["&nbsp;考评机构" "icon-arrow" ; title id
+         ["考评机构" "icon-earth" ; title id
           ["申请资质证书" "icon-list"    "org-apply"] ; title icon id 
           ["申请变更备案" "icon-list"    "backup/org"] ; title icon id 
           ["申请换证" "icon-list"    "cert-renew/org"] 
@@ -96,12 +99,12 @@
           ["问题整改" "icon-list" "org-refine"] ; title icon id 
           ["使用帮助"          "icon-help"   "help_bt"]
           ]
-         ["&nbsp;管理考评员" "icon-user" ; title id
+         ["管理考评员" "icon-user" ; title id
           ["本机构考评员列表" "icon-list"    "org-pn"] ; title icon id 
           ["本机构考评员培训考试" "icon-list"    "org-pn-train"] 
           ["考评员档案管理" "icon-list"    "org-pn-archive"] 
           ]
-         ["&nbsp;企业考评管理" "icon-pen" ; title id
+         ["企业考评管理" "icon-pen" ; title id
           ["企业考评待办工作" "icon-list" "apply-resp/en"] ; title icon id 
           ["企业达标等级证书制发" "icon-list" "cert-resp/en"] ; title icon id 
           ["工作进度查询" "icon-list" "org-en-process"] 
@@ -119,7 +122,7 @@
    :style (map #(str % 1) ["layout_north" "layout_title"])  ; "" 或者 "1"
    :title "交通运输企业安全生产标准化——企业在线填报管理系统（试行）"
    :nav [
-         ["企业申请" "icon-pen" ; title id
+         ["企业申请" "icon-star" ; title id
           ["1、达标自评" "icon-list"    "en-stand"] 
           ["2、在线填报" "icon-list"    "en-apply"] 
           ["3、选择考评机构" "icon-list" "en-select-org"] 

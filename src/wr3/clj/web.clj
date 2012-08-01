@@ -553,7 +553,7 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
       {:id "accord1" :style "" }
       (for [[title icon & nav2] (:nav cfg)]
         (eui-accord- 
-          {:iconCls icon} title
+          {:iconCls icon} (str (space 2) title) ; 在icon和文字之间加上2个空格的间隙
           (for [[title icon id url] nav2]
             (let [url2 (if (and url (.startsWith url "/")) url
                          (format "/c/%s/%s" (:name cfg) (or url id)))]

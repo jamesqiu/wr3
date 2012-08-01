@@ -50,6 +50,7 @@
 (defn tb-count
   "得到tb的全记录数；或者tb中字段f符合匹配条件s的记录数。"
   ([tb] (with-mdb2 "esp" (fetch-count tb)))
+  ([tb s] (let [f (if (wr3.util.Charsetx/hasChinese s) :name :cid)] (tb-count tb f s)))
   ([tb f s] (with-mdb2 "esp" (fetch-count tb :where {f (re-pattern (or s ""))}))))
   
 (defn data-
@@ -143,7 +144,7 @@
                           :fulltime (if v0 "专职" "<font color=gray>兼职</font>")
                           :contract0 (format-date- v)
                           :contract1 (if v0 (format-date- v0) "<b>目前在职</b>")
-                          :uid (wr3user-name v0)
+                          :uid (if (:mot-user m) v0 (wr3user-name v0))
                           :role (if-let [dd (:admin m)] (get dd v) v) ; espfj 角色
                           :freport [:a {:href v0 :target "_blank"} "查看"]
                           :info (replace-all v "\r\n" "<br/>")
@@ -286,39 +287,62 @@
       (eui-combo {:id "pagers" :name "pagers" :value skip :onchange onchange} (pager-options count1)) ))
   
 (defn list-
-  "共用函数：列表显示pn、org、en
-  @id name的pattern如'张' 
-  @tb :pn :org :en "
+  "共用函数：列表显示pn、org、en。相关函数： pn-list en-list org-list org-en-archive
+  @id name的pattern如'张' 或者为nil
+  @tb :pn :org :en 
+  @col-names @col-ids 列显示名称，存储名称
+  @m 含:skip等参数"
   [id tb col-names col-ids m]
   (let [nam (tb {:pn "考评员" :org "考评机构" :en "交通运输企业"})
-        count1 (tb-count tb)
-        rt (search-auto- tb id m)]
+        rt (search-auto- tb id m)
+        count1 (if id (tb-count tb id) (tb-count tb))]
     (html
       [:h1 (format "%s 列表（%s 名）" nam (count rt))]
-      (pager-html count1 (:skip m) (format "esp_pager('/c/esp/%s-list')" (name tb)))
-      (eui-button {:href (format "/c/esp/list-export/%s-export-%s列表.csv?content-type=text/csv&charset=GBK" (name tb) (dd-form tb))
-                   :style "margin:10px"} (format "文件导出（全部%s行）" count1))
+      (pager-html count1 (:skip m) (format "esp_pager('/c/esp/%s-list/%s')" (name tb) (if id id "")))
+      (eui-button 
+        {:href (format "/c/esp/list-export/exp-%s列表.csv?content-type=text/csv&charset=GBK&tb=%s&s=%s" 
+                       (dd-form tb) (name tb) (or id "")) :style "margin:10px"} 
+        (format "文件导出（全部%s行）" count1))
       (result-html- rt col-names col-ids {:form (str "docv/" (name tb))})
       [:br] )))
 
-(def list-export-dd 
-  {:pn [:name :org :from]
-   :org [:name :province]
-   :en [:province :name :type :grade]
-   })
+(defn result-csv
+  [rt col-names col-ids]
+  (let [fcol (fn [r c] (let [v (c r)] 
+                         (wr3.util.Csv/toCsv 
+                           (case c
+                             :type (dd-type (to-int v))
+                             :type2 (dd-type2 (to-int v))
+                             :grade (dd-grade (to-int v))
+                             :orgid1 (org-name v)
+                             v))))
+        frow (fn [r] (join (map #(fcol r %) col-ids) ","))]
+    (str
+      (join (map #(wr3.util.Csv/toCsv %) col-names) ",") "\r\n"
+      (join (for [r rt] (frow r) ) "\r\n"))))
 
 (defn list-export
-  "导出列表"
-  []
-  (let [rs (with-esp- (fetch :en-apply :where {:cid {:$exists true}}))
-        frow (fn [r] (join (map #(wr3.util.Csv/toCsv %)
-                                [(:name r)
-                                 (dd-type2 (to-int (:type2 r)))
-                                 (dd-grade (to-int (:grade r)))
-                                 (org-name (:orgid1 r))]) 
-                           ","))]
-    (str
-      (join (map #(wr3.util.Csv/toCsv %) ["企业名称" "达标类别" "达标等级" "实施考评的考评机构"]) ",") "\r\n"
-      (join (for [r rs] (frow r) ) "\r\n"))))
+  "导出列表。调用url形如：
+  /c/esp/list-export/列表.csv?content-type=text/csv&charset=GBK&tb=en-apply&s=张
+  @tb 'pn' 'en' 'org'
+  @s 搜索字符串如'张' 
+  todo：增加id搜索字符串，真正导出列表"
+  [tb s]
+  (let [tb (keyword tb)
+        rt (if (= tb :en-apply) 
+             (with-esp- (fetch :en-apply :where {:cid {:$exists true}}))
+             (search-auto- tb s {:limit 0}))
+        col-names ({:en-apply ["企业名称" "达标类别" "达标等级" "实施考评的考评机构"]
+                    :pn ["姓名" "业务类型"]
+                    :en ["企业名称" "业务类型" "达标等级"]
+                    :org ["考评机构名称" "等级"]
+                    } tb)
+        col-ids ({:en-apply [:name :type2 :grade :orgid1]
+                  :pn [:name :type]
+                  :en [:name :type :grade]
+                  :org [:name :grade]
+                  } tb)
+        ]
+    (result-csv rt col-names col-ids) ))
 
 ;(pager-options 201)

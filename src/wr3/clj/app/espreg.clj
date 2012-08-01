@@ -8,9 +8,12 @@
 
 ;;;;------------------------- esp 无证书登录验证
 (defn check0
+  "用户名密码不对返回nil，否则返回用户名和角色"
   [uid pwd]
-  (println "-- check0 --")
-  {:name "hello1" :roles "mot"})
+  (let [r (with-mdb2 "esp" (fetch-one :user :where {:uid uid}))]
+;    (println "-- check0 --" r)
+    (when (= (:pwd r) (wr3.util.Stringx/md5 pwd))
+      {:name (:name r) :roles (:role r)}) ))
 
 ;;;;------------------------- BJCA 证书登录页面及验证
 ; bjca证书验证返回值代表的含义

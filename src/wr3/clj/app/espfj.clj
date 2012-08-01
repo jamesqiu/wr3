@@ -68,6 +68,20 @@
       :else false)))
 
 (defn index
+  "2012-7-31 8:00PM后关闭"
+  []
+  (html-body
+    [:center {:style "border: 1px solid #369"}
+     [:h1 {:style "padding:20px; background-color:#369; color: white; font-size: 22px; margin-top:0px"} 
+      "福建省交通运输厅——考评员在线报名系统"]
+     [:div {:style "min-height:200px"}
+      [:h1 {:style "color:red;margin:50px"} 
+       "请注意：2012年7月31日8点我们截至此次的预报名。"[:br][:br]
+       "如有疑问，请咨询福建省交通运输厅相关人员。"]]
+     [:h2 {:style "padding:15px; background-color:lightgray; margin-bottom:0px; color:#333; text-shadow:0 1px 0 #EEE;"}
+        "版权所有：福建省交通运输厅 2012 年"] ]))
+
+(defn index-closed
   "填写考评员注册信息" 
   [request]
   (let [wr3user (session! request "wr3user" "fj")
@@ -103,14 +117,41 @@
       (insert! :pn-apply (into m {:date (datetime)}))) 
     (format "已提交 %s 的申请表。" (vars :name) )))
 
+(defn pn-apply-list
+  "service：分页显示考评员申请列表 "
+  [skip request]
+  (let [role (wr3role request)
+        limit 20
+        where (if (in? role ["1400" "1401"]) {} {:admin role}) ; 管理员看全部，其他看自己管理范围的。
+        count1 (with-mdb2 "espfj" (fetch-count :pn-apply :where where))
+        pages (int (Math/ceil (/ count1 limit)))
+        pager-options (map #(let [k (* % limit)
+                                  v (format "第%s页：%s-%s" 
+                                            (inc %) 
+                                            (inc k) 
+                                            (if (= % (dec pages)) count1 (* limit (inc %))))] 
+                              (vector k v)) 
+                           (range pages))
+        rs2 (with-mdb2 "espfj" 
+              (vec (fetch :pn-apply :skip (to-int skip) :limit limit :where where :sort {:del 1 :date 1})))] 
+    (html
+      [:div {:style "margin:5px;"} 
+       [:label {:for "pagers"} (format "共 %s 页 %s 条，选择：" (int (Math/ceil (/ count1 limit))) count1)]
+       (eui-combo {:id "pagers" :value (to-int skip) 
+                   :onchange "ajax_load($('#list'),'/c/espfj/pn-apply-list?skip='+$('#pagers').val())"} 
+                  pager-options)]
+      (espc/result-html- rs2
+                         ["主管机关" "报名日期" "姓名" "身份证" "报名类型" "处理结果" "处理意见" "直接颁发" "删除标记" "详情"]
+                         [:admin :date :name :pid :type :resp :advice :pass-direct :del :_id-fj]
+                         {:admin dd-admin-fj :form "admin-resp"}) )))
+
 (defn admin
   "主管机关查看所有申请"
   [id request]
-  (let [uid (wr3user request)
-        role (wr3role request)
-        rs (with-mdb2 "espfj" (fetch-one :user :where {:uid uid})) ; 登录用户的信息
-        where (if (in? role ["1400" "1401"]) {} {:admin role}) 
-        rs2 (with-mdb2 "espfj" (vec (fetch :pn-apply :where where)))] ; 管理员看全部，其他看自己管理范围的。
+  (let [role (wr3role request)
+        uid (wr3user request)
+        rs (with-mdb2 "espfj" (fetch-one :user :where {:uid uid})) ; 登录用户的信息 
+        ]
     (html-body 
       {:onload ""}
       [:center {:style "border: 1px solid #366"}
@@ -122,16 +163,11 @@
          [:a {:href "/c/espfj/passwd" :target "_blank"} "【修改密码】"] (space 5)
          (when (in? role ["1400" "1401"]) 
            [:a {:href "/c/espfj/users" :target "_blank"} "【管理用户】"]) ]
-        [:h1 (format "考评员资格审批（%s）" (:name rs))]
-        (espc/result-html- rs2
-                         ["主管机关" "报名日期" "姓名" "身份证" "报名类型" "处理结果" "直接颁发" "详情"]
-                         [:admin :date :name :pid :type :resp :pass-direct :_id-fj]
-                         {:admin dd-admin-fj :form "admin-resp"})
-        ]
+        [:h1 (format "考评员资格审批（%s）" (:name rs))] 
+        [:div#list (pn-apply-list 0 request)]]
        [:br][:br][:br]
        [:h2 {:style "padding:15px; background-color:lightgray; margin-bottom:0px; color:#333; text-shadow:0 1px 0 #EEE;"}
-        "版权所有：福建省交通运输厅 2012 年"] 
-       ] )))
+        "版权所有：福建省交通运输厅 2012 年"] ] )))
 
 (defn admin-resp
   "主管机关处理一个申请"
@@ -139,17 +175,22 @@
   (let [rs (with-mdb2 "espfj" (fetch-by-id :pn-apply (object-id id)))]
     (espc/doc- :pn-apply id 
               {:rs rs :admin dd-admin-fj :from dd-province-fj
-               :before [:h1 {:align "center"} "考评员资格审批"]
+               :before (html [:h1 {:align "center"} "考评员资格审批"]
+                             (if (not= "1" (:del rs))
+                               (eui-button {:onclick "espfj_admin_resp_del(1)" :iconCls "icon-cancel" :style "margin:10px"} 
+                                           "删除此申请记录（放入垃圾箱）")
+                               (eui-button {:onclick "espfj_admin_resp_del(0)" :iconCls "icon-undo" :style "margin:10px"}
+                                           "恢复此记录")))
                :after (html 
                         [:h2 "审批意见："]
                         [:form#fm1 {:action "/c/espfj/admin-resp-submit" :method "post"}
-                         [:input {:name "oid" :type "hidden" :value (:_id rs)}]
+                         [:input {:id "oid" :name "oid" :type "hidden" :value (:_id rs)}]
                          [:p [:label "处理意见："] (eui-textarea {:name "advice"} (:advice rs))]
                          [:p [:label "处理结果："] (eui-combo {:id "resp" :name "resp" :value (:resp rs)} 
                                                          {"yes" "同 意" "no" "不同意"})]
                          (eui-tip "符合免试申请条件者：")
                          (eui-text {:id "pass-direct" :name "pass-direct" :type "checkbox"}) (space 2) "直接颁发" 
-                         [:p (eui-button {:onclick "$('#fm1').submit()"} "提 交")]] 
+                         [:p (eui-button {:onclick "$('#fm1').submit()" :iconCls "icon-ok"} "提 交")]] 
                         [:script "espfj_admin_resp()"]
                         )}) ))
 
@@ -161,6 +202,15 @@
     (html-body
       [:h2 "已保存"]
       (eui-button {:href "#" :onclick "window.close();"} "关闭"))))
+
+(defn admin-resp-del
+  [id flag request]
+  (when-not (nullity? id)
+    (with-mdb2 "espfj" (update! :pn-apply {:_id (object-id id)}
+                                {:$set {:del flag}}))
+    (if (= "1" flag) 
+      "已删除申请记录，关闭后请刷新列表。"
+      "已恢复申请记录，关闭后请刷新列表。")))
 
 (defn login
   "登录界面"
@@ -231,6 +281,7 @@
   (let [rs (with-mdb2 "espfj" (vec (fetch :user :sort {:role 1} :where {:uid {:$ne "admin"}})))]
     (html-body
       [:center [:h1 "系统用户管理"]
+       (eui-button {:href "/c/espfj/user" :target "_blank" :style "margin:10px"} "增加新用户" )
        (espc/result-html- rs
                          ["用户角色" "用户名称" "用户ID" "详情"]
                          [:role :name :uid :_id-fj]
@@ -265,10 +316,10 @@
   [id request]
   (with-mdb2 "espfj"
     (let [{oid :oid n :name role :role uid :uid pwd :pwd} (query-vars2 request)
-          pn (fetch-by-id :user (object-id oid))
+          pn (fetch-by-id :user (when (not (nullity? oid)) (object-id oid)))
           pn-new {:name n :role role :uid uid :pwd (wr3.util.Stringx/md5 pwd)}]
       (case id
-        "add" (if pn 
+        "add" (if (fetch-one :user :where {:uid uid}) 
                 (format "ID为 %s 的用户已经存在，请填写不同的ID" uid)
                 (do (insert! :user pn-new) (str "已增加新用户" n)))
         "del" (do (destroy! :user pn) (str "已删除用户" n))
