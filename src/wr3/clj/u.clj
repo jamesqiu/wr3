@@ -219,6 +219,11 @@
   @s 格式如 2011-1-2 2011-12-03 
   @return Calendar "
   [s] (Datetime/parse s))
+(defn date-format
+  "日期格式化，例如 (date-format '2012-3-5' 'yyyy年MM月dd日') 
+  @s 如：'2012-3-5' '2012-03-5' 
+  @fmt 如：'yyyyMd' 'yyyy年MM月dd日' "
+  [s fmt] (Datetime/format (date-parse s) fmt))
 (defn date-add 
   "日期增减，从今天或者指定日期, (date-add '2013-4-05' 1 -1 10) ; '2014-3-15'
   @from 日期String如 '2012-1-1'
@@ -242,4 +247,4 @@
   cons+统一为和输入一致，(cons+ 1 '(2 3)) -> '(1 2 3), (cons+ 1 [2 3]) ->  [1 2 3]"
   [x coll] (if (vector? coll) (into (vector x) coll) (cons x coll)))
 
-(days "2012-7-21")
+;(days "2012-7-21")

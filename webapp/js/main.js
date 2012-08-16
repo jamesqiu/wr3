@@ -62,7 +62,7 @@ function pid_onload() {
 	$("form.app input[type='text']").hover(function() {
 		this.select();
 	}, function() {
-		this.blur();
+//		this.blur();
 	});
 
 	/**
@@ -302,7 +302,7 @@ function cdoc_onload() {
 	$("form.app input[type='text']").hover(function() {
 		this.select();
 	}, function() {
-		this.blur();
+//		this.blur();
 	});
 
 	$("input#in").autocomplete({
@@ -2998,10 +2998,31 @@ function esp_en_select_org() {
 }
 
 /**
- * 标识出企业已经选择了的2个考评机构
- * @param sid 选中的多个orgid，如 "4f8ae..cd,4f8ae..d0"
+ * org选择考评员进行企业考评
  */
-function esp_en_selected(sid) {
+function esp_org_select_pn(oid) {
+	var sids = ""
+	var sum = 0
+	$('input[type="checkbox"]').each(function(i,e) {
+		if ($(e).prop('checked')==true) {
+			sids += $(e).attr('sid') + " "
+			sum++;			
+		}
+	})
+	if (sum==0) {
+		alert('请打勾选择考评员')
+	} else {
+		ajax_post('/c/esp/org-select-pn-save/'+oid+'?sids='+sids)
+	}
+	
+}
+
+/**
+ * 根据逗号分隔的值@sid给所有checkbox中value在其中的打勾。
+ * 如：标识出企业已经选择了的2个考评机构；标识org已经选中的多个考评员；……
+ * @param sid 选中的多个uid（orgid、pnids等），如 "pn1,pn-110114200002130012"
+ */
+function esp_mark_selected(sid) {
 	$('input[type="checkbox"]').each(function(i,e) {
 		if (sid.indexOf($(e).attr('sid')) != -1) {
 			$(e).prop('checked', true)
@@ -3172,11 +3193,34 @@ function esp_pn_train_list(url) {
 function esp_mot_en_search() {
 	ajax_load($('#result'), '/c/esp/mot-en-search?'+$('#fm1').serialize())
 }
+
+/**
+ * en,org,pn 模糊搜索框的自动完成初始化
+ * @typ 'en' 'org' 'pn'
+ */
+function esp_name_cid_autocomplete(typ) {
+	// 输入框hover效果设置
+	$("input#in").hover(function() {
+		this.select();
+	}, function() {
+//		this.blur();
+	});
+
+	$("input#in").autocomplete({
+		source: "/c/esp/name-cid-autocomplete/"+typ,
+		select: function (event, ui) {
+			$("input#in").val(ui.item.label);
+			return false;
+		},
+		minLength: 2
+	});
+	
+}
 /**
  * BJCA 提交前验证
  * @returns {Boolean}
  */
-function LoginForm_onsubmit() {
+function esp_bjca_onsubmit(srand) {
 	var ret;
 	var strContainerName = LoginForm.UserList.value;
 	var strPin = LoginForm.UserPwd.value;
@@ -3187,12 +3231,20 @@ function LoginForm_onsubmit() {
 	ret = XTXAPP.AddSignInfo(strPin);
 	//ret = Login(LoginForm,strContainerName,strPin);
 	LoginForm.UserPwd.value = "";
-	LoginForm.strRandom.value='NDYxNjY1NTEwNzc0NTk1NTM4NTcxOTY0';
+	LoginForm.strRandom.value = 'NDYxNjY1NTEwNzc0NTk1NTM4NTcxOTY0' // srand
 	if(!ret) {
 		return false;
 	} else {
 		return true;
 	}
+}
+
+/**
+ * BJCA 响应KEY插入/拔出事件
+ */
+function esp_bjca_onchange() {
+	alert('提示：您已经插入/拔出USBKey，当前用户将注销！')
+	app_exit('/esp')
 }
 
 /**

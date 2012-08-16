@@ -2,6 +2,7 @@
 
 (use 'hiccup.core)
 (use 'wr3.clj.web)
+(require '[wr3.clj.app.espreg :as espreg])
 
 ;; 交通运输主管部门界面配置
 (def cfg-frame-mot
@@ -9,11 +10,12 @@
    :style (map #(str % "") ["layout_north" "layout_title"])  ; "" 或者 "1"
    :title "交通运输企业安全生产标准化——主管机关管理系统（试行）"
    :searcher ["张" ; default-value
-              ["考评人员搜索" "range_pn" "icon-ok"] ; label name icon
-              ["考评机构搜索" "range_org" "icon-ok"]
-              ["交通运输企业搜索" "range_en" "icon-tip"] ]
+              ["考评员搜索" "range_pn" "icon-user"] ; label name icon
+              ["考评机构搜索" "range_org" "icon-earth"]
+              ["企业搜索" "range_en" "icon-star"] ]
    :nav [
          ["待办事宜" "icon-arrow" ; title icon
+          ["待办事宜概况一览" "icon-sum" "mot-resp-sum"]
           ["考评员申请受理" "icon-user"     "apply-resp/pn"] ; title icon id 
           ["考评员换证申请受理" "icon-user" "cert-renew-resp/pn"]  
           ["考评机构申请受理" "icon-earth"    "apply-resp/org"]  
@@ -61,9 +63,8 @@
           ["使用帮助"          "icon-help"   "help_bt"]
           ]
          ]   
-   :frame-main (html [:h2 "主管机关用户主界面"]
-                     [:div#resp-sum] 
-                     [:script "ajax_load($('#resp-sum'), '/c/esp/mot-resp-sum');"]
+   :frame-main (html [:script "layout_load_center('/c/esp/mot-resp-sum')"]
+                     espreg/bjca-on-change
                      (set-title "主管机关管理系统（试行）"))
    })
 
@@ -81,6 +82,7 @@
           ]
          ] 
    :frame-main (html [:script "layout_load_center('/static/esp/about-pn.html')"]
+                     espreg/bjca-on-change
                      (set-title "考评员在线申请系统（试行）"))
    })
 
@@ -113,6 +115,7 @@
           ]
          ]   
    :frame-main (html [:h2 "考评机构用户主界面"]
+                     espreg/bjca-on-change
                      (set-title "考评机构管理系统（试行）"))
    })
 
@@ -133,6 +136,7 @@
           ]
          ]   
    :frame-main (html [:h2 "交通运输企业用户主界面"]
+                     espreg/bjca-on-change
                      (set-title "企业在线填报管理系统（试行）"))
    })
 
@@ -156,6 +160,7 @@
    3 "港口码头" 
    4 "城市客运" 
    5 "交通运输工程建设"
+   6 "其他" ; add jiayuan's req (2012-8-13)
    })
 ; 业务细类
 (def dd-type2 
@@ -325,27 +330,27 @@
   [
    ["姓名" :name {:require true}]
    ["身份证号" :pid {:t 'pid :require true :title "15位或18位身份证"}]
-   ["常住地" :from {:t dd-province :v "福建"}]
-   ["照片" :photo {:t 'file :title "照片要求：……"}]
-   ["工作单位" :org]
+   ["常住地" :from {:t dd-province :v "福建" :require true}]
+   ["照片" :photo {:t 'file :title "照片文件请勿超过10M大小" :require true}]
+   ["工作单位" :org {:require true}]
    ["职称" :title]
-   ["通讯地址" :address]
-   ["邮编" :pcode {:t 'pcode}]
+   ["通讯地址" :address {:require true}]
+   ["邮编" :pcode {:t 'pcode :require true}]
    ["联系电话" :tel]
    ["传真号码" :fax]
-   ["手机号码" :mobile]
-   ["电子邮箱" :email {:t 'email}]
-   ["文化程度" :edu {:t dd-edu :title "按国标（中专以上）"}]
-   ["所学专业" :major {:title "注意：必须具备交通运输相关专业大学专科以上学历"}]
-   ["现从事专业" :prof]
-   ["相关专业从业年份" :begindate {:v 5}]   
+   ["手机号码" :mobile {:require true}]
+   ["电子邮箱" :email {:t 'email :require true}]
+   ["文化程度" :edu {:t dd-edu :title "按国标（中专以上）" :require true}]
+   ["所学专业" :major {:title "注意：必须具备交通运输相关专业大学专科以上学历" :require true}]
+   ["现从事专业" :prof {:require true}]
+   ["相关专业从业年份" :begindate {:v 5 :require true}]   
    ["申请专业类型（不得多于两种）" :type {:t dd-type :v 1 :title "考评员申请的专业类型不得多于二种"}] ; 最多两类
-   ["主要学习（培训）经历" :train {:t 'textarea}]
-   ["主要工作简历" :resume {:t 'textarea}]
-   ["专业工作业绩" :perf {:t 'textarea}]
+   ["主要学习（培训）经历" :train {:t 'textarea :require true}]
+   ["主要工作简历" :resume {:t 'textarea :require true}]
+   ["专业工作业绩" :perf {:t 'textarea :require true :title "不得少于10个字"}]
    ["专业工作业绩附件" :perf2 {:t 'file}]
-   ["相关证明文件（身份证）" :proof {:t 'file :title "二代身份证正反面（pdf, doc或者jpg格式）"}]
-   ["相关证明文件（学历证书）" :proof2 {:t 'file :title "学历证书（pdf, doc或者jpg格式）"}]
+   ["相关证明文件（身份证）" :proof {:t 'file :title "二代身份证正反面（pdf, doc或者jpg格式）" :require true}]
+   ["相关证明文件（学历证书）" :proof2 {:t 'file :title "学历证书（pdf, doc或者jpg格式）" :require true}]
    ["相关证明文件（其他证书）" :proof3 {:t 'file :title "其他各类培训合格证明的照片、编号页、发证机关印章页（pdf, doc或者jpg格式）"}]
    ["主管机关" :admin {:t (dissoc dd-admin "01") :title "请自选主管机关"}]
    ["换证原因<b>（仅换证申请）</b>" :renew {:t dd-renew}]
@@ -397,7 +402,8 @@
 
 (defn- cfg-meta [cfg] (into {} (for [[v k & _] cfg] [k v])))
 ; 数据项英文、中文对照
-(def ^{:doc "减少dd-meta和cfg-apply-pn|org|en中的重复定义"} dd-meta2
+(def ^{:doc "减少dd-meta和cfg-apply-pn|org|en中的重复定义"} 
+      dd-meta
   (merge
     (cfg-meta cfg-apply-pn)
     (cfg-meta cfg-apply-org)
@@ -429,10 +435,11 @@
      :mobile "手机"
      :name "名称"
      :org "单位组织"
-     :orgid "选择的2个考评机构"
-     :orgid1 "指定的考评机构"
+     :orgid "选择的2个考评机构" ; en预选
+     :orgid1 "指定的考评机构" ; mot指定
      :pass-direct "直接颁发"
      :pn "考评员"
+     :pnids "选择的考评员"
      :province "省份"
      :reason "原因"
      :resp "受理结果"
@@ -457,91 +464,13 @@
      :uid "用户ID"
      :workdate "参加工作日期"
      :yyyy "年份"
+     ;-- espfj
+     :titlefile "职称证明文件"
+     :beginfile "相关专业从业年份证明文件"
+     :proofmobile "证明人联系电话"
+     :proofname "证明人"
+     :prooforg "证明单位"
      }))
 
-; 数据项英文、中文对照（@deprecated：因与cfg-apply-pn|org|en 重复，用dd-meta代替，最后要移除）
-(def dd-meta
-  {
-   :_id "详情"
-   :_issue "证书"
-   :_select "选择"
-   :_cdate-end "证书到期日"
-   :admin "主管机关"
-   :advice "处理意见"
-   :advice-eval "考评意见"
-   :advice-review "审核意见"
-   :begindate "相关专业从业年份"
-   :belong "所属考评机构"
-   :birth "出生日期"
-   :cdate "发证时间"
-   :cid "证书号"
-   :content "内容"
-   :contract0 "聘用日期"
-   :contract1 "解聘日期"
-   :ctype "证书类型"
-   :date "日期"
-   :death "死亡人数"
-   :edu "文化程度"
-   :enid "企业ID"
-   :exam-date "考试日期"
-   :exam-score "考试分数"
-   :from "常住地"
-   :fulltime "专兼职"
-   :grade "等级"
-   :info "举报人信息"
-   :legalp "法人代表"
-   :major "所学专业"
-   :mobile "手机"
-   :name "名称"
-   :org "单位组织"
-   :orgid "选择的2个考评机构"
-   :orgid1 "指定的考评机构"
-   :pass-direct "直接颁发"
-   :pcode "邮编"
-   :perf "专业工作业绩" 
-   :perf2 "专业工作业绩附件" 
-   :photo "照片"
-   :pid "身份证号"
-   :pn "考评员"
-   :pnumber "专职考评员人数"
-   :pnumber2 "高级技术职称考评员人数"   
-   :proof "相关证明文件（身份证）"
-   :proof2 "相关证明文件（学历证书）"
-   :proof3 "相关证明文件（其他证书）"
-   :province "省份"
-   :qual "企业法人资格证件"
-   :reason "原因"
-   :resp "受理结果" ; resp: 第一步mot选1个考评机构；resp-eval：第二步org进行考评；resp-review：第三步mot进行审核
-   :resp-eval "考评结果"
-   :resp-review "审核结果"
-   :respdate "受理日期"
-   :respdate-eval "考评日期"
-   :respdate-review "审核日期"
-   :resume "主要工作简历"
-   :safe "安全生产组织架构"
-   :score "分数"
-   :score0 "自评分数"
-   :score1 "考评分数"
-   :sex "性别"
-   :stand "达标评估"
-   :start "开始从事相应业务年份" 
-   :stop "终止业务"
-   :tel "电话"
-   :title "职称"
-   :train "主要学习（培训）经历"
-   :train-end "培训结束日期"
-   :train-hour "培训学时"
-   :train-id "培训合格证号"
-   :train-start "培训开始日期"
-   :type "业务类型"
-   :type2 "业务类别"
-   :uid "用户ID" ; 每个pn一个uid（可用身份证等）；每个en的所有登录用户同一个uid，每个org的所有登录用户同一个uid（可用机构代码等）
-   :workdate "参加工作日期"
-   :yyyy "年份"
-   })
-
 ;(use 'wr3.clj.s)
-;(into (sorted-map) (filter (fn [[k v]] (or (not (in? k (keys dd-meta2))) (not= (dd-meta2 k) v))) dd-meta))
-;(doseq [[k v] dd-meta]
-;  (when (and (in? k (keys dd-meta2)) (not= v (dd-meta2 k))) (println k (dd-meta2 k) "->" v)))
 ;(count dd-meta) ; 76

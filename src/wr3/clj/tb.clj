@@ -303,3 +303,13 @@
               [:td {:align "right"} (sum (for [[c1 c2 v] data :when (and (= c1 dim-left) (= c2 dim-top))] (f-value v)))])
             ]) ] ))))
   
+(defn cross-data
+  "生成cross-table所需的data，如：[[left1 top1 v1] [left2 top2 v2] ...]
+  @rs: 数据库查询结果集
+  @fs: 字段列表，给出2个字段列表示left和top进行count聚合，给出3个字段则最后一个表示统计值进行sum聚合；
+  如[:admin :grade]或者 [:admin :grade :value] "
+  [rs fs]
+  (if (= 2 (count fs)) 
+    (for [r rs] [((first fs) r) ((second fs) r) 1])
+    (for [r rs] (vec (map #(get r %) fs)))))
+

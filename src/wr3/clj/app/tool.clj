@@ -204,7 +204,7 @@ html2: 可选参数，其他需要补充在<body>最后的html内容
        [:input#in {:value input0}] " "
        [:input#ok {:type "button" :value " 提交处理 "}] " "][:br]
       [:div "结果："][:br]
-      [:div#rt  (let [f (ns-resolve 'wr3.clj.app.tool (symbol (str id "2")))] (f {:id [input0]}))]
+      [:div#rt  (let [f (ns-resolve 'wr3.clj.app.tool (symbol (str id "2")))] (f input0))]
       (apply str html2)
       ]]))
 

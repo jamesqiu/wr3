@@ -327,6 +327,11 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   [m s]
   (tags :a {:class "easyui-linkbutton" :href "#" :onclick ""} m s))
 
+(defn eui-button-close
+  "关闭窗口的按钮"
+  []
+  (eui-button {:onclick "window.close();"} "关闭"))
+
 (defn eui-accord
   "Accordion界面框架，内容用eui-accord-"
   [m & items]
@@ -655,8 +660,11 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
                 (= t 'email)     (eui-email    attr)
                 (map? t)         (eui-combo    attr t)
                 (vector? t)      (eui-combo    attr (apply array-map (flatten (for [e t] [e e]))))
-                :else            (eui-text     (into attr {:style "width: 250px"}))) ]]))
-        [:tfoot [:tr [:td {:colspan 2 :align "center" :style "padding: 15px"} (:buttons m) ]]]]] )))
+                :else            (eui-text     (into attr {:style "width: 250px"}))) ]
+             [:td [:font {:color (if require "red" "lightgray")} "*"]]
+             ]))
+        [:tfoot [:tr [:td {:colspan 3 :align "center" :style "padding: 15px"} 
+                      [:p "注：带红色<font color='red'>*</font>的为必填项。"] (:buttons m) ]]]]] )))
 
 (defn set-title 
   "用js更改浏览器的title"

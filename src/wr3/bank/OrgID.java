@@ -72,5 +72,8 @@ public class OrgID {
 		System.out.println(c2n('3'));
 		System.out.println(c2n('Z'));
 		System.out.println(isid("00002106-3")); // 00359131-X 00002106-3
+		if (args.length>0) {
+			System.out.println(toid(args[0]));
+		}
 	}
 }

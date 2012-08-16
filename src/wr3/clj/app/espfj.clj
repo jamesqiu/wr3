@@ -44,14 +44,14 @@
 (def cfg-pn
   (let [n (count conf/cfg-apply-pn)
         rt1 (take (- n 4) conf/cfg-apply-pn)
-        rt2 (assoc (vec rt1) 2 ["常住地" :from {:t dd-province-fj :v "1"}])
+        rt2 (assoc (vec rt1) 2 ["常住地" :from {:t dd-province-fj :v "1" :require true}])
         rt3 (row-add rt2 6 ["职称证明文件" :titlefile {:t 'file}])
         rt4 (row-add rt3 17 ["相关专业从业年份证明文件" :beginfile {:t 'file}])
-        rt5 (row-add rt4 17 ["证明人联系电话" :proofmobile {}])
-        rt6 (row-add rt5 17 ["证明人" :proofname {}])
-        rt7 (row-add rt6 17 ["证明单位" :prooforg {}])
+        rt5 (row-add rt4 17 ["证明人联系电话" :proofmobile {:require true}])
+        rt6 (row-add rt5 17 ["证明人" :proofname {:require true}])
+        rt7 (row-add rt6 17 ["证明单位" :prooforg {:require true}])
         ]
-    (concat rt7 [["主管机关" :admin {:t dd-admin-fj :title "请自选主管机关"}]])))
+    (concat rt7 [["主管机关" :admin {:t dd-admin-fj :title "请自选主管机关" :require true}]])))
 
 (defn auth
   "该 CljServlet 调用，用于本应用各函数的权限控制 "
@@ -61,13 +61,13 @@
         id (first ids)]
 ;    (println (format "uid=%s, role=%s, fname=%s" uid role fname))
     (cond
-      (in? fname ["index" "input-submit" "login" "login-submit" "logout"]) true
+      (in? fname ["index" "index-closed" "input-submit" "login" "login-submit" "logout"]) true
       (and (= fname "users") (not= role "1400") (not= role "1401")) false
       (= role "1400") true
       (in? role (keys dd-admin-fj)) true
       :else false)))
 
-(defn index
+(defn index-close
   "2012-7-31 8:00PM后关闭"
   []
   (html-body
@@ -81,7 +81,7 @@
      [:h2 {:style "padding:15px; background-color:lightgray; margin-bottom:0px; color:#333; text-shadow:0 1px 0 #EEE;"}
         "版权所有：福建省交通运输厅 2012 年"] ]))
 
-(defn index-closed
+(defn index
   "填写考评员注册信息" 
   [request]
   (let [wr3user (session! request "wr3user" "fj")
@@ -133,7 +133,7 @@
                               (vector k v)) 
                            (range pages))
         rs2 (with-mdb2 "espfj" 
-              (vec (fetch :pn-apply :skip (to-int skip) :limit limit :where where :sort {:del 1 :date 1})))] 
+              (vec (fetch :pn-apply :skip (to-int skip) :limit limit :where where :sort {:del 1 :admin 1 :date 1})))] 
     (html
       [:div {:style "margin:5px;"} 
        [:label {:for "pagers"} (format "共 %s 页 %s 条，选择：" (int (Math/ceil (/ count1 limit))) count1)]
@@ -141,8 +141,8 @@
                    :onchange "ajax_load($('#list'),'/c/espfj/pn-apply-list?skip='+$('#pagers').val())"} 
                   pager-options)]
       (espc/result-html- rs2
-                         ["主管机关" "报名日期" "姓名" "身份证" "报名类型" "处理结果" "处理意见" "直接颁发" "删除标记" "详情"]
-                         [:admin :date :name :pid :type :resp :advice :pass-direct :del :_id-fj]
+                         ["主管机关" "报名日期" "姓名" "身份证" "单位" "职称" "现从事专业" "报名类型" "处理结果" "处理意见" "详情"]
+                         [:admin :date :name :pid :org :title :prof :type :resp :advice :_id-fj]
                          {:admin dd-admin-fj :form "admin-resp"}) )))
 
 (defn admin
@@ -192,7 +192,9 @@
                          (eui-text {:id "pass-direct" :name "pass-direct" :type "checkbox"}) (space 2) "直接颁发" 
                          [:p (eui-button {:onclick "$('#fm1').submit()" :iconCls "icon-ok"} "提 交")]] 
                         [:script "espfj_admin_resp()"]
-                        )}) ))
+                        )
+               :orders (map second cfg-pn)
+               }) ))
 
 (defn admin-resp-submit
   [request]
@@ -201,7 +203,7 @@
                                 {:$set {:resp resp :advice advice :pass-direct pass-direct}}))
     (html-body
       [:h2 "已保存"]
-      (eui-button {:href "#" :onclick "window.close();"} "关闭"))))
+      (eui-button-close))))
 
 (defn admin-resp-del
   [id flag request]
@@ -259,7 +261,7 @@
        [:label {:for "pwd2"} "再输入新密码："] [:input#pwd2 {:name "pwd2" :type "password"}][:br]
        [:br]
        (eui-button {:onclick "$('#fm1').submit()"} "确认修改") (space 5) 
-       (eui-button {:href "#" :onclick "window.close();"} "关闭") ] 
+       (eui-button-close) ] 
       )))
 
 (defn passwd-change
@@ -307,7 +309,7 @@
          (html
            (eui-button {:onclick "$('#fm1').attr('action','/c/espfj/user-crud/update').submit()"} "更新用户") (space 5) 
            (eui-button {:onclick "$('#fm1').attr('action','/c/espfj/user-crud/del').submit()"} "删除用户") (space 5) ))
-       (eui-button {:href "#" :onclick "window.close();"} "关闭") ] 
+       (eui-button-close) ] 
       )))
 
 (defn user-crud
@@ -326,7 +328,14 @@
         "update" (do (update! :user pn pn-new) (str "已保存用户" n))
         "未知动作" ))))
 
-;(with-mdb2 "espfj"
+;(def doc1 (with-mdb2 "espfj" (fetch-by-id :pn-apply (object-id "5004f3fe2823f20ced2a6249")))) ; 1104  603
 ;  (doseq [[k v] (rest dd-admin-fj)]
 ;    (insert! :user {:name v :role k :uid k :pwd "7215ee9c7d9dc229d2921a40e899ec5f"})))
 
+;(def orders (for [[k v] cfg-pn] v))
+;(println orders)
+;(def m1 (for [k orders :let [v (doc1 k)] :when v] [k v]))
+;(def m2 (for [[k v] doc1 :when (not (in? k orders))] [k v]))
+;(concat m1 m2)
+;(apply array-map (flatten (concat (for [k orders :let [v (doc1 k)] :when v] [k v])
+;                                  (for [[k v] doc1 :when (not (in? k orders))] [k v]))))
