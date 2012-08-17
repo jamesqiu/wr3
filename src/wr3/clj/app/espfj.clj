@@ -2,7 +2,8 @@
      wr3.clj.app.espfj)
 
 (use 'wr3.clj.s 'wr3.clj.n 'wr3.clj.u 'wr3.clj.web 'wr3.clj.tb)
-(use 'somnium.congomongo 'wr3.clj.nosql 'somnium.congomongo 'hiccup.core)
+(use 'somnium.congomongo 'wr3.clj.nosql 'somnium.congomongo 'hiccup.core 'clojure.contrib.json)
+
 (require '[wr3.clj.app.espc :as espc]) 
 (require '[wr3.clj.app.espconf :as conf]) 
 
@@ -61,7 +62,7 @@
         id (first ids)]
 ;    (println (format "uid=%s, role=%s, fname=%s" uid role fname))
     (cond
-      (in? fname ["index" "index-closed" "input-submit" "login" "login-submit" "logout"]) true
+      (in? fname ["index" "index-close" "input" "input-submit" "input-login-check" "login" "login-submit" "logout"]) true
       (and (= fname "users") (not= role "1400") (not= role "1401")) false
       (= role "1400") true
       (in? role (keys dd-admin-fj)) true
@@ -81,11 +82,49 @@
      [:h2 {:style "padding:15px; background-color:lightgray; margin-bottom:0px; color:#333; text-shadow:0 1px 0 #EEE;"}
         "版权所有：福建省交通运输厅 2012 年"] ]))
 
+(def body-head [:h1 {:style "padding:20px; background-color:#369; color: white; font-size: 22px; margin-top:0px"} 
+           "福建省交通运输厅——考评员在线报名系统"] )
+
+(def body-tail [:h2 {:style "padding:15px; background-color:lightgray; margin-bottom:0px; color:#333; text-shadow:0 1px 0 #EEE;"}
+                "版权所有：福建省交通运输厅 2012 年"])
+  
 (defn index
-  "填写考评员注册信息" 
-  [request]
+  "app: 直接填写或者用身份证（密码：后4位）登录修改原来提交的内容"
+  []
+  (html-body
+    [:center {:style "border: 1px solid #369"}
+     body-head
+     [:div {:style "min-height: 500px"}
+      [:h2 "初次报名，请直接点击填写个人报名信息："][:br]
+      (eui-button {:href "/c/espfj/input"} "填写个人报名信息") [:br][:br][:br][:hr][:br]
+      [:h2 "已经填写提交过报名材料，希望进一步修改提交，请输入用户ID和密码登录："][:br]
+      [:form#fm1
+       [:label "用户代码："] (eui-text {:name "pid" :id "pid"}) [:br]
+       [:label "用户密码："] (eui-text {:name "pass"}) [:br][:br]
+       (eui-button {:onclick "espfj_input_login($('#fm1'))"} "登 录")]]
+     body-tail ]))
+
+(defn- with-pid-
+  [pid]
+  (with-mdb2 "espfj" (first (fetch :pn-apply :where {:pid {:$in [(.toLowerCase pid) (.toUpperCase pid)]}} :sort {:date -1}))))
+
+(defn input-login-check
+  "service: 校验用户名和密码是否符合"
+  [pid pass]
+  (json-str 
+    (cond 
+      (or (not= 18 (count pid)) (not= 4 (count pass))) false
+      (not (.equalsIgnoreCase pass (subs pid 14 18))) false
+      (empty? (with-pid- pid)) false
+      :else true )))
+
+(defn input
+  "app: 填写考评员注册信息" 
+  [id request]
   (let [wr3user (session! request "wr3user" "fj")
-        wr3role (session! request "wr3role" "pn")]
+        wr3role (session! request "wr3role" "pn")
+        cfg-pn (if (not id) cfg-pn
+                 (espc/cfg-set-values- cfg-pn (with-pid- id)))]
     (html-body
       {:onload "espfj_onload()"}
       [:center {:style "border: 1px solid #369"}
@@ -118,32 +157,51 @@
     (format "已提交 %s 的申请表。" (vars :name) )))
 
 (defn pn-apply-list
-  "service：分页显示考评员申请列表 "
-  [skip request]
+  "service：分页显示考评员申请列表
+  @skip 跳过的记录数
+  @del '0' '全部' '1' '正常' '-1' '垃圾箱（已删除）' 
+  @resp 'yes' 'no' 'nil' "
+  [skip del resp request]
   (let [role (wr3role request)
-        limit 20
         where (if (in? role ["1400" "1401"]) {} {:admin role}) ; 管理员看全部，其他看自己管理范围的。
+        options-del {"-" "全部" "0" "正 常（未删除）" "1" "垃圾箱（已删除）"}
+        options-resp {"-" "全部" "yes" "已审批同意的" "no" "已审批不同意的" "nil" "尚未处理的"}
+        where-del (case del 
+                    "-" nil
+                    "0" {:del {:$ne "1"}}
+                    "1" {:del "1"})
+        where-resp (case resp
+                     "-" nil
+                     "yes" {:resp "yes"}
+                     "no" {:resp "no"}
+                     "nil" {:resp nil} )
+        where (merge where where-del where-resp)
+
         count1 (with-mdb2 "espfj" (fetch-count :pn-apply :where where))
+        limit 20 ; 每页的限制记录值
         pages (int (Math/ceil (/ count1 limit)))
         pager-options (map #(let [k (* % limit)
                                   v (format "第%s页：%s-%s" 
-                                            (inc %) 
-                                            (inc k) 
-                                            (if (= % (dec pages)) count1 (* limit (inc %))))] 
-                              (vector k v)) 
-                           (range pages))
+                                            (inc %) (inc k) (if (= % (dec pages)) count1 (* limit (inc %))))]
+                              (vector k v)) (range pages))
         rs2 (with-mdb2 "espfj" 
-              (vec (fetch :pn-apply :skip (to-int skip) :limit limit :where where :sort {:del 1 :admin 1 :date 1})))] 
+              (vec (fetch :pn-apply :skip (to-int skip) :limit limit :where where 
+                          :sort {:del 1 :admin 1 :resp -1 :date 1})))
+        ] 
     (html
       [:div {:style "margin:5px;"} 
        [:label {:for "pagers"} (format "共 %s 页 %s 条，选择：" (int (Math/ceil (/ count1 limit))) count1)]
-       (eui-combo {:id "pagers" :value (to-int skip) 
-                   :onchange "ajax_load($('#list'),'/c/espfj/pn-apply-list?skip='+$('#pagers').val())"} 
-                  pager-options)]
-      (espc/result-html- rs2
-                         ["主管机关" "报名日期" "姓名" "身份证" "单位" "职称" "现从事专业" "报名类型" "处理结果" "处理意见" "详情"]
-                         [:admin :date :name :pid :org :title :prof :type :resp :advice :_id-fj]
-                         {:admin dd-admin-fj :form "admin-resp"}) )))
+       (eui-combo {:id "pagers" :value (to-int skip) :onchange "espfj_pn_list_onchange(true)"} pager-options)
+       (space 5) [:label "范围选择："] (eui-combo {:id "del" :value del :onchange "espfj_pn_list_onchange(false)" } 
+                                             options-del)
+       (space 5) [:label "按处理结果筛选："] 
+       (eui-combo {:id "resp" :value resp :onchange "espfj_pn_list_onchange(false)"} options-resp)
+       ]
+      (espc/result-html- 
+        rs2
+        ["主管机关" "报名日期" "姓名" "身份证" "单位" "职称" "现从事专业" "报名类型" "处理结果" "详情"]
+        [:admin :date :name :pid :org :title :prof :type :resp :_id-fj]
+        {:admin dd-admin-fj :form "admin-resp"}) )))
 
 (defn admin
   "主管机关查看所有申请"
@@ -162,9 +220,11 @@
          [:a {:href "#" :onclick "$.ajaxSetup({cache:false}); app_exit('/c/espfj/admin')"} "【注销】"] (space 5)
          [:a {:href "/c/espfj/passwd" :target "_blank"} "【修改密码】"] (space 5)
          (when (in? role ["1400" "1401"]) 
-           [:a {:href "/c/espfj/users" :target "_blank"} "【管理用户】"]) ]
+           (html
+             [:a {:href "/c/espfj/users" :target "_blank"} "【管理用户】"] (space 5)
+             [:a {:href "/c/espfj/olap-admin" :target "_blank"} "【各地报名情况】"]) ) ]
         [:h1 (format "考评员资格审批（%s）" (:name rs))] 
-        [:div#list (pn-apply-list 0 request)]]
+        [:div#list (pn-apply-list 0 "-" "-" request)]]
        [:br][:br][:br]
        [:h2 {:style "padding:15px; background-color:lightgray; margin-bottom:0px; color:#333; text-shadow:0 1px 0 #EEE;"}
         "版权所有：福建省交通运输厅 2012 年"] ] )))
@@ -327,6 +387,21 @@
         "del" (do (destroy! :user pn) (str "已删除用户" n))
         "update" (do (update! :user pn pn-new) (str "已保存用户" n))
         "未知动作" ))))
+
+(defn olap-admin
+  []
+  (let [rs (with-mdb2 "espfj" (mdb-group :pn-apply [:admin]))
+        rt1 (sort-by :admin rs)
+        rt2 (sort-by :count > rs)]
+  (html-body
+    [:h1 "按地市报名情况统计表："]
+    [:table {:width "100%" :align "center"}
+     [:tr
+      [:td [:h2 "按主管机关排序："]
+       (espc/result-html- rt1 ["主管机关" "报名小计"] [:admin :count] {:admin dd-admin-fj}) ]
+      [:td [:h2 "按报名数量排序："]
+       (espc/result-html- rt2 ["主管机关" "报名小计"] [:admin :count] {:admin dd-admin-fj}) ]]]
+    )))
 
 ;(def doc1 (with-mdb2 "espfj" (fetch-by-id :pn-apply (object-id "5004f3fe2823f20ced2a6249")))) ; 1104  603
 ;  (doseq [[k v] (rest dd-admin-fj)]

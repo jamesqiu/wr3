@@ -3272,7 +3272,6 @@ function espfj_onload() {
 }
 
 function espfj_input_submit_check() {
-//	if ($('#name').val().trim()=='') { // IE垃圾没有trim()函数
 	if ($.trim($('#name').val())=='') { 
 		alert('姓名为必填字段')
 		return false
@@ -3283,6 +3282,17 @@ function espfj_input_submit_check() {
 		return false
 	}
 	return true;
+/* 
+	var ok = true
+	$('[required="true"]').each(function(i) {
+		if ($.trim($(this).val())=='') {
+			alert('有必填字段没有填写！请仔细检查')
+			ok = false
+			return false
+		}
+	})
+	return ok;
+*/	
 }
 
 /**
@@ -3319,6 +3329,26 @@ function espfj_admin_resp_del(flag) {
 	});
 }
 
+function espfj_input_login(fm) {
+	$.post('/c/espfj/input-login-check', fm.serialize(), function(data) {
+		var json = $.parseJSON(data)
+		if (json==true) {
+			window.location.href = '/c/espfj/input/' + $('#pid').val()
+		} else {
+			alert('登录失败，请联系相关负责人。')
+		}
+	})
+}
 
+/**
+ * 
+ * @param isPagers true表示是选不同页码；false表示选其他
+ */
+function espfj_pn_list_onchange(isPagers) {
+	var skip = isPagers ? $('#pagers').val() : 0
+	var url = '/c/espfj/pn-apply-list?skip=' + skip
+	url += '&del='+ $('#del').val() + '&resp='+$('#resp').val()
+	ajax_load($('#list'),  url)
+}
 
 

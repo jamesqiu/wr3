@@ -411,6 +411,11 @@
               (result-html- rs2 '[申请时间 处理状态 查看] [:date :respdate :_id] 
                             {:form (format "docv/%s-apply" (name type))}) )) )))
 
+(defn cfg-set-values-
+  "cfg配置和已有记录合并：设置cfg的m中的:v缺省值"
+  [cfg0 r]
+  (for [[n id m] cfg0] [n id (merge m (if (id r) {:v (id r)} {}))]))
+
 (defn apply-input-
   "共用函数：pn-input, org-input, en-input的录入表单。
   把缺省value设为用户最后录入的数据记录中的值，以便减少录入量。
@@ -421,9 +426,7 @@
         cfg0 ({:pn cfg-apply-pn :en cfg-apply-en :org cfg-apply-org} type)
         nam (dd-cert type)
         r (first (with-uid- type uid))
-        cfg (if r 
-              (for [[n id m] cfg0] [n id (merge m (if (id r) {:v (id r)} {}))])
-              cfg0)]
+        cfg (if r (cfg-set-values- cfg0 r) cfg0)]
     (html
       (input-form 
         cfg 
