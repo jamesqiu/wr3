@@ -64,8 +64,8 @@
           ]
          ]   
    :frame-main (html [:script "layout_load_center('/c/esp/mot-resp-sum')"]
-                     espreg/bjca-on-change
                      (set-title "主管机关管理系统（试行）"))
+   :frame-top (html espreg/bjca-on-change)
    })
 
 ;; 考评员界面配置
@@ -81,9 +81,10 @@
           ["使用帮助" "icon-help" "pn-help" "/static/esp/about-pn.html"]
           ]
          ] 
-   :frame-main (html [:script "layout_load_center('/static/esp/about-pn.html')"]
-                     espreg/bjca-on-change
+   :frame-main (html [:h2 "考评员用户主界面"]
+                     [:script "layout_load_center('/static/esp/about-pn.html')"]
                      (set-title "考评员在线申请系统（试行）"))
+   :frame-top (html espreg/bjca-on-change)
    })
 
 ;; 考评机构界面配置
@@ -115,8 +116,8 @@
           ]
          ]   
    :frame-main (html [:h2 "考评机构用户主界面"]
-                     espreg/bjca-on-change
                      (set-title "考评机构管理系统（试行）"))
+   :frame-top (html espreg/bjca-on-change)
    })
 
 ;; 交通运输企业界面配置
@@ -136,8 +137,8 @@
           ]
          ]   
    :frame-main (html [:h2 "交通运输企业用户主界面"]
-                     espreg/bjca-on-change
                      (set-title "企业在线填报管理系统（试行）"))
+   :frame-top (html espreg/bjca-on-change)
    })
 
 ; 主界面子系统菜单

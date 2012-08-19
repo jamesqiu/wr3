@@ -33,10 +33,29 @@
   <param name=\"ServerCert\" value= \"MIIEFjCCA72gAwIBAgIKGhAAAAAAAABGIzAKBggqgRzPVQGDdTBEMQswCQYDVQQGDAJDTjENMAsGA1UECgwEQkpDQTENMAsGA1UECwwEQkpDQTEXMBUGA1UEAwwOQmVpamluZyBTTTIgQ0EwHhcNMTExMTA4MTYwMDAwWhcNMTIxMTA5MTU1OTU5WjBeMRAwDgYDVQQpDAdURVNUMDAyMRAwDgYDVQQDDAdzbTJjZXJ0MQ0wCwYDVQQLDARiamNhMQ0wCwYDVQQKDARCSkNBMQ0wCwYDVQQKDARiamNhMQswCQYDVQQGDAJDTjBZMBMGByqGSM49AgEGCCqBHM9VAYItA0IABCmZyEamE/rn+h8avGyDHQKxHiVFoZIndsz+QVzYc7ma6tut7Widce80FTtHpyt6Pe1C8uyfZFJXaddwZWNYrzCjggJ7MIICdzAfBgNVHSMEGDAWgBQf5s/Uj8UiKpdKKYoV5xbJkjTEtjAdBgNVHQ4EFgQU2q8YnzPs3rS+SndwB4WIZ3Q9rAswCwYDVR0PBAQDAgbAMIGbBgNVHR8EgZMwgZAwX6BdoFukWTBXMQswCQYDVQQGDAJDTjENMAsGA1UECgwEQkpDQTENMAsGA1UECwwEQkpDQTEXMBUGA1UEAwwOQmVpamluZyBTTTIgQ0ExETAPBgNVBAMTCGNhMjFjcmwxMC2gK6AphidodHRwOi8vY3JsLmJqY2Eub3JnLmNuL2NybC9jYTIxY3JsMS5jcmwwGQYKKoEchu8yAgEBAQQLDAlKSlRFU1QwMDIwYAYIKwYBBQUHAQEEVDBSMCMGCCsGAQUFBzABhhdPQ1NQOi8vb2NzcC5iamNhLm9yZy5jbjArBggrBgEFBQcwAoYfaHR0cDovL2NybC5iamNhLm9yZy5jbi9jYWlzc3VlcjCBiQYDVR0gBIGBMH8wMAYDVR0gMCkwJwYIKwYBBQUHAgEWGyBodHRwOi8vd3d3LmJqY2Eub3JnLmNuL2NwczBLBgNVHSAwRDBCBggrBgEFBQcCARY2aHR0cDovL3d3dy5iamNhLm9yZy5jbi9zaXRlcy9kZWZhdWx0L2ZpbGVzL3NtMi1jcHMucGRmMBEGCWCGSAGG+EIBAQQEAwIA/zAXBgoqgRyG7zICAQEIBAkMB1RFU1QwMDIwGQYKKoEchu8yAgECAgQLDAlKSlRFU1QwMDIwHwYKKoEchu8yAgEBDgQRDA8xMDIwMDAwMDAwMDAwNzcwGQYKKoEchu8yAgEBBAQLDAlKSlRFU1QwMDIwCgYIKoEcz1UBg3UDRwAwRAIgCOM85UU7E2FjT5oddOxP/iEbbDd9skH4QdjHWG+Nm1gCIChXTmCbXcXbSlLNgdjxDl/JFNzXF8RMyr3Y+R2KkVk1\" >
   </OBJECT>")
 
+;; bjca登录页面的js
+(defn bjca-js 
+  [strServerSignedData strServerRan strServerCert]
+  (str "<script type='text/javascript' src='/esp/js/date.js'></script>"
+       "<script type='text/javascript' src='/esp/js/XTXApp.js'></script>"
+       (format "<script LANGUAGE=javascript>
+                  var strServerSignedData = \"%s\"; 
+			            var strServerRan = \"%s\";
+			            var strServerCert = \"%s\";
+                </script>" strServerSignedData strServerRan strServerCert)
+       "<SCRIPT LANGUAGE=JAVASCRIPT event=OnLoad for=window>
+		       GetUserList(\"LoginForm.UserList\");
+		       LoginForm.UserPwd.focus();
+	      </SCRIPT>
+	      <SCRIPT LANGUAGE=javascript event=OnUsbKeyChange for=XTXAPP>
+		       ChangeUserList(\"LoginForm.UserList\");
+		       LoginForm.UserPwd.focus();
+	      </SCRIPT>"))
+
 ; bjca usbkey 插拔响应代码
 (def bjca-on-change
   (html bjca-activex
-        [:script "if ($.browser.msie) XTXAPP.attachEvent('OnUsbkeyChange', esp_bjca_onchange)"]))
+        [:script "if ($.browser.msie) XTXAPP.attachEvent('OnUsbkeyChange', esp_bjca_onchange)"] ))
   
 (defn ca
   "BJCA test，win下需要配置文件：%USERPROFILE%\\BJCAROOT\\SVSClient.properties "
@@ -44,27 +63,30 @@
   (let [sed (SecurityEngineDeal/getInstance "SM")
         strServerCert (.getServerCertificate sed)
         strRandom (.genRandom sed 24)
+        strSignedData (.signData sed (.getBytes strRandom))
         sr (session! request "Random" strRandom) ]
-    (html-body
-      {:class "login_body"}
-      [:img {:src "/img/idp-webfirst.png" :style "position: absolute; top: 50%; left: 50%; margin-top: -80px; margin-left: -110px;"}]
-      [:form {:method "post" :ID "LoginForm" :name "LoginForm" :action "/c/espreg/ca-submit" :class "login_form ui-corner-all"
-              :onsubmit (format "return esp_bjca_onsubmit('%s')" strRandom)}
-       [:center [:div {:style "color:yellow;margin-bottom:9px"} 
-                 "提示：请先将系统专用UKey证书（<a href='#' style='color:#fcc'>申请</a>）插入计算机。"]]
-       "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br]
-       "选择口令：" [:input {:id "UserPwd" :name "pwd1" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
-       [:p {:align "center" :style "padding:6px"}
-        [:input {:type "submit" :value " 提 交 " :class "ui-state-default ui-corner-all" :style "font-weight:bold;color:green"}]]
-       [:center [:img {:alt "nasoft" :src "/img/nasoft-rnd.png"}]]
-       [:input {:type "hidden" :ID "UserSignedData" :name "UserSignedData"}]
-       [:input {:type "hidden" :ID "UserCert" :name "UserCert"}]
-       [:input {:type "hidden" :ID "ContainerName" :name "ContainerName"}]
-       [:input {:type "hidden" :ID "strRandom" :name "strRandom"}] ]
-      bjca-activex
-      [:script "document.title='标准化系统证书登录' "]
-      )))
-
+    (html
+      [:html
+       (head-set-join (bjca-js strSignedData strRandom strServerCert))
+       [:body {:class "login_body" :onload "esp_bjca_onload()" }
+        [:img {:src "/img/idp-webfirst.png" :style "position: absolute; top: 50%; left: 50%; margin-top: -80px; margin-left: -110px;"}]
+        [:form {:method "post" :ID "LoginForm" :name "LoginForm" :action "/c/espreg/ca-submit" :class "login_form ui-corner-all"
+                :onsubmit (format "return esp_bjca_onsubmit('%s')" strRandom)}
+         [:center [:div {:style "color:yellow;margin-bottom:9px"} 
+                   "提示：请先将系统专用UKey证书（<a href='#' style='color:#fcc'>申请</a>）插入计算机。"]]
+         "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br]
+         "选择口令：" [:input {:id "UserPwd" :name "pwd1" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
+         [:p {:align "center" :style "padding:6px"}
+          [:input {:type "submit" :value " 提 交 " :class "ui-state-default ui-corner-all" :style "font-weight:bold;color:green"}] ]
+         [:center 
+          [:a {:href "/esp" :style "color:white"} "返回主页"] [:br] 
+          [:img {:alt "nasoft" :src "/img/nasoft-rnd.png"}]]
+         [:input {:type "hidden" :ID "UserSignedData" :name "UserSignedData"}]
+         [:input {:type "hidden" :ID "UserCert" :name "UserCert"}]
+         [:input {:type "hidden" :ID "ContainerName" :name "ContainerName"}]
+         [:input {:type "hidden" :ID "strRandom" :name "strRandom"}] ]
+        [:script "document.title='标准化系统证书登录' "]]] )))
+        
 (def db-reg "espdev") ; 用户注册的RDB数据源名称
 
 (defn- check1
@@ -103,32 +125,32 @@
   (let [vars (query-vars2 request)
         ;<bjca>
         sed (SecurityEngineDeal/getInstance "SM")
+        ranStr (session request "Random") ; (:strRandom vars)
         clientCert (:UserCert vars)
         UserSignedData (:UserSignedData vars)
         certPub (.getCertInfo sed clientCert 8)
-        ranStr (:strRandom vars)
         retValue (.validateCert sed clientCert)
         uniqueIdStr (.getCertInfo sed clientCert 17)
-        uniqueId (.getCertInfoByOid sed clientCert "1.2.156.112562.2.1.1.24") ; SF110010198709080314 或 1@5009JJ0686119689
-;        uniqueId (.getCertInfoByOid sed clientCert "1.2.156.112562.2.1.1.1") ; JJ638610457 
-        signedByte (.base64Decode sed UserSignedData)
-        rt (.verifySignedData sed clientCert (.getBytes ranStr) signedByte) ; 认证结果
+        ; SF110010198709080314 或 1@5009JJ0686119689
+        uniqueId (.getCertInfoByOid sed clientCert "1.2.156.112562.2.1.1.24") 
+        signedByte (.base64Decode sed UserSignedData)        
+        rt (.verifySignedData sed clientCert (.getBytes ranStr) signedByte) ; 认证结果 true/false
         ;</bjca>
-;        PaperType (subs uniqueId 0 2) ; 'JJ' 'SF'
         PaperType (if (.startsWith uniqueId "SF") "SF" "JJ"); 'JJ' 'SF'
         PaperID (if (= PaperType "SF") (subs uniqueId 2) 
                   (str (left uniqueId "@") "@" (right uniqueId "JJ"))) ; pid
-        pid ()
+        pid (if (= PaperType "SF") PaperID
+              (let [n (count PaperID)] (subs PaperID (- n 10))))
         wr3url (session request "wr3url")
-        rs (with-mdb2 "esp" (fetch-one :user :where {:pid PaperID})) ; 本地esp库查询用户的结果
+        rs (with-mdb2 "esp" (fetch-one :user :where {:pid pid})) ; 本地esp库查询用户的结果
         ]
     (html
-      [:pre uniqueId]
+      [:pre pid]
       [:pre "'" ranStr "'"]
       (cond
         (not rt) (format "证书认证失败（%s）：%s<br/>%s" uniqueId rt signedByte)
         (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。"
-        :else (do (session! request "wr3user" (str (:role rs) "-" PaperID))
+        :else (do (session! request "wr3user" (:uid rs))
                 (session! request "wr3role" (:role rs))
                 (html (format "%s（%s）认证成功！" (:name rs) PaperID)
                       [:script (format "window.location.href='%s' " wr3url)])) ) )))
@@ -140,25 +162,31 @@
         clientCert (:UserCert vars)
         UserSignedData (:UserSignedData vars)
         ranStr (:strRandom vars)
-        dec (Stringx/base64dec clientCert)
-        idx (.indexOf dec "\2\1\1\1")
-        PaperType (subs dec (+ idx 8) (+ idx 10))
-        PaperID (if (= PaperType "JJ") 
-                  (str (subs dec (+ idx 10) (+ idx 18)) "-" (subs dec (+ idx 18) (+ idx 19) )) 
-                  (subs dec (+ idx 10) (+ idx 28)))
+        decs (Stringx/base64dec clientCert)
+        idx (.indexOf decs "\u0002\u0001\u0001\u0018")
+        idx1 (+ 2 (.indexOf decs "\u000c" (+ idx 4)))
+        idx2 (.indexOf decs "\n" idx1)
+        uniqueId (subs decs idx1 (dec idx2)) ; 2@5009JJ0X0009970-2  SF210106198506020084
+
+        PaperType (if (.startsWith uniqueId "SF") "SF" "JJ"); 'JJ' 'SF'
+        PaperID (if (= PaperType "SF") (subs uniqueId 2) 
+                  (str (left uniqueId "@") "@" (right uniqueId "JJ"))) ; pid
+        pid (if (= PaperType "SF") PaperID
+              (let [n (count PaperID)] (subs PaperID (- n 10))))
         wr3url (session request "wr3url")
-        rs (with-mdb2 "esp" (fetch-one :user :where {:pid PaperID})) ]
+        rs (with-mdb2 "esp" (fetch-one :user :where {:pid pid})) ; 本地esp库查询用户的结果
+        ]
     (html
       (if (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。"
-        (do (session! request "wr3user" (str (:role rs) "-" PaperID))
+        (do (session! request "wr3user" (:uid rs))
           (session! request "wr3role" (:role rs))
-          (html (format "%s（%s）认证成功！" (:name rs) PaperID)
+          (html (format "%s（%s）认证成功！" (:name rs) pid)
                 [:script (format "window.location.href='%s' " wr3url)])) ))))
 
 (defn ca-submit
   "BJCA 插入证书密码提交后认证"
   [request]
-  (check2 request))
+  (check3 request))
 
 (defn who
   "service: 返回session中名为'wr3user'的当前已登录用户的json对象{:uid .. :name .. :roles ..}，未登录则返回'null' "

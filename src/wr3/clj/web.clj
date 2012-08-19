@@ -109,7 +109,7 @@
 (defn head-set-join
   "除了head-set，在<head>内添加其他内容"
   [& s]
-  (apply str head-set s))
+  (html [:head meta-utf8 js-main s]))
 
 (defn head-js
   "生成<head>中包含<webapp>/js/下指定.js文件的html片段"
@@ -544,7 +544,9 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
          (for [[label nam icon] (rest (:searcher cfg))]
            [:div {:name nam :iconCls icon :style "margin: 0px"} label] ))])
     ; 1、2级导航条
-    (when (:menu cfg) (frame-top-menu cfg)) ))
+    (when (:menu cfg) (frame-top-menu cfg)) 
+    ; 一般为js等不可见内容（如ukey插件）
+    (:frame-top cfg) ))
 
 (defn frame-left-right
   "layout.west | layout.east"

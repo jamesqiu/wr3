@@ -2539,6 +2539,39 @@ function test_cookie() {
 }
 
 /**
+ * 点击 cross table 报表行头或者列头后绘制图形
+ * @param url0 提交画图的页面
+ */
+function cross_table_chart(url0) {
+	var type_name = $('h1').attr('type')
+	$('th[group="dim_top"]').click(function() {
+		var col_index = $(this).get(0).cellIndex
+		var tb = $(this).parent().parent().get(0)
+		var rows = tb.rows.length
+		$(tb).find('td').css('background-color', '')
+		for(var i=1; i<rows; i++) {
+			$(tb.rows[i].cells[col_index]).css('background-color', 'yellow')
+		}
+		var url = url0 +'&dim-top='+$(this).text()+'&dim-left=';
+		$('#chart').html('<img src="/img/loading3.gif" />').load(url)
+	})
+	$('th[group="dim_left"]').click(function() {
+		var row_index = $(this).parent().get(0).rowIndex
+		var tb = $(this).parent().parent().get(0)
+		var cols = tb.rows[row_index].cells.length
+		$(tb).find('td').css('background-color', '')
+		for(var i=1; i<cols; i++) {
+			$(tb.rows[row_index].cells[i]).css('background-color', 'yellow')
+		}
+		var url = url0 + '&dim-top='+'&dim-left='+$(this).text();	
+		// 碰到奇怪问题：直接调用load方法页面不绘制chart，
+		url = encodeURI(url)
+		$('#chart').html('<img src="/img/loading3.gif" />')
+		$.get(url, function(data) { $('#chart').html(data) })
+	})
+}
+
+/**
  * wr3.clj.app.grade/index
  */
 function grade_onload() {
@@ -3216,26 +3249,31 @@ function esp_name_cid_autocomplete(typ) {
 	});
 	
 }
+
+/**
+ * bjca 登录初始化ukey
+ */
+function esp_bjca_onload() {
+	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
+	GetUserList("LoginForm.UserList");
+	LoginForm.UserPwd.focus();	
+}
+
 /**
  * BJCA 提交前验证
  * @returns {Boolean}
  */
 function esp_bjca_onsubmit(srand) {
-	var ret;
 	var strContainerName = LoginForm.UserList.value;
 	var strPin = LoginForm.UserPwd.value;
-	if(strPin.length<4||strPin.length>16){
-		alert("密码长度应该在4-16位之间");
-		return false;
-	}
-	ret = XTXAPP.AddSignInfo(strPin);
-	//ret = Login(LoginForm,strContainerName,strPin);
-	LoginForm.UserPwd.value = "";
-	LoginForm.strRandom.value = 'NDYxNjY1NTEwNzc0NTk1NTM4NTcxOTY0' // srand
-	if(!ret) {
-		return false;
-	} else {
+	LoginForm.strRandom.value = srand //'NDYxNjY1NTEwNzc0NTk1NTM4NTcxOTY0' // srand
+	var ret = Login("LoginForm", strContainerName, strPin);
+//	var ret = XTXAPP.AddSignInfo(strPin);
+	if(ret) {
+		LoginForm.UserPwd.value = "";
 		return true;
+	} else {
+		return false;
 	}
 }
 

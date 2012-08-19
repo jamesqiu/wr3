@@ -1180,7 +1180,17 @@
                          :dim-left-name "主管机构"
                          :f-dim-left (fn [v] (dd-admin v))
                          :f-dim-top (fn [v] (str (dd-grade (to-int v)) "企业"))
-                         :f-value (fn [v] (to-int v))}) )))
+                         :f-value (fn [v] (to-int v))}) 
+      [:div#chart ]
+      (html-js "cross_table_chart('/c/esp/mot-sub-chart?type=1')") )))
+
+(defn mot-sub-chart
+  ""
+  [dim-top dim-left]
+  (html 
+    [:h1 "chart"]
+    [:h2 "dim-top:" dim-top]
+    [:h2 "dim-left:" dim-left]))
 
 (defn mot-admin
   "service: 管理本主管机关直接下级的主管机关
@@ -1320,6 +1330,6 @@
 ;(with-esp- (fetch :user :where {:uid {:$in ["en1" "en2" "org1" "org2" "pn1" "pn2" "mot1" "mot2"]}}))
 ;(with-mdb2 "esp" (destroy! :mot {:code "1416"}))
 ;(update- :en-apply {:pnids  ["4f8ad8ef75e0ae928336807c"]} {:pnids ["pn-623021194511023211"]})
-;(insert- :user  {:name "测试北京交委用户1", :role "mot", :uid "motbj", :admin "02", :pwd "7215ee9c7d9dc229d2921a40e899ec5f"})
+;(insert- :user  {:name "0815个人测试", :pid "210106198506020084" :role "pn", :uid "pn-210106198506020084"})
 ;(print-seq (with-esp- (fetch :en-apply :only [:name :pnids] :where {:pnids {:$in ["4f8aeb2a75e0ae92833680e2"]}})))
 ;(with-esp- (fetch :en-apply :where {:orgid ["4f8aebd175e0ae92833680f4" "4f8aebd175e0ae92833680ff"]}))

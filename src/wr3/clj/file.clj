@@ -1,5 +1,7 @@
 (ns wr3.clj.file)
 
+(import wr3.util.Filex java.io.IOException)
+
 ;;;----------------- 对文件每行进行处理
 (defn- line-filter-enc
   "按enc读入文件的每行，对行进行处理。
@@ -21,6 +23,18 @@
   [fname func]
   (line-filter-enc fname func "UTF-8"))
 
+(defn file-text
+  "获取文本文件所有内容的String
+  @fname 文件路径及文件名，web下用 (.getRealPath request '/file/foo.txt') 
+  @enc 'UTF-8' 'GB18030' 无此参数则采用系统缺省编码 "
+  ([fname] (Filex/read fname))
+  ([fname enc] (try (Filex/getFileText fname enc) (catch IOException e (.printStackTrace e)))))
+
+(defn file-set-text
+  "将String的内容写入文本文件"
+  ([fname s] (Filex/write fname s))
+  ([fname s enc] (try (Filex/setFileText fname s enc) (catch IOException e (.printStackTrace e)))))
+    
 ;;--- usage:
 ;(def n (atom 0))
 ;(defn- f1 [line] (swap! n inc))
