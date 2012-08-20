@@ -783,7 +783,7 @@
   "app: 企业选择考评机构"
   [request]
   (let [uid (wr3user request)
-        admin (:admin (first (with-uid- :en uid)))
+        admin (:admin (first (with-uid- :user uid)))
         rs (with-esp- (fetch :org :where {:admin admin}))
         r (first (with-esp- (fetch :en-apply :where {:uid uid} :sort {:date -1}))) ; 第一条申请
         ] 
@@ -1169,28 +1169,63 @@
       (eui-button {} "提 交") )))
 
 (defn mot-sub-olap
-  "service: 主管机关对下级机关的综合分析"
-  []
-  (let [rt1 (with-mdb2 "esp" (mdb-group :en [:admin :grade]))
-        data (cross-data rt1 [:admin :grade :count])]
+  "service: 主管机关对下级机关的综合分析
+  @type 'grade' 'type' "
+  [type]
+  (let [type (or type "grade")
+        url (str "/c/esp/mot-sub-chart?type=" type)
+        type (keyword type)
+        type-name ({:grade "达标等级" :type "业务类型"} type)
+        dd ({:grade dd-grade :type dd-type} type)
+        rt1 (sort-by :admin (with-mdb2 "esp" (mdb-group :en [:admin type])))
+        data (cross-data rt1 [:admin type :count])]
     (html
-      [:h1 "各级交通管理部门管辖企业分析"]
-      (cross-table data {:caption "主管机构各级企业数量统计表"
-                         :dim-top-name "企业级别"
-                         :dim-left-name "主管机构"
-                         :f-dim-left (fn [v] (dd-admin v))
-                         :f-dim-top (fn [v] (str (dd-grade (to-int v)) "企业"))
+      (eui-button {:onclick "layout_load_center('/c/esp/mot-sub-olap?type=grade')"} "主管机关——企业达标等级") (space 5)
+      (eui-button {:onclick "layout_load_center('/c/esp/mot-sub-olap?type=type')"} "主管机关——企业业务类型")
+      (cross-table data {:caption (format "各%s企业数量统计表" type-name)
+                         :dim-top-name type-name
+                         :dim-left-name "主管机关"
+                         :f-dim-left (fn [v] (format "<font color=gray>%s</font>: %s" v (dd-admin v)))
+                         :f-dim-top (fn [v] (format "<font color=gray>%s</font>: %s" v (dd (to-int v))))
                          :f-value (fn [v] (to-int v))}) 
       [:div#chart ]
-      (html-js "cross_table_chart('/c/esp/mot-sub-chart?type=1')") )))
+      (html-js (format "cross_table_chart('%s')" url)) )))
+
+(defn- mot-sub-chart-data
+  " (mot-sub-chart-data :admin \"02\") 画:北京3个等级的数量图，(mot-sub-chart-data :grade \"2\") 画所有地区2级企业的数量图
+  @type :grade :type
+  @dim 点击的维度 :grade :type :admin
+  @where 该维度的值，用字符串 "
+  [type dim where]
+  (let [dims [:admin type] 
+        dim2 (if (= dim :admin) type :admin) ; 统计的维度
+        dd (case dim2
+             :admin (rest dd-admin) 
+             :grade dd-grade
+             :type dd-type)
+        rs (with-mdb2 "esp" (mdb-group :en dims))
+        rt (filter #(= where (dim %)) rs)
+        m (into {} (for [{d dim2 c :count} rt] [d c])) ]
+    (for [[k v] dd] [v (or (m (str k)) 0)])))
 
 (defn mot-sub-chart
-  ""
-  [dim-top dim-left]
-  (html 
-    [:h1 "chart"]
-    [:h2 "dim-top:" dim-top]
-    [:h2 "dim-left:" dim-left]))
+  "绘制一行或者一列的图表。
+  @type 除了:admin之外的维度，可以是 'grade' 'type'
+  @dim-top @dim-left 空或者形如 '01: 北京' '1: 一级企业' "
+  [type dim-top dim-left]
+  (let [type (keyword type)
+        type-name ({:grade "达标等级" :type "业务类型"} type)
+        dim-top? (nullity? dim-left)
+        dim (if dim-top? type :admin)
+        where (if dim-top? (left dim-top ":") (left dim-left ":"))
+        data (mot-sub-chart-data type dim where)
+        title (format "%s %s 企业数量" 
+                      (if dim-top? "各主管机关" (right dim-left ": ")) 
+                      (if dim-top? (right dim-top ": ") (str "各" type-name))) 
+        x (if dim-top? "主管机关" type-name) ]
+    (html 
+      [:h1 "图表显示"]
+      (barf (apply array-map (flatten data)) {:title title :x x :y "企业数量"}) )))
 
 (defn mot-admin
   "service: 管理本主管机关直接下级的主管机关
@@ -1327,9 +1362,9 @@
 ;;------------------------------------------------- test
 ;(use 'wr3.clj.datagen)
 ;--- 注：文件大小不能大于64k字节，否则报错
-;(with-esp- (fetch :user :where {:uid {:$in ["en1" "en2" "org1" "org2" "pn1" "pn2" "mot1" "mot2"]}}))
-;(with-mdb2 "esp" (destroy! :mot {:code "1416"}))
-;(update- :en-apply {:pnids  ["4f8ad8ef75e0ae928336807c"]} {:pnids ["pn-623021194511023211"]})
-;(insert- :user  {:name "0815个人测试", :pid "210106198506020084" :role "pn", :uid "pn-210106198506020084"})
+;(with-esp- (fetch :user :where {:name #"^0815"}))
+;(with-mdb2 "esp" (destroy! :user {:name #"^0815"}))
+;(update- :user {:pid "X0009980-4"} {:admin "13"})
+;(insert- :user  {:name "0820考评员测试", :pid "150121198506020081" :role "pn", :uid "pn-150121198506020081"})
 ;(print-seq (with-esp- (fetch :en-apply :only [:name :pnids] :where {:pnids {:$in ["4f8aeb2a75e0ae92833680e2"]}})))
 ;(with-esp- (fetch :en-apply :where {:orgid ["4f8aebd175e0ae92833680f4" "4f8aebd175e0ae92833680ff"]}))

@@ -164,7 +164,8 @@
      (eui-searchbox 
        {:searcher "grade_search1" :style "width: 250px;" :value "000001"} 
        [:div {:name "范围A" :iconCls "icon-ok" :style "margin: 0px"} "上市公司代码"]
-       [:div {:name "范围B" :iconCls "icon-tip" :style "margin: 0px"} "局部搜索"])]          
+       [:div {:name "范围B" :iconCls "icon-tip" :style "margin: 0px"} "局部搜索"])]
+    (set-title "上市公司综合评价")
     ))
 
 (defn- app-left
@@ -749,4 +750,3 @@
 
 ;(with-mdb2 "grade"
 ;  (vec (map :code (fetch :corp :only [:code] :where {:code #"^9"}))))
-

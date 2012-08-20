@@ -2552,7 +2552,7 @@ function cross_table_chart(url0) {
 		for(var i=1; i<rows; i++) {
 			$(tb.rows[i].cells[col_index]).css('background-color', 'yellow')
 		}
-		var url = url0 +'&dim-top='+$(this).text()+'&dim-left=';
+		var url = encodeURI(url0 +'&dim-top='+$(this).text()+'&dim-left='); // 有中文和空格，必须encodeURI
 		$('#chart').html('<img src="/img/loading3.gif" />').load(url)
 	})
 	$('th[group="dim_left"]').click(function() {
@@ -2563,11 +2563,8 @@ function cross_table_chart(url0) {
 		for(var i=1; i<cols; i++) {
 			$(tb.rows[row_index].cells[i]).css('background-color', 'yellow')
 		}
-		var url = url0 + '&dim-top='+'&dim-left='+$(this).text();	
-		// 碰到奇怪问题：直接调用load方法页面不绘制chart，
-		url = encodeURI(url)
-		$('#chart').html('<img src="/img/loading3.gif" />')
-		$.get(url, function(data) { $('#chart').html(data) })
+		var url = encodeURI(url0 + '&dim-top='+'&dim-left='+$(this).text()); // 有中文和空格，必须encodeURI	
+		$('#chart').html('<img src="/img/loading3.gif" />').load(url)
 	})
 }
 

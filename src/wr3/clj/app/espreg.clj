@@ -64,7 +64,8 @@
         strServerCert (.getServerCertificate sed)
         strRandom (.genRandom sed 24)
         strSignedData (.signData sed (.getBytes strRandom))
-        sr (session! request "Random" strRandom) ]
+        sr (session! request "Random" strRandom) 
+        _ (println "-- bjca:" strSignedData)]
     (html
       [:html
        (head-set-join (bjca-js strSignedData strRandom strServerCert))
@@ -155,12 +156,29 @@
                 (html (format "%s（%s）认证成功！" (:name rs) PaperID)
                       [:script (format "window.location.href='%s' " wr3url)])) ) )))
 
+(defn- bjca-decode
+  "从bjca的提交内容中直接解读出证件号内容"
+  [clientCert]
+  (let [decs (Stringx/base64dec clientCert)
+        idx (.indexOf decs "\u0002\u0001\u0001\u0018")
+        idx1 (+ 2 (.indexOf decs "\u000c" (+ idx 4)))
+        idx2 (.indexOf decs "\n" idx1)
+        uniqueId (subs decs idx1 (dec idx2)) ; 2@5009JJ0X0009970-2  SF210106198506020084
+
+        PaperType (if (.startsWith uniqueId "SF") "SF" "JJ"); 'JJ' 'SF'
+        PaperID (if (= PaperType "SF") (subs uniqueId 2) 
+                  (str (left uniqueId "@") "@" (right uniqueId "JJ"))) ; pid
+        pid (if (= PaperType "SF") PaperID
+              (let [n (count PaperID)] (subs PaperID (- n 10))))]
+    (if (= PaperType "SF") 
+      {:type "pn" :pid pid}
+      {:type "jj" :pid pid :no (left uniqueId "@")})))
+    
 (defn- check3
   "验证方法3：不使用ca服务器直接读取ukey中的pid信息，esp数据库验证"
   [request]
   (let [vars (query-vars2 request)
         clientCert (:UserCert vars)
-        UserSignedData (:UserSignedData vars)
         ranStr (:strRandom vars)
         decs (Stringx/base64dec clientCert)
         idx (.indexOf decs "\u0002\u0001\u0001\u0018")
@@ -187,6 +205,36 @@
   "BJCA 插入证书密码提交后认证"
   [request]
   (check3 request))
+
+(defn ca-local
+  "app: 不与服务器通讯直接读bjca UKey内容。仅用于ie"
+  [request]
+  (let [sed (SecurityEngineDeal/getInstance "SM") 
+        ]
+    (html-body
+      {:class "login_body"}
+      [:img {:src "/img/idp-webfirst.png" :style "position: absolute; top: 50%; left: 50%; margin-top: -80px; margin-left: -110px;"}]
+      [:form {:method "post" :ID "LoginForm" :name "LoginForm" :action "/c/espreg/ca-local-submit" :class "login_form ui-corner-all"
+              :target "ifrm1" :onsubmit "return XTXAPP.AddSignInfo(LoginForm.UserPwd.value)"}
+       "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br]
+       "选择口令：" [:input {:id "UserPwd" :name "pwd1" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
+       [:p {:align "center" :style "padding:6px"}
+        [:input {:type "submit" :value " 提 交 " :class "ui-state-default ui-corner-all" :style "font-weight:bold;color:green"}] ]
+       [:input {:type "hidden" :ID "UserSignedData" :name "UserSignedData"}]
+       [:input {:type "hidden" :ID "UserCert" :name "UserCert"}]
+       [:input {:type "hidden" :ID "ContainerName" :name "ContainerName"}]
+       [:input {:type "hidden" :ID "strRandom" :name "strRandom" :value "NDYxNjY1NTEwNzc0NTk1NTM4NTcxOTY0"}] ]
+      bjca-activex
+      [:iframe#ifrm1 {:name "ifrm1" :style "width:90%; height:200px; border:1px solid red"}] )))
+
+(defn ca-local-submit
+  [request]
+  (let [vars (query-vars2 request)
+        clientCert (:UserCert vars)
+        rt (bjca-decode clientCert)]
+    (html-body
+      [:h1 "rt: " rt]
+      [:table (for [[k v] vars] [:tr [:td k] [:td v]])] )))
 
 (defn who
   "service: 返回session中名为'wr3user'的当前已登录用户的json对象{:uid .. :name .. :roles ..}，未登录则返回'null' "
