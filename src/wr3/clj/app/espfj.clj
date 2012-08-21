@@ -186,7 +186,7 @@
                               (vector k v)) (range pages))
         rs2 (with-mdb2 "espfj" 
               (vec (fetch :pn-apply :skip (to-int skip) :limit limit :where where 
-                          :sort {:del 1 :admin 1 :resp -1 :date 1})))
+                          :sort {:del 1 :admin 1 :resp -1 :date -1})))
         ] 
     (html
       [:div {:style "margin:5px;"} 

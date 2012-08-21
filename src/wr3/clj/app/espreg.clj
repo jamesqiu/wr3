@@ -56,16 +56,40 @@
 (def bjca-on-change
   (html bjca-activex
         [:script "if ($.browser.msie) XTXAPP.attachEvent('OnUsbkeyChange', esp_bjca_onchange)"] ))
-  
-(defn ca
-  "BJCA test，win下需要配置文件：%USERPROFILE%\\BJCAROOT\\SVSClient.properties "
+
+(defn ca-local
+  [request]
+  (let [sed (SecurityEngineDeal/getInstance "SM")]
+    (html-body
+      {:class "login_body"}
+      [:img {:src "/img/idp-webfirst.png" :style "position: absolute; top: 50%; left: 50%; margin-top: -80px; margin-left: -110px;"}]
+        [:form {:method "post" :ID "LoginForm" :name "LoginForm" :action "/c/espreg/ca-local-submit" :class "login_form ui-corner-all"
+                :onsubmit "return XTXAPP.AddSignInfo(LoginForm.UserPwd.value)"}
+         [:center [:div {:style "color:yellow;margin-bottom:9px"} 
+                   "提示：请先将系统专用UKey证书（<a href='#' style='color:#fcc'>申请</a>）插入计算机。"]]
+         "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br]
+         "选择口令：" [:input {:id "UserPwd" :name "pwd1" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
+         [:p {:align "center" :style "padding:6px"}
+          [:input {:type "submit" :value " 提 交 " :class "ui-state-default ui-corner-all" :style "font-weight:bold;color:green"}] ]
+         [:center 
+          [:a {:href "/esp" :style "color:white"} "返回主页"] [:br] 
+          [:img {:alt "nasoft" :src "/img/nasoft-rnd.png"}]]
+         [:input {:type "hidden" :ID "UserSignedData" :name "UserSignedData"}]
+         [:input {:type "hidden" :ID "UserCert" :name "UserCert"}]
+         [:input {:type "hidden" :ID "ContainerName" :name "ContainerName"}]
+         [:input {:type "hidden" :ID "strRandom" :name "strRandom"}] ]
+        bjca-activex
+        [:script "document.title='标准化系统证书登录' "] )))
+
+(defn ca-server
+  "app: BJCA服务器认证UKey，win下需要配置文件：%USERPROFILE%\\BJCAROOT\\SVSClient.properties "
   [request]
   (let [sed (SecurityEngineDeal/getInstance "SM")
         strServerCert (.getServerCertificate sed)
         strRandom (.genRandom sed 24)
         strSignedData (.signData sed (.getBytes strRandom))
         sr (session! request "Random" strRandom) 
-        _ (println "-- bjca:" strSignedData)]
+        _ (println "-- bjca (" (datetime) "):" strRandom)]
     (html
       [:html
        (head-set-join (bjca-js strSignedData strRandom strServerCert))
@@ -87,41 +111,16 @@
          [:input {:type "hidden" :ID "ContainerName" :name "ContainerName"}]
          [:input {:type "hidden" :ID "strRandom" :name "strRandom"}] ]
         [:script "document.title='标准化系统证书登录' "]]] )))
-        
-(def db-reg "espdev") ; 用户注册的RDB数据源名称
 
-(defn- check1
-  "验证方法1：ca服务器验证后外部注册数据库验证"
+(defn ca
+  "app: 可通过本地或者服务器认证bjca ukey"
   [request]
-  (let [vars (query-vars2 request)
-        ;<bjca>
-        sed (SecurityEngineDeal/getInstance "SM")
-        clientCert (:UserCert vars)
-        UserSignedData (:UserSignedData vars)
-        certPub (.getCertInfo sed clientCert 8)
-        ranStr (:strRandom vars)
-        retValue (.validateCert sed clientCert)
-        uniqueIdStr (.getCertInfo sed clientCert 17)
-        uniqueId (.getCertInfoByOid sed clientCert "1.2.156.112562.2.1.1.24") ; 1@5009JJ0863175332 
-;        uniqueId (.getCertInfoByOid sed clientCert "1.2.156.112562.2.1.1.1") ; JJ638610457 
-        signedByte (.base64Decode sed UserSignedData)
-        rt (.verifySignedData sed clientCert (.getBytes ranStr) signedByte) ; 认证结果
-        ;</bjca>
-        PaperType (subs uniqueId 0 2)
-        PaperID (let [s (subs uniqueId 2)] (if (= PaperType "JJ") (str (subs s 0 8) "-" (subs s 8)) s ))
-        wr3url (session request "wr3url")
-        rs (select-row "esp" (format "SELECT PaperID,CommonName,usertype FROM userregister where PaperType='%s' and PaperID='%s' " 
-                     PaperType PaperID)) ]
-    (cond
-      (not rt) "证书认证失败"
-      (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。"
-      :else (do (session! request "wr3user" (str (:usertype rs) "-" PaperID))
-              (session! request "wr3role" (:usertype rs))
-              (html (format "%s（%s）认证成功！" (:commonname rs) PaperID)
-                   [:script (format "window.location.href='%s' " wr3url)])) ) ))
+  ; 可调用 ca-local 或者 ca-remote
+  (ca-server request)) 
 
-(defn- check2
-  "验证方法2：ca服务器验证后esp数据库验证"
+
+(defn- bjca-verify
+  "bjca服务器认证结果"
   [request]
   (let [vars (query-vars2 request)
         ;<bjca>
@@ -137,84 +136,107 @@
         signedByte (.base64Decode sed UserSignedData)        
         rt (.verifySignedData sed clientCert (.getBytes ranStr) signedByte) ; 认证结果 true/false
         ;</bjca>
-        PaperType (if (.startsWith uniqueId "SF") "SF" "JJ"); 'JJ' 'SF'
-        PaperID (if (= PaperType "SF") (subs uniqueId 2) 
-                  (str (left uniqueId "@") "@" (right uniqueId "JJ"))) ; pid
-        pid (if (= PaperType "SF") PaperID
-              (let [n (count PaperID)] (subs PaperID (- n 10))))
-        wr3url (session request "wr3url")
-        rs (with-mdb2 "esp" (fetch-one :user :where {:pid pid})) ; 本地esp库查询用户的结果
         ]
-    (html
-      [:pre pid]
-      [:pre "'" ranStr "'"]
-      (cond
-        (not rt) (format "证书认证失败（%s）：%s<br/>%s" uniqueId rt signedByte)
-        (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。"
-        :else (do (session! request "wr3user" (:uid rs))
-                (session! request "wr3role" (:role rs))
-                (html (format "%s（%s）认证成功！" (:name rs) PaperID)
-                      [:script (format "window.location.href='%s' " wr3url)])) ) )))
-
-(defn- bjca-decode
-  "从bjca的提交内容中直接解读出证件号内容"
-  [clientCert]
-  (let [decs (Stringx/base64dec clientCert)
-        idx (.indexOf decs "\u0002\u0001\u0001\u0018")
-        idx1 (+ 2 (.indexOf decs "\u000c" (+ idx 4)))
-        idx2 (.indexOf decs "\n" idx1)
-        uniqueId (subs decs idx1 (dec idx2)) ; 2@5009JJ0X0009970-2  SF210106198506020084
-
-        PaperType (if (.startsWith uniqueId "SF") "SF" "JJ"); 'JJ' 'SF'
+    {:uniqueId uniqueId :rt rt} ))
+  
+(defn- bjca-parse
+  "从bjca取出的uniqueId中得到{:type .. :pid .. :no ..}
+  @uniqueId 形如：'2@5009JJ0X0009970-2'  'SF210106198506020084' "
+  [uniqueId]
+  (let [PaperType (if (.startsWith uniqueId "SF") "SF" "JJ"); 'JJ' 'SF'
         PaperID (if (= PaperType "SF") (subs uniqueId 2) 
                   (str (left uniqueId "@") "@" (right uniqueId "JJ"))) ; pid
         pid (if (= PaperType "SF") PaperID
               (let [n (count PaperID)] (subs PaperID (- n 10))))]
     (if (= PaperType "SF") 
-      {:type "pn" :pid pid}
-      {:type "jj" :pid pid :no (left uniqueId "@")})))
-    
+      {:type "SF" :pid pid}
+      {:type "JJ" :pid pid :no (left uniqueId "@")})))    
+  
+(defn- bjca-decode
+  "从bjca本地提交内容中直接解码读出证件号内容"
+  [clientCert]
+  (let [decs (Stringx/base64dec clientCert)
+        idx (.indexOf decs "\u0002\u0001\u0001\u0018")
+        idx1 (+ 2 (.indexOf decs "\u000c" (+ idx 4)))
+        idx2 (.indexOf decs "\n" idx1)
+        ; 2@5009JJ0X0009970-2  SF210106198506020084
+        uniqueId (subs decs idx1 (dec idx2))]
+    (bjca-parse uniqueId)))
+
+(def db-reg "espdev") ; 用户注册的RDB数据源名称
+
+(defn- check1
+  "验证方法1：ca服务器验证后外部注册数据库验证"
+  [request]
+  (let [{uniqueId :uniqueId rt :rt} (bjca-verify request)
+        {PaperType :type PaperID :pid} (bjca-parse uniqueId)
+        ; 本地sqlserver认证已注册用户
+        rs (select-row db-reg (format "SELECT PaperID,CommonName,usertype FROM userregister where PaperType='%s' and PaperID='%s' " 
+                                      PaperType PaperID)) 
+        wr3url (session request "wr3url") ]
+    (cond
+      (not rt) "证书认证失败"
+      (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。"
+      :else (do (session! request "wr3user" (str (:usertype rs) "-" PaperID))
+              (session! request "wr3role" (:usertype rs))
+              (html (format "%s（%s）认证成功！" (:commonname rs) PaperID)
+                   [:script (format "window.location.href='%s' " wr3url)])) ) ))
+
+(defn- check2
+  "验证方法2：ca服务器验证后esp数据库验证"
+  [request]
+  (let [{uniqueId :uniqueId rt :rt} (bjca-verify request)
+        pid (:pid (bjca-parse uniqueId))
+        ; 本地mdb认证已注册用户
+        rs (with-mdb2 "esp" (fetch-one :user :where {:pid pid}))
+        wr3url (session request "wr3url") ]
+    (html
+      [:head meta-utf8]
+      [:body
+       (cond
+         (not rt) (format "证书认证失败（%s）：%s" uniqueId rt)
+         (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。"
+         :else (do (session! request "wr3user" (:uid rs))
+                 (session! request "wr3role" (:role rs))
+                (html (format "%s（%s）认证成功！" (:name rs) pid)
+                      [:script (format "window.location.href='%s' " wr3url)])) ) ])))
+       
 (defn- check3
   "验证方法3：不使用ca服务器直接读取ukey中的pid信息，esp数据库验证"
   [request]
   (let [vars (query-vars2 request)
         clientCert (:UserCert vars)
-        ranStr (:strRandom vars)
-        decs (Stringx/base64dec clientCert)
-        idx (.indexOf decs "\u0002\u0001\u0001\u0018")
-        idx1 (+ 2 (.indexOf decs "\u000c" (+ idx 4)))
-        idx2 (.indexOf decs "\n" idx1)
-        uniqueId (subs decs idx1 (dec idx2)) ; 2@5009JJ0X0009970-2  SF210106198506020084
-
-        PaperType (if (.startsWith uniqueId "SF") "SF" "JJ"); 'JJ' 'SF'
-        PaperID (if (= PaperType "SF") (subs uniqueId 2) 
-                  (str (left uniqueId "@") "@" (right uniqueId "JJ"))) ; pid
-        pid (if (= PaperType "SF") PaperID
-              (let [n (count PaperID)] (subs PaperID (- n 10))))
-        wr3url (session request "wr3url")
-        rs (with-mdb2 "esp" (fetch-one :user :where {:pid pid})) ; 本地esp库查询用户的结果
-        ]
+        pid (:pid (bjca-decode clientCert))
+        ; 本地mdb认证已注册用户
+        rs (with-mdb2 "esp" (fetch-one :user :where {:pid pid})) 
+        wr3url (session request "wr3url") ]
     (html
-      (if (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。"
-        (do (session! request "wr3user" (:uid rs))
-          (session! request "wr3role" (:role rs))
-          (html (format "%s（%s）认证成功！" (:name rs) pid)
-                [:script (format "window.location.href='%s' " wr3url)])) ))))
+      [:head meta-utf8]
+      [:body
+       (if (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。"
+         (do (session! request "wr3user" (:uid rs))
+           (session! request "wr3role" (:role rs))
+           (html (format "%s（%s）认证成功！" (:name rs) pid)
+                 [:script (format "window.location.href='%s' " wr3url)])) )])))
 
 (defn ca-submit
   "BJCA 插入证书密码提交后认证"
   [request]
+  (check2 request))
+
+(defn ca-local-submit
+  "ca-local提交的结果测试"
+  [request]
   (check3 request))
 
-(defn ca-local
+(defn ca-test
   "app: 不与服务器通讯直接读bjca UKey内容。仅用于ie"
   [request]
-  (let [sed (SecurityEngineDeal/getInstance "SM") 
-        ]
+  (let [sed (SecurityEngineDeal/getInstance "SM") ]
     (html-body
       {:class "login_body"}
       [:img {:src "/img/idp-webfirst.png" :style "position: absolute; top: 50%; left: 50%; margin-top: -80px; margin-left: -110px;"}]
-      [:form {:method "post" :ID "LoginForm" :name "LoginForm" :action "/c/espreg/ca-local-submit" :class "login_form ui-corner-all"
+      [:form {:method "post" :ID "LoginForm" :name "LoginForm" :action "/c/espreg/ca-test-submit" :class "login_form ui-corner-all"
               :target "ifrm1" :onsubmit "return XTXAPP.AddSignInfo(LoginForm.UserPwd.value)"}
        "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br]
        "选择口令：" [:input {:id "UserPwd" :name "pwd1" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
@@ -227,7 +249,8 @@
       bjca-activex
       [:iframe#ifrm1 {:name "ifrm1" :style "width:90%; height:200px; border:1px solid red"}] )))
 
-(defn ca-local-submit
+(defn ca-test-submit
+  "ca-test提交的结果测试"
   [request]
   (let [vars (query-vars2 request)
         clientCert (:UserCert vars)
@@ -254,8 +277,7 @@
                                [:td (td-align v) 
                                 (case k
                                   :tradeguid [:a {:href (str "/c/espreg/user-import/" v) :target "_blank"} "审批该用户"]
-                                  v) ])
-                       }))))
+                                  v) ]) }))))
 
 (defn user-import
   "app: 查看某一个申请过UKey的用户

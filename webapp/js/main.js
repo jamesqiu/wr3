@@ -3136,9 +3136,10 @@ function textarea_val(id) {
  * @param url
  * @see ajax_load
  */
-function ajax_post(url) {
+function ajax_post(url, func) {
 	$.post(url, function(data) {
 		alert('提示：' + data)
+		if (func) func()
 	})
 }
 
@@ -3336,7 +3337,9 @@ function espfj_input_submit_check() {
 function espfj_input_submit(form) {
 	if (espfj_input_submit_check()) {
 		var url = '/c/espfj/input-submit/'+form +'?' + $("form").serialize() 
-		ajax_post(url)		
+		ajax_post(url, function() {
+			window.location.href = '/c/espfj'			
+		})
 	}
 }
 

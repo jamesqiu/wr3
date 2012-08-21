@@ -1,12 +1,9 @@
-(ns ^{:doc 
-      "企业安全生产标准化管理系统 Enterprise Safety Production Standardization。
+(ns ^{:doc "企业安全生产标准化管理系统 Enterprise Safety Production Standardization。
   后来的文档中有这么叫的“安全生产标准化（work safety standardization）” 
   pn：考评员person，en：企业enterprise，org：考评机构organization，mot：交通部Ministry Of Transport
   pot：省级交通厅/委/局 Pronvince department Of Transport
   暂定的企业达标证书格式：2012-type-grade-admin-%05d "
-      :todo 
-      "1、pn、en、org的标识：pn可以用uid，en、org必须用en、org表的oid; 或者把en、org所有用户的uid都设为一样，
-  再用ukey号来标识其他的区别； 2、增加主管机关自己初始化下属单位的功能。" }
+      :todo "" }
      wr3.clj.app.esp)
 
 (use 'wr3.clj.app.espc 'wr3.clj.app.espconf :reload) ; 发布时去除reload
@@ -1174,11 +1171,11 @@
   [type]
   (let [type (or type "grade")
         url (str "/c/esp/mot-sub-chart?type=" type)
-        type (keyword type)
-        type-name ({:grade "达标等级" :type "业务类型"} type)
-        dd ({:grade dd-grade :type dd-type} type)
-        rt1 (sort-by :admin (with-mdb2 "esp" (mdb-group :en [:admin type])))
-        data (cross-data rt1 [:admin type :count])]
+        typ (keyword type)
+        type-name ({:grade "达标等级" :type "业务类型"} typ)
+        dd ({:grade dd-grade :type dd-type} typ)
+        rt1 (with-mdb2 "esp" (mdb-group :en [:admin typ]))
+        data (cross-data rt1 [:admin typ :count])]
     (html
       (eui-button {:onclick "layout_load_center('/c/esp/mot-sub-olap?type=grade')"} "主管机关——企业达标等级") (space 5)
       (eui-button {:onclick "layout_load_center('/c/esp/mot-sub-olap?type=type')"} "主管机关——企业业务类型")
@@ -1187,7 +1184,8 @@
                          :dim-left-name "主管机关"
                          :f-dim-left (fn [v] (format "<font color=gray>%s</font>: %s" v (dd-admin v)))
                          :f-dim-top (fn [v] (format "<font color=gray>%s</font>: %s" v (dd (to-int v))))
-                         :f-value (fn [v] (to-int v))}) 
+                         :f-value (fn [v] (to-int v))
+                         :sort? true }) 
       [:div#chart ]
       (html-js (format "cross_table_chart('%s')" url)) )))
 

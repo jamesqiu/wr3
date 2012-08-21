@@ -273,10 +273,11 @@
   "生成交叉表的html片段
   @data [[c1 c2 v] ..] c1表示left维度，c2表示top维度，如 (['北京' 'A级' 10] ['上海' 'B级' 15] .. ) 
   @m 定制化参数如 {:caption '' .. } 支持如下的参数和函数：
-  caption: [str] 表标题
-  dim-top-name / dim-left-name: [str] 列头/行头的维度名称
-  f-dim-left / f-dim-top: 行/列头元素的处理函数如：(fn [dim] [:i dim])
-  f-value: 数据项处理函数  
+  :caption: [str] 表标题
+  :dim-top-name / dim-left-name: [str] 列头/行头的维度名称
+  :f-dim-left / f-dim-top: 行/列头元素的处理函数如：(fn [dim] [:i dim])
+  :f-value: 数据项处理函数
+  :sort?: [true/false] 排序行列头 
   "
   ([data] (cross-table data nil))
   ([data m]
@@ -284,7 +285,9 @@
           dim-top-name (:dim-top-name m)
           dim-left-name (:dim-left-name m)
           dims-left (distinct (for [[c1 c2 v] data] c1))
+          dims-left (if (:sort? m) (sort dims-left) dims-left)
           dims-top (distinct (for [[c1 c2 v] data] c2))
+          dims-top (if (:sort? m) (sort dims-top) dims-top)
           f-dim-left (:f-dim-left m)
           f-dim-top (:f-dim-top m)
           f-dim (fn [f dim] (if f (f dim) dim))
