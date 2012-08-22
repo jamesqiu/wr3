@@ -75,7 +75,8 @@ public class Datetime {
 	}
 
 	public static String datetime(Calendar cal) {
-		return DateFormat.getDateTimeInstance().format(asDate(cal));
+//		return DateFormat.getDateTimeInstance().format(asDate(cal));
+		return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(asDate(cal));
 	}
 
 	public static String format(Calendar cal,  String pattern) {
@@ -276,7 +277,7 @@ public class Datetime {
 	}
 
 	/**
-	 * 把形如"yyyy-MM-dd"或"yy年MM月dd日"日期字符串解析为Date
+	 * 把形如"yyyy-MM-dd"或"yy年MM月dd日"日期字符串解析为Date。注意：可忽略或者不忽略时分秒
 	 * @param dateString
 	 * @return 如果格式不对则返回null
 	 */
@@ -292,7 +293,7 @@ public class Datetime {
 	}
 
 	/**
-	 * 把形如"yyyy-MM-dd"日期字符串解析为Date
+	 * 把形如"yyyy-MM-dd"日期字符串解析为Date. 注意：忽略时分秒。
 	 * @param dateString
 	 * @return
 	 */
@@ -312,10 +313,11 @@ public class Datetime {
 		System.out.println(lunar(2010,2,13));
 		System.out.printf("Today - (2012-7-22) = %s 天\n", days(calendar(2012,7,22), today()));
 		
-		System.out.println(date(parse("2011-5-4")));
+		System.out.println(datetime(parse("2011-5-4 12:03:15", "yyyy-MM-dd HH:mm:ss")));
+		System.out.println(date(parse("2011-5-4 12:03:15", "yyyy-MM-dd HH:mm:ss")));
 		System.out.println(date(parse("2011-5-04")));
 		System.out.println(date(parse("2011-05-04")));
-		
+
 	}
 
 }

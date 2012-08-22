@@ -58,6 +58,7 @@
         [:script "if ($.browser.msie) XTXAPP.attachEvent('OnUsbkeyChange', esp_bjca_onchange)"] ))
 
 (defn ca-local
+  "app: bjca不联服务器本地提交ukey，提交到ca-local-submit函数"
   [request]
   (let [sed (SecurityEngineDeal/getInstance "SM")]
     (html-body
@@ -82,14 +83,13 @@
         [:script "document.title='标准化系统证书登录' "] )))
 
 (defn ca-server
-  "app: BJCA服务器认证UKey，win下需要配置文件：%USERPROFILE%\\BJCAROOT\\SVSClient.properties "
+  "app: BJCA服务器认证UKey，win下配置文件：%USERPROFILE%\\BJCAROOT\\SVSClient.properties "
   [request]
   (let [sed (SecurityEngineDeal/getInstance "SM")
         strServerCert (.getServerCertificate sed)
         strRandom (.genRandom sed 24)
         strSignedData (.signData sed (.getBytes strRandom))
-        sr (session! request "Random" strRandom) 
-        _ (println "-- bjca (" (datetime) "):" strRandom)]
+        sr (session! request "Random" strRandom) ]
     (html
       [:html
        (head-set-join (bjca-js strSignedData strRandom strServerCert))
@@ -117,7 +117,6 @@
   [request]
   ; 可调用 ca-local 或者 ca-remote
   (ca-server request)) 
-
 
 (defn- bjca-verify
   "bjca服务器认证结果"
@@ -220,12 +219,15 @@
                  [:script (format "window.location.href='%s' " wr3url)])) )])))
 
 (defn ca-submit
-  "BJCA 插入证书密码提交后认证"
+  "BJCA 插入证书密码提交后认证。
+  如果ca调用ca-server，本函数可调用check1 check2 ；
+  如果ca调用ca-local，则由ca-local-submit函数调用check3处理"
   [request]
+;  (check1 request))
   (check2 request))
 
 (defn ca-local-submit
-  "ca-local提交的结果测试"
+  "ca-local提交的结果响应"
   [request]
   (check3 request))
 
@@ -258,6 +260,24 @@
     (html-body
       [:h1 "rt: " rt]
       [:table (for [[k v] vars] [:tr [:td k] [:td v]])] )))
+
+;(import cn.org.bjca.client.security.SecurityEngineDeal)
+;(def sed (SecurityEngineDeal/getInstance "SM"))
+;(def strServerCert (.getServerCertificate sed))
+;(def strRandom (.genRandom sed 24))
+;(def strSignedData (.signData sed (.getBytes strRandom)))
+  
+(defn ca-server-test
+  "app: BJCA服务器连通性测试 "
+  [request]
+  (let [sed (SecurityEngineDeal/getInstance "SM")
+        strServerCert (.getServerCertificate sed)
+        strRandom (.genRandom sed 24)
+        strSignedData (.signData sed (.getBytes strRandom))]
+    (html-body
+      [:h2 (str "strServerCert:<br/>" strServerCert)]
+      [:h2 (str "strRandom:<br/>" strRandom)]
+      [:h2 (str "strSignedData:<br/>" strSignedData)])))
 
 (defn who
   "service: 返回session中名为'wr3user'的当前已登录用户的json对象{:uid .. :name .. :roles ..}，未登录则返回'null' "

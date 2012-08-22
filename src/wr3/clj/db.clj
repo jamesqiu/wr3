@@ -11,7 +11,7 @@
 (defn- prefs 
   "得到用户 Preferences，和wr3.clj包下的一个类关联（这里选 CljServlet）"
   [] 
-  (Preferences/userNodeForPackage (class wr3.clj.CljServlet)))
+  (Preferences/userNodeForPackage (class wr3.clj.ClojureCompletor)))
 
 (defn quick-dbname
   "从Preferences读/写一个jdbc连接设置的map

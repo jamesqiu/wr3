@@ -414,3 +414,24 @@
 ;(concat m1 m2)
 ;(apply array-map (flatten (concat (for [k orders :let [v (doc1 k)] :when v] [k v])
 ;                                  (for [[k v] doc1 :when (not (in? k orders))] [k v]))))
+                            
+(defn update-espfj
+  "共用函数：更新保存记录到esp的tb表中。不需要用with-mdb2包围
+  @tb 要更新的表，如 :hot
+  @where 查询要更新记录的条件，如 {:_id (object-id '..')}  
+  @fm 带一个r记录参数的函数f或者一个哈希m，如 (fn [r] {:date (date)}) 
+  @replace 任意值（一般用 :replace 即可），代表要替代而不是合并 "
+  [tb where fm & replace]
+  (with-mdb2 "espfj"
+    (let [rs (fetch tb :where where)]
+      (doseq [r rs] 
+        (let [fr (if (fn? fm) (fm r) fm)]
+          (update! tb r (if replace fr (into r fr) )))))))
+
+(defn update-date
+  []
+  (do (update-espfj :pn-apply {} (fn [r] {:date (date-format (:date r) "yyyy-MM-dd HH:mm:ss")}))
+    (html "转换完毕")))
+  
+
+;(with-mdb2 "espfj" (doseq [r (fetch :pn-apply :where {})] (println (:date r))));(date-format (:date r) "yyyy-MM-dd HH:mm:ss"))))

@@ -177,7 +177,8 @@
           (if (<= sid 999999) sid (cert-sid-next 0))))
 
 (defn- cert-id
-  "生成en、org的达标证书和资质证书号，形如yyyy-ta-xxxxxx；pn的资格证，形如yyyy-c-ta-xxxxxx。
+  "生成证书编号。en、org的达标证书和资质证书号，形如yyyy-ta-xxxxxx； pn的资格证，形如yyyy-c-ta-xxxxxx。
+  其中： ta 表示2位主管机关代码('01' ~ '35')，c 表示5个业务类型代码('1' ~ '5')
   @m {:year 2005 :admin '01' :max 0 :type 1} 
     其中:year 发证年份，:admin 主管机关，:max 当前最大号，:type证书类型参数只有pn才有，表明业务大类型"
   ([m]
@@ -1366,3 +1367,4 @@
 ;(insert- :user  {:name "0820考评员测试", :pid "150121198506020081" :role "pn", :uid "pn-150121198506020081"})
 ;(print-seq (with-esp- (fetch :en-apply :only [:name :pnids] :where {:pnids {:$in ["4f8aeb2a75e0ae92833680e2"]}})))
 ;(with-esp- (fetch :en-apply :where {:orgid ["4f8aebd175e0ae92833680f4" "4f8aebd175e0ae92833680ff"]}))
+;(def *wr3conf* {1 10 2 20})

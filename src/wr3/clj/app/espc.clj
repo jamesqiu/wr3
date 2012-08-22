@@ -164,7 +164,7 @@
   @v0 字段原来的值如 '1' '4f8aeb2a75e0ae92833680e4' ['4f8aeb2a75e0ae92833680d9' '4f8aeb2a75e0ae92833680e2'] 
   @m 客户定制化的设置如 {:form 'docv/pn' :issue 'pn-apply' :type ..} "
   [row col v0 m]
-  (let [v (-> v0 str trim)]
+  (let [v (.trim (str v0))]
     (case col
       :_id [:a {:href (format "/c/esp/%s/%s" (:form m) v) :target "_blank"} "查看"]
       :_id-fj [:a {:href (format "/c/espfj/%s/%s" (:form m) (:_id row)) :target "_blank"} "查看"] ; 福建

@@ -64,7 +64,7 @@
 ;;;---------------------------- ns 和 函数动态调用
 
 (defn ns-exist?
-  "根据namespace字符串查询，是否存在该namespace，如: (ns-check \"wr3.clj.u\") "
+  "根据namespace字符串查询，是否存在该namespace，如: (ns-exist? \"wr3.clj.u\") "
   [ns]
   (try (require (symbol ns)) true
     (catch Exception _ (do (println "ns-exist? error: " _) false))))
@@ -217,13 +217,15 @@
 (defn date-parse
   "日期解析
   @s 格式如 2011-1-2 2011-12-03 
+  @fmt 无此参数则只解析到年月日
   @return Calendar "
-  [s] (Datetime/parse s))
+  ([s] (Datetime/parse s))
+  ([s fmt] (Datetime/parse s fmt)))
 (defn date-format
-  "日期格式化，例如 (date-format '2012-3-5' 'yyyy年MM月dd日') 
+  "日期格式化，例如 (date-format '2012-3-5' 'yyyy年MM月dd日') (date-format '2012-7-27 17:2:20' 'yyyy-MM-dd HH:mm:ss')
   @s 如：'2012-3-5' '2012-03-5' 
-  @fmt 如：'yyyyMd' 'yyyy年MM月dd日' "
-  [s fmt] (Datetime/format (date-parse s) fmt))
+  @fmt 如：'yyyyMd' 'yyyy年MM月dd日' 'yyyy-MM-dd HH:mm:ss' "
+  [s fmt] (Datetime/format (date-parse s fmt) fmt))
 (defn date-add 
   "日期增减，从今天或者指定日期, (date-add '2013-4-05' 1 -1 10) ; '2014-3-15'
   @from 日期String如 '2012-1-1'
