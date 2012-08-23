@@ -48,6 +48,7 @@
           ["企业列表" "icon-list"  "en-list"] ; title icon id 
           ["已达标企业" "icon-list"  "mot-en-passed"] ; title icon id 
           ["企业统计查询" "icon-bar"  "mot-olap/en"] ; title icon id 
+          ["问题整改" "icon-list"    "mot-en-refine"] ; title icon id 
           ["附加考评" "icon-list"    "mot-en-recheck"] ; title icon id 
           ["达标证书撤销" "icon-list"    "cert-cancel/en"] ; title icon id 
           ["年度工作报告"          "icon-list"    "report-view/en"] ; title icon id 
@@ -55,7 +56,7 @@
          ["下级机构管理"           "icon-pen" ; title id
           ["统计分析"          "icon-list"    "mot-sub-olap"] ; title icon id 
           ["机构维护"          "icon-list"    "mot-admin"] ; title icon id 
-          ["委托代办"          "icon-list"    "mot-give"] ; title icon id 
+          ["用户列表"          "icon-list"    "mot-user"] ; title icon id 
           ]
          ["系统管理及帮助"     "icon-search"
           ["装载更新配置"     "icon-search" "reload" "/c/console/reload/app.espconf"]
@@ -75,7 +76,7 @@
    :title "交通运输企业安全生产标准化——考评员在线申请系统（试行）"
    :nav [
          ["考评员" "icon-user" ; title id
-          ["申请考评证书" "icon-list"    "pn-apply"] ; title icon id url 
+          ["资格申请" "icon-list"    "pn-apply"] ; title icon id url 
           ["培训、考试情况" "icon-list"  "pn-learn"] 
           ["换证申请" "icon-list"  "cert-renew/pn"] 
           ["使用帮助" "icon-help" "pn-help" "/static/esp/about-pn.html"]
@@ -93,22 +94,23 @@
    :style (map #(str % 1) ["layout_north" "layout_title"])  ; "" 或者 "1"
    :title "交通运输企业安全生产标准化——考评机构管理系统（试行）"
    :nav [
-         ["考评机构" "icon-earth" ; title id
-          ["申请资质证书" "icon-list"    "org-apply"] ; title icon id 
-          ["申请变更备案" "icon-list"    "backup/org"] ; title icon id 
-          ["申请换证" "icon-list"    "cert-renew/org"] 
-          ["已认定的资质证书" "icon-list"    "org-cert"] 
-          ["年度工作报告" "icon-list" "report/org"] ; title icon id 
-          ["问题整改" "icon-list" "org-refine"] ; title icon id 
-          ["使用帮助"          "icon-help"   "help_bt"]
+         ["待办事宜" "icon-arrow" ; title icon
+          ["企业考评待办工作" "icon-list" "apply-resp/en"] ; title icon id 
+          ["整改报告" "icon-list" "org-refine"] ; title icon id 
           ]
-         ["管理考评员" "icon-user" ; title id
-          ["本机构考评员列表" "icon-list"    "org-pn"] ; title icon id 
-          ["本机构考评员培训考试" "icon-list"    "org-pn-train"] 
+         ["考评机构" "icon-earth" ; title id
+          ["资质申请" "icon-list"    "org-apply"] ; title icon id 
+          ["变更申请" "icon-list"    "backup/org"] ; title icon id 
+          ["换证申请" "icon-list"    "cert-renew/org"] 
+          ["资质证书信息" "icon-list"    "org-cert"] 
+          ["年度工作报告" "icon-list" "report/org"] ; title icon id 
+          ]
+         ["考评员管理" "icon-user" ; title id
+          ["考评员列表" "icon-list"    "org-pn"] ; title icon id 
+          ["考评员培训考试" "icon-list"    "org-pn-train"] 
           ["考评员档案管理" "icon-list"    "org-pn-archive"] 
           ]
          ["企业考评管理" "icon-pen" ; title id
-          ["企业考评待办工作" "icon-list" "apply-resp/en"] ; title icon id 
           ["企业达标等级证书制发" "icon-list" "cert-resp/en"] ; title icon id 
           ["工作进度查询" "icon-list" "org-en-process"] 
           ["考评企业档案管理" "icon-list" "org-en-archive"] 
@@ -116,6 +118,7 @@
           ]
          ]   
    :frame-main (html [:h2 "考评机构用户主界面"]
+                     [:script "layout_load_center('/c/esp/apply-resp/en')"]
                      (set-title "考评机构管理系统（试行）"))
    :frame-top (html espreg/bjca-on-change)
    })
@@ -128,12 +131,13 @@
    :nav [
          ["企业申请" "icon-star" ; title id
           ["1、达标自评" "icon-list"    "en-stand"] 
-          ["2、在线填报" "icon-list"    "en-apply"] 
-          ["3、选择考评机构" "icon-list" "en-select-org"] 
+          ["2、等级申请" "icon-list"    "en-apply"] 
+          ["3、选择考评机构（拟去除）" "icon-list" "en-select-org"] 
           ["进度查询" "icon-list"    "en-process"] 
           ["企业年度工作报告" "icon-list"  "report/en"] 
-          ["申请变更" "icon-list"    "backup/en"] 
-          ["申请换证" "icon-list"    "cert-renew/en"] 
+          ["变更申请" "icon-list"    "backup/en"] 
+          ["换证申请" "icon-list"    "cert-renew/en"] 
+          ["整改报告" "icon-list" "en-refine"] ; title icon id 
           ]
          ]   
    :frame-main (html [:h2 "交通运输企业用户主界面"]
@@ -318,12 +322,28 @@
 ; 学历
 (def dd-edu 
   {
-  "中专" "中专" 
-  "大专" "大专" 
-  "本科" "本科" 
-  "研究生" "研究生" 
-  "博士生" "博士生" 
-  })
+   "中专" "中专" 
+   "大专" "大专" 
+   "本科" "本科" 
+   "研究生" "研究生" 
+   "博士生" "博士生" 
+   })
+; 门户模块
+(def dd-portal
+  {
+   1 "信息公告"
+   2 "图片新闻"
+   3 "工作动态"
+   4 "相关资源链接"
+   })
+
+(def cfg-portal
+  [
+   ["类型" :type {:t dd-portal :require true}]
+   ["标题" :title {:require true}]
+   ["连接" :link {}]
+   ["附件" :file {:t 'file}]
+   ])
 
 ;; 考评员资格证书、考评机构资质证书、企业达标证书申请表格
 ; 考评员申请表
@@ -362,42 +382,41 @@
 (def cfg-apply-org 
   [
    ["单位名称" :name {:require true :v "" :title "一般为：学校/交通相关学会/协会/研究所"}]
-   ["组织机构代码" :orgcode {:require true}]
    ["法人代表" :legalp {:require true}]
-   ["资质等级" :grade {:t dd-grade :v 1}]
-   ["专业范围" :type {:t dd-type :v 1 :title "todo: 改为可以多选，或者每个专业申请一次"}]
-   ["专职考评员人数" :pnumber {:v 7 :title "一级≥7名；二级≥5名；三级≥3名。"}]
-   ["高级技术职称考评员人数" :pnumber2 {:v 3 :title "一级≥3名；二级≥2名；三级≥1名。"}]
-   ["开始从事相应业务年份" :start {:v 2005}]
-   ["主管机关" :admin {:t dd-admin}]
+   ["资质等级" :grade {:t dd-grade :v 1 :require true}]
+   ["专业范围" :type {:t dd-type :v 1 :require true :title "todo: 改为可以多选，或者每个专业申请一次"}]
+   ["专职考评员人数" :pnumber {:v 7 :require true :title "一级≥7名；二级≥5名；三级≥3名。"}]
+   ["高级技术职称考评员人数" :pnumber2 {:v 3 :require true :title "一级≥3名；二级≥2名；三级≥1名。"}]
+   ["开始从事相应业务年份" :start {:v 2005 :require true}]
+   ["主管机关" :admin {:t dd-admin :require true}]
    ["办公地址" :address]
    ["邮编" :pcode {:t 'pcode}]
-   ["单位电话" :tel]
-   ["传真号码" :fax]
-   ["联系人" :contact]
-   ["联系人手机" :mobile]
-   ["联系人邮箱" :email]
-   ["单位相关证明材料" :met {:t 'file}]
-   ["考评员相关材料" :pns {:t 'file :title "文件10M以内大小"}]
+   ["单位电话" :tel {:require true}]
+   ["传真号码" :fax {:require true}]
+   ["联系人" :contact {:require true}]
+   ["联系人手机" :mobile {:require true}]
+   ["联系人邮箱" :email {:require true}]
+   ["单位基本情况相关材料" :met {:t 'file :require true}]
+   ["专职考评员相关材料" :pns {:t 'file :require true :title "文件10M以内大小"}]
    ])
 ; 企业申请表
 (def cfg-apply-en ; en-input-form 
   [
    ["企业名称" :name {:require true :v "xxx"}]
-   ["申请等级" :grade {:t dd-grade :v 1}]
-   ["法人代表" :legalp]
-   ["生产经营类型" :type {:t dd-type :v 1}]
-   ["生产经营类别" :type2 {:t dd-type2 :v 11}]
-   ["主管机关" :admin {:t dd-admin :title "一级不用选（部）；二级选34个机构；三级选二级、三级机构；每个类型对应自己的主管机关"}]
-   ["企业办公地址" :address {:title "选择GIS坐标"}]
-   ["企业电话" :tel]
-   ["企业传真" :tax]
+   ["申请等级" :grade {:require true :t dd-grade :v 1}]
+   ["法人代表" :legalp {:require true }]
+   ["生产经营类型" :type {:t dd-type :require true :v 1}]
+   ["生产经营类别" :type2 {:t dd-type2 :require true :v 11}]
+   ["主管机关" :admin {:t dd-admin :require true :title "一级不用选（部）；二级选34个机构；三级选二级、三级机构；每个类型对应自己的主管机关"}]
+   ["企业办公地址" :address {:require true :title "选择GIS坐标"}]
+   ["企业电话" :tel {:require true }]
+   ["企业传真" :tax {:require true }]
    ["联系人" :contact]
    ["联系电话" :contact-tel]
-   ["安全生产组织架构" :safe {:t 'file}]
-   ["企业法人资格证件" :qual {:t 'file}] 
-   ["经营许可证" :license {:t 'file}]
-   ["企业安全生产工作报告" :report {:t 'file :title "Word文档"}]
+   ["安全生产组织架构" :safe {:t 'file :require true }]
+   ["企业法人资格证件" :qual {:t 'file :require true }] 
+   ["经营许可证" :license {:t 'file :require true }]
+   ["企业安全生产工作报告" :report {:t 'file :require true :title "Word文档"}]
    ])
 ;---------------- end
 

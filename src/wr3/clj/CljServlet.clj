@@ -5,7 +5,7 @@
    2.app应用如esp.clj使用命名空间中的auth函数来进行权限控制，
      auth函数必须3个以上参数，第一个参数会传入request，第二个参数会传入fname（可选），第三个参数会传入ids；
      如果根本不想使用这些参数，可以直接带一个 & args 避免调用出错，或者用1～2个参数，最后一个用 & args
-     返回true表示通过，继续输出页面；返回 false 等则表示验证没有通过，跳转到/login.html;
+     返回true表示通过，继续输出页面；返回 false 等则表示验证没有通过，跳转到缺省的/login.html或由用户通过auth-login-url变量指定;
    3.类似Play!，自动绑定querystring中的值和app/*.clj函数中的同名参数，例如 clj1/foo/01/012?name=james&age=30 对应函数为
      (defn foo [name age] ...) 
        -- foo函数自动获取到name=james, age=30这两个值；也可以有3个自动绑定的名称(id ids request)：
@@ -134,6 +134,7 @@
                (fcall ns fn)
                ; (fcall ns fn {:request request :id id})
                (fcall-binding-params ns fn (make-binding-params request ids))))
+        auth-login-url (if-let [url (fget ns "auth-login-url")] @url "/login.html")
         ]
 ;    (println "-- debug: auth =" auth " fn =" fn)
     ; jamesqiu (2012-2-25) 支持输出多客户：http://server/c/chartf/chinamap2?content-type=text/xml&charset=gbk
@@ -146,7 +147,7 @@
 ;        (println "-- debug: path-info =" (format "%s/c%s" (BaseConfig/webapp) path-info))
         (-> request .getSession
           (.setAttribute "wr3url" (format "%s/c%s" (BaseConfig/webapp) path-info)))
-        (.sendRedirect response "/login.html"))
+        (.sendRedirect response auth-login-url))
       )))
 
 ;; 下面的方法写不写皆可

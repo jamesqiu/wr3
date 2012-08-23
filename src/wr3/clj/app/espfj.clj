@@ -54,6 +54,8 @@
         ]
     (concat rt7 [["主管机关" :admin {:t dd-admin-fj :title "请自选主管机关" :require true}]])))
 
+;--------------------------------------------------------------- 登录安全
+(def auth-login-url "/c/espfj/login") ; 本ns的登录页面 /login.html
 (defn auth
   "该 CljServlet 调用，用于本应用各函数的权限控制 "
   [request fname ids & args]
@@ -291,7 +293,7 @@
        [:script "document.title='考评员在线报名管理登录' "])))
 
 (defn login-submit
-  ""
+  "从espfj库的user表中进行对比"
   [request]
   (let [vars (query-vars2 request)
         uid (:uid vars)
@@ -429,9 +431,9 @@
           (update! tb r (if replace fr (into r fr) )))))))
 
 (defn update-date
+  "运行一次，用来更新原来的:date字段格式 "
   []
   (do (update-espfj :pn-apply {} (fn [r] {:date (date-format (:date r) "yyyy-MM-dd HH:mm:ss")}))
     (html "转换完毕")))
   
-
 ;(with-mdb2 "espfj" (doseq [r (fetch :pn-apply :where {})] (println (:date r))));(date-format (:date r) "yyyy-MM-dd HH:mm:ss"))))

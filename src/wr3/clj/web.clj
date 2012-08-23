@@ -332,6 +332,16 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   []
   (eui-button {:onclick "window.close();"} "关闭"))
 
+(defn eui-button-submit
+  "submit form的按钮. @fm fm的id字符串，如'fm1' "
+  [form-id]
+  (eui-button {:onclick (format "$('#%s').submit()" form-id) :iconCls "icon-ok"} "提交"))
+
+(defn eui-button-reset
+  "reset form的按钮. @fm fm的id字符串，如'fm1' "
+  [form-id]
+  (eui-button {:onclick (format "$('#%s')[0].reset()" form-id) :iconCls "icon-undo"} "重置"))
+
 (defn eui-accord
   "Accordion界面框架，内容用eui-accord-"
   [m & items]
@@ -555,7 +565,7 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
     (if (= "right" (:left-or-right cfg)) "east" "west") 
     {:title "快捷导航" :style "width: 210px"}
     [:div {:style "margin: 10px"} 
-     (eui-button {:href (or (:main cfg) (str "/" (:name cfg))) :plain "true" :iconCls "icon-back" } "返回子系统列表") ]
+     (eui-button {:href (or (:main cfg) (str "/" (:name cfg))) :plain "true" :iconCls "icon-back" } "返回首页") ]
     (eui-accord 
       {:id "accord1" :style "" }
       (for [[title icon & nav2] (:nav cfg)]
@@ -666,6 +676,19 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
              [:td [:font {:color (if require "red" "lightgray")} "*"]] ]))
         [:tfoot [:tr [:td {:colspan 3 :align "center" :style "padding: 15px"} 
                       [:p "注：带红色<font color='red'>*</font>的为必填项。"] (:buttons m) ]]]]] )))
+
+(defn input-check-require
+  "检查根据input配置@cfg录入的结果@vars中，是否所有:require true的项都确实录入了。
+  @vars 输入内容如{:link 'url1', :file '', :type '1', :title 'title111'} 
+  @cfg input表单配置如： (def cfg-portal [ ['类型' :type {:t dd-portal :require true}]
+	                                         ['标题' :title {:require true}] ['连接' :link {}] ])
+  @return 形如 {:rt true/false :error nil/'('类型' '标题') }。其中:rt为true表示必填项全填了，:error 是未填的必填项的名称列表 "
+  [vars cfg]
+  (let [rt (for [[fname fid {require :require t :t}] cfg :when require]
+             (if (nullity? (vars fid)) fname true))]
+    (if (apply all-true? rt) 
+      {:rt true :error nil} 
+      {:rt false :error (remove true? rt)}) ))
 
 (defn set-title 
   "用js更改浏览器的title"

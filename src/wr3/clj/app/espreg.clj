@@ -57,6 +57,10 @@
   (html bjca-activex
         [:script "if ($.browser.msie) XTXAPP.attachEvent('OnUsbkeyChange', esp_bjca_onchange)"] ))
 
+(def ca-prompt 
+  (str "提示：请将本系统证书U盘插入计算机"
+       "（<a href='http://gotoreal.com:8080/userregister/firstpage.html' style='color:#fcc'>点击申请</a>）。"))
+
 (defn ca-local
   "app: bjca不联服务器本地提交ukey，提交到ca-local-submit函数"
   [request]
@@ -66,12 +70,11 @@
       [:img {:src "/img/idp-webfirst.png" :style "position: absolute; top: 50%; left: 50%; margin-top: -80px; margin-left: -110px;"}]
         [:form {:method "post" :ID "LoginForm" :name "LoginForm" :action "/c/espreg/ca-local-submit" :class "login_form ui-corner-all"
                 :onsubmit "return XTXAPP.AddSignInfo(LoginForm.UserPwd.value)"}
-         [:center [:div {:style "color:yellow;margin-bottom:9px"} 
-                   "提示：请先将系统专用UKey证书（<a href='#' style='color:#fcc'>申请</a>）插入计算机。"]]
+         [:center [:div {:style "color:yellow;margin-bottom:9px"} ca-prompt]]
          "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br]
          "选择口令：" [:input {:id "UserPwd" :name "pwd1" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
          [:p {:align "center" :style "padding:6px"}
-          [:input {:type "submit" :value " 提 交 " :class "ui-state-default ui-corner-all" :style "font-weight:bold;color:green"}] ]
+          [:input {:type "submit" :value " 登 录 " :class "ui-state-default ui-corner-all" :style "font-weight:bold;color:green"}] ]
          [:center 
           [:a {:href "/esp" :style "color:white"} "返回主页"] [:br] 
           [:img {:alt "nasoft" :src "/img/nasoft-rnd.png"}]]
@@ -97,12 +100,11 @@
         [:img {:src "/img/idp-webfirst.png" :style "position: absolute; top: 50%; left: 50%; margin-top: -80px; margin-left: -110px;"}]
         [:form {:method "post" :ID "LoginForm" :name "LoginForm" :action "/c/espreg/ca-submit" :class "login_form ui-corner-all"
                 :onsubmit (format "return esp_bjca_onsubmit('%s')" strRandom)}
-         [:center [:div {:style "color:yellow;margin-bottom:9px"} 
-                   "提示：请先将系统专用UKey证书（<a href='#' style='color:#fcc'>申请</a>）插入计算机。"]]
+         [:center [:div {:style "color:yellow;margin-bottom:9px"} ca-prompt]]
          "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br]
          "选择口令：" [:input {:id "UserPwd" :name "pwd1" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
          [:p {:align "center" :style "padding:6px"}
-          [:input {:type "submit" :value " 提 交 " :class "ui-state-default ui-corner-all" :style "font-weight:bold;color:green"}] ]
+          [:input {:type "submit" :value " 登 录 " :class "ui-state-default ui-corner-all" :style "font-weight:bold;color:green"}] ]
          [:center 
           [:a {:href "/esp" :style "color:white"} "返回主页"] [:br] 
           [:img {:alt "nasoft" :src "/img/nasoft-rnd.png"}]]

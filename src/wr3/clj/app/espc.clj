@@ -266,8 +266,8 @@
   ([tb id m]
     (let [rt (or (:rs m) (with-oid- tb id))
           rt (if-let [orders (:orders m)]
-               (apply array-map (flatten (concat (for [k orders :let [v (rt k)] :when v] [k v])
-                                                 (for [[k v] rt :when (not (in? k orders))] [k v]))))
+               (apply array-map (reduce into (concat (for [k orders :let [v (rt k)] :when v] [k v])
+                                                     (for [[k v] rt :when (not (in? k orders))] [k v]))))
                rt)]
       (html-body
         (when-let [before (:before m)] (if (fn? before) (before rt) before))
@@ -283,7 +283,7 @@
            [:td {:colspan 2 } (eui-button-close)]]]] 
         (when-let [after (:after m)] (if (fn? after) (after rt) after)))))
   ([tb id] (doc- tb id {})))
-
+  
 (defn docv
   "service: 公用函数 docview，根据 form 和 object-id 来显示文档
   /c/esp/docv/form/id
@@ -403,12 +403,12 @@
         r1 (first (with-uid- tb uid)) ; 保存的最后录入信息
         rs2 (with-uid- tb-apply uid)] ; 提交过的所有信息
     (html
-      [:h1 (format "录入过的申请信息 %s 条" (if r1 1 0))]
-      (eui-button {:href "#" :onclick (format "layout_load_center('/c/esp/%s-input')" (name type))}  
-                  (if r1 "查看已录入的申请信息" "初次申请考评证书"))
+      [:h1 (format "%s申请" (dd-cert type))]
+      (eui-button {:href "#" :onclick (format "layout_load_center('/c/esp/%s-input')" (name type)) :style "margin:10px"}  
+                  (if r1 "进行证书申请" "进行证书初次申请"))
       (when rs2
-        (html [:h1 (format "已提交过%s次申请：" (count rs2))]
-              (result-html- rs2 '[申请时间 处理状态 查看] [:date :respdate :_id] 
+        (html [:h2 (format "已提交过%s次申请：" (count rs2))]
+              (result-html- rs2 '[] [:date (case type :en :type2 :type) :resp :respdate :_id] 
                             {:form (format "docv/%s-apply" (name type))}) )) )))
 
 (defn cfg-set-values-

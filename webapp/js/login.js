@@ -6,6 +6,7 @@ $(function() {
 	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
 
 	// 如果要验证的是esp应用，并且是ie，跳到UKey验证页面
+	/*
 	$.get("/c/auth/url", function(data) {
 		if (data.indexOf('/c/espfj/')==0) {
 			window.top.location.href = '/c/espfj/login';
@@ -13,7 +14,7 @@ $(function() {
 		if ((data.indexOf('/c/esp/')==0) && ($.browser.msie)) {
 			window.top.location.href = '/c/espreg/ca';
 		}
-	})
+	}) */
 
 	// 便于输入用户名和密码
 	$('input[name="uid"]').select().change(function() {

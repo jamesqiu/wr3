@@ -14,6 +14,7 @@
 (require '[wr3.clj.app.auth :as au])
 
 ;;;-------------------------------------------------------------------------------------------------------- 公共函数
+(def auth-login-url (first ["/login.html" "/c/espreg/ca"])) ; 本ns的登录页面：可选缺省认证或者bjca认证
 (defn auth
   "该 CljServlet 调用，用于本应用各函数的权限控制 "
   [request fname ids & args]
@@ -92,12 +93,13 @@
         y (case tb :pn 5 :org 5 :en 3 1) ; 有效期年份
         cname (dd-cert tb)]
     (html
-      [:h1 "申请换证"]
+      [:h1 "换证申请"]
       (if (empty? rs)
         (eui-tip (format "目前还没有%s证书，对于已有证书系统会自动提醒换证（%s年到期前3个月）。" cname y))
         (html
           [:h2 (format "目前已有的 《%s》：" cname)]
-          (result-html- rs [] [:cid :cdate :_cdate-end :_id] {:type tb :form (str "cert-renew-doc/" id)}) )))))
+          (eui-tip "请点击查看详情并进行换证申请")
+          (result-html- rs [] [:cid :cdate :type :_cdate-end :_id] {:type tb :form (str "cert-renew-doc/" id)}) )))))
 
 (defn cert-renew-doc
   "app: pn、en、org显示换证操作
@@ -414,10 +416,9 @@
   @id 'pn' 'org' 'en' "
   [id]
   (let [tb (keyword id)
-        nam (dd-form tb)
         v0 (tb {:pn "2011-2-022-20789" :org "2012-D-00-丙7585" :en "2012-2-1-0551-00844"})]
     (html
-      [:h1 (format "%s资格撤销工作" nam)]
+      [:h1 (format "%s撤销" (dd-cert tb))]
       [:form {:id "fm1" :action (format "/c/esp/cert-cancel-doc/%s" id) :method "get" :target "_blank"}
        (name-cid-search-input tb) [:br][:br]
 ;       [:label (format "请输入要撤销资质的%s证书号：" nam)]
@@ -466,6 +467,21 @@
       (eui-button {:onclick f-yes :iconCls "icon-ok"} s-yes) (space 10)
       (eui-button {:onclick f-no :iconCls "icon-cancel"} s-no) br2 br2 )))
 
+(defn refine-
+  "org或en处理mot下发的整改意见和整改通知。
+  @type :org :en
+  todo"
+  [type]
+  (let []
+    (html 
+      [:h1 "整改意见及报告"]
+      [:table.wr3table
+       [:thead 
+        [:tr [:th "整改意见"] [:th "整改报告"] ]]
+       [:tbody 
+        [:tr [:td "主管机关整改意见"] [:td (dd-form type) "整改报告（文字+附件）"] ]] 
+       ] )))
+  
 ;;;-------------------------------------------------------------------------------------------------------- pn  考评员
 (def pn---------- nil)
 
@@ -553,8 +569,9 @@
     (html
       [:h1 (format "本机构当前在职考评人员 %s 名" (count (filter #(nil? (:contract1 %)) rt)))]
       [:div#hire {:style "margin:15px"}
-       (eui-tip "已聘用的考评员可以点击详情查看后进行解聘。")
-       [:label "聘用考评员，请输入资质证书号："]
+       (eui-tip "受聘考评员需提供其证书U盘；已聘用的考评员可以点击详情查看后进行解聘。")
+       (eui-button {} "读取受聘考评员证书U盘") [:br] ; todo 打开一个新窗口，选择证书
+       [:label "@deprecated: 聘用考评员，请输入资质证书号："]
        (eui-text {:id "cid"}) (space 3)
        (eui-button {:onclick "esp_org_hire()"} "查询聘用") ]
       (result-html- rt '[姓名 证书类别 证书编号 专兼职 聘用日期 解聘日期 详情] 
@@ -563,7 +580,7 @@
 
 (defn org-refine
   []
-  (html (eui-tip "暂无整改通知")))
+  (refine- :org))
 
 (defn org-hire-view
   "app: 考评员情况，能否聘用
@@ -814,6 +831,10 @@
         (html [:h2 (format "已提交过%s次申请：" (count rs))]
               (result-html- rs [] [:date :grade :type2 :admin :_id] {:form "docv/en-apply"}) )))))
 
+(defn en-refine
+  []
+  (refine- :en))
+
 ;;;-------------------------------------------------------------------------------------------------------- mot 主管机关
 (def mot---------- nil)
 
@@ -916,7 +937,7 @@
                (case type
                  :pn (let [uid (:uid rt) t (:type rt)
                            rs (with-esp- (fetch :pn-train :where {:uid uid :type t}))]
-                       (html [:h2 "该考评员“" (dd-type t) "”类型的培训、考试记录："]
+                       (html [:h2 "该考评员“" (dd-type (to-int t 0)) "”类型的培训、考试记录："]
                              (result-html- rs [] [:name :type :train-id :exam-date :exam-score]) [:br][:br]
                              (eui-tip "直接从事交通运输安全生产行政管理工作10年以上，熟悉掌握交通运输安全生产相关法规和企业安全生产标准化规定者：")
                              (eui-text {:id "pass-direct" :type "checkbox"}) (space 2) "直接颁发" ))
@@ -924,8 +945,12 @@
                  :en (eui-tip "注意：请指派一个考评机构对该企业进行考评！")
                  nil)
                (yes-no-advice- {:onclick [(f-click "yes") (f-click "no")]}) ))
-           :orgid-as-select (when orgid-as-select true)})))
+           :orgid-as-select (when orgid-as-select true)
+           :orders (map second ({:pn cfg-apply-pn :org cfg-apply-org :en cfg-apply-en} type))
+           })))
 
+;(println (map second cfg-apply-en))
+  
 (defn mot-pn-apply [id] (mot-apply- :pn id))
 (defn mot-org-apply [id] (mot-apply- :org id))
 (defn mot-en-apply [id request] (mot-apply- :en id true))
@@ -1081,7 +1106,7 @@
         rt2 (with-esp- (fetch :pn-train :only [:train-start] :sort {:train-start 1}))
         yyyymm (frequencies (map #(-> % :train-start (leftback "-")) rt2))]
     (html
-      [:h1 "考评员培训工作"]
+      [:h1 "考评员培训、考试管理"]
       [:h2 "培训时间，培训学时（不少于24个学时），培训类别，培训合格证号"]
       [:div "注：由省级交通运输主管机关、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作。"]
       [:br]
@@ -1138,7 +1163,7 @@
   (let [rt2 (with-esp- (fetch :pn-train :only [:exam-score] :sort {:exam-score 1}))
         scores (into (sorted-map) (frequencies (map :exam-score rt2)))]
     (html
-      [:h1 "考评员考试工作"]
+      [:h1 "考评员考试情况统计"]
       [:h2 "考试时间，考试成绩，是否合格，考试类别，"]
       [:div "注：交通运输部负责组织编写培训教材和考试大纲。"
        "省级交通运输主管机关、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作"] [:br]
@@ -1191,7 +1216,7 @@
       (html-js (format "cross_table_chart('%s')" url)) )))
 
 (defn- mot-sub-chart-data
-  " (mot-sub-chart-data :admin \"02\") 画:北京3个等级的数量图，(mot-sub-chart-data :grade \"2\") 画所有地区2级企业的数量图
+  " (mot-sub-chart-data :admin '02') 画:北京3个等级的数量图，(mot-sub-chart-data :grade '2') 画所有地区2级企业的数量图
   @type :grade :type
   @dim 点击的维度 :grade :type :admin
   @where 该维度的值，用字符串 "
@@ -1286,7 +1311,7 @@
         "update" (do (update! :mot mot mot-new) (str "已保存该主管机关" n))
         "未知动作" ))))
 
-(defn mot-user
+(defn mot-user-list
   "得到mot指定admin的用户
   @id :admin代码如'01' "
   [id request]
@@ -1294,27 +1319,31 @@
     (if (empty? rs)
       "（该下级主管机关尚无审核通过的注册用户。）" 
       (html
-        (result-html- rs [] [:name :uid :_select] {:mot-user true}) [:br] 
-        (eui-button {:title "todo: 需求待明确"} "委托代办审核工作") ))))
+        (result-html- rs [] [:name :uid :_select] {:mot-user true}) ))))
 
-(defn mot-give
+(defn mot-user
   "service: 主管机关向下级主管机关委托代办工作
   @todo "
   [request]
   (let [admin (mot-role request)
         rs (with-esp- (fetch :mot :where {:upper admin}))]
     (html
-      (eui-tip "向下级主管机关委托代办审核工作。")
-      [:label {:for "admins"} "1、选择下级主管机关："] 
-      (eui-combo {:id "admins" :onchange "ajax_load($('#users'), '/c/esp/mot-user/'+$('#admins').val())"} 
+      [:h1 "下级主管机关用户列表"]
+      [:label {:for "admins"} "选择主管机关："] 
+      (eui-combo {:id "admins" :onchange "ajax_load($('#users'), '/c/esp/mot-user-list/'+$('#admins').val())"} 
                  (map #(vector (:code %) (:name %)) rs)) [:br]
-      [:label {} "2、选择用户进行委托代办："][:br][:br]
-      [:div#users (mot-user (:code (first rs)) request)])))
+      [:label {} "用户列表："][:br][:br]
+      [:div#users (mot-user-list (:code (first rs)) request)])))
   
 (defn mot-org-refine
   []
   (html
     (eui-tip "Todo：选择考评机构下发整改通知。")))
+  
+(defn mot-en-refine
+  []
+  (html
+    (eui-tip "Todo：选择企业下发整改通知。")))
   
 (defn mot-resp-sum
   "service: 在主页面上显示待办事宜统计信息"
@@ -1332,6 +1361,26 @@
           [:a {:href "#" :onclick (format "layout_load_center('/c/esp/%s')" url)}
            [:h2  
             (format "%s （<font color=%s>%s</font>）" title (if (zero? sum ) "lightgray" "red") sum)]]])] ) ))
+
+(defn mot-portal
+  "service: mot对首页进行维护"
+  [request]
+  (html-body
+    {}
+    (input-form cfg-portal {:title "首页栏目内容维护"
+                            :action "/c/esp/mot-portal-save"
+                            :buttons (html (eui-button-submit "fm1") (space 5)
+                                           (eui-button-reset "fm1") ) })
+    (fileupload-dialog) ))
+
+(defn mot-portal-save
+  [request]
+  (let [vars (query-vars2 request)
+        {rt :rt err :error} (input-check-require vars cfg-portal)]
+    (html-body 
+      (if rt
+        (str "成功提交：" vars)
+        (eui-tip (str "如下必填字段尚未填写：" (join err "，")))))))
 
 ;;;-------------------------------------------------------------------------------------------------------- hot 热线举报投诉
 (def hot---------- nil)
@@ -1361,10 +1410,10 @@
 ;;------------------------------------------------- test
 ;(use 'wr3.clj.datagen)
 ;--- 注：文件大小不能大于64k字节，否则报错
-;(with-esp- (fetch :user :where {:name #"^0815"}))
+;(with-esp- (fetch :en :where {:admin {:$exists false}}))
 ;(with-mdb2 "esp" (destroy! :user {:name #"^0815"}))
-;(update- :user {:pid "X0009980-4"} {:admin "13"})
-;(insert- :user  {:name "0820考评员测试", :pid "150121198506020081" :role "pn", :uid "pn-150121198506020081"})
+;(update- :pn {:admin {:$exists true}} (fn [r] {:cid (format "2011-%s-%s-0%s"  (:type r) (:admin r) (subs+ (:cid r) -1 -5) )}))
+;(insert- :user  {:name "北京交通测试1", :pid "X0009980-7" :role "mot", :uid "mot-X0009980-7"})
 ;(print-seq (with-esp- (fetch :en-apply :only [:name :pnids] :where {:pnids {:$in ["4f8aeb2a75e0ae92833680e2"]}})))
 ;(with-esp- (fetch :en-apply :where {:orgid ["4f8aebd175e0ae92833680f4" "4f8aebd175e0ae92833680ff"]}))
-;(def *wr3conf* {1 10 2 20})
+;(sum (with-esp- (map :score (fetch :indic3 :only [:score] :where {:type2 51}))))
