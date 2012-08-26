@@ -276,7 +276,7 @@
          [:tbody
           (for [[k v] (dissoc rt :_id)]
             [:tr 
-             [:th {:style "text-align: left"} (or (dd-meta k) k) "："] 
+             [:th {:nowrap "true" :style "text-align: left"} (or (dd-meta k) k) "："] 
              [:td (format-doc-field- tb k v m)] ])]
          [:tfoot 
           [:tr {:align "center" :height "50px"} 

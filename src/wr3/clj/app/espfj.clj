@@ -56,6 +56,7 @@
 
 ;--------------------------------------------------------------- 登录安全
 (def auth-login-url "/c/espfj/login") ; 本ns的登录页面 /login.html
+
 (defn auth
   "该 CljServlet 调用，用于本应用各函数的权限控制 "
   [request fname ids & args]
@@ -70,8 +71,8 @@
       (in? role (keys dd-admin-fj)) true
       :else false)))
 
-(defn index-close
-  "2012-7-31 8:00PM后关闭"
+(defn index
+  "2012-7-31 8:00PM，2012-8-23 8：00PM后关闭"
   []
   (html-body
     [:center {:style "border: 1px solid #369"}
@@ -79,7 +80,7 @@
       "福建省交通运输厅——考评员在线报名系统"]
      [:div {:style "min-height:200px"}
       [:h1 {:style "color:red;margin:50px"} 
-       "请注意：2012年7月31日8点我们截至此次的预报名。"[:br][:br]
+       "请注意：2012年8月23日晚8点我们截至此次的报名。"[:br][:br]
        "如有疑问，请咨询福建省交通运输厅相关人员。"]]
      [:h2 {:style "padding:15px; background-color:lightgray; margin-bottom:0px; color:#333; text-shadow:0 1px 0 #EEE;"}
         "版权所有：福建省交通运输厅 2012 年"] ]))
@@ -90,7 +91,7 @@
 (def body-tail [:h2 {:style "padding:15px; background-color:lightgray; margin-bottom:0px; color:#333; text-shadow:0 1px 0 #EEE;"}
                 "版权所有：福建省交通运输厅 2012 年"])
   
-(defn index
+(defn index-close
   "app: 直接填写或者用身份证（密码：后4位）登录修改原来提交的内容"
   []
   (html-body
@@ -219,6 +220,7 @@
         "福建省交通运输厅——考评员在线报名系统"]
        [:div {:align "center" :style "border:0px solid red"}
         [:h2 {:align "right"}
+         [:a {:href "/c/espfj/pn-search" :target "_blank"} "【查询考评员】"] (space 5)
          [:a {:href "#" :onclick "$.ajaxSetup({cache:false}); app_exit('/c/espfj/admin')"} "【注销】"] (space 5)
          [:a {:href "/c/espfj/passwd" :target "_blank"} "【修改密码】"] (space 5)
          (when (in? role ["1400" "1401"]) 
@@ -404,6 +406,42 @@
       [:td [:h2 "按报名数量排序："]
        (espc/result-html- rt2 ["主管机关" "报名小计"] [:admin :count] {:admin dd-admin-fj}) ]]]
     )))
+
+
+(defn pn-search
+  "自动完成的en名称、证书号录入框的html片段
+  @tb :en :org :pn "
+  []
+  (let []
+    (html-body
+      (eui-tip "请输入报名人姓名或身份证号进行模糊查询，并选定查看详情。")
+      [:form {:id "fm1" :action "/c/espfj/pn-search-doc" :method "post" :target "_blank"}
+       [:label "姓名或身份证号：" ]
+       [:input#in {:name "in" :type "text" :style "width:300px;" :value ""}] (space 5)
+       (eui-button {:onclick "$('#fm1').submit()"} "显示详情")]  [:br]
+      (eui-button-close)
+      [:script (format "input_autocomplete('%s',1)" "/c/espfj/name-pid-autocomplete")])))
+
+(defn name-pid-autocomplete
+  "service: en-search-input函数提交的自动完成查询
+  @term 自动搜索控件自动附上的参数，带搜索字符串 "
+  [term request]
+  (let [role (wr3role request)
+        where (if (in? role ["1400" "1401"]) {} {:admin role}) ; 管理员看全部，其他看自己管理范围的。
+        where (into where {:$or [{:name (re-pattern term)} {:pid (re-pattern term)}]})
+        _ (println "--" where)
+        rs (with-mdb2 "espfj" (vec (fetch :pn-apply :limit 20 :where where)))]
+    (json-str (map #(format "%s %s" (:pid %) (:name %)) rs))))
+
+(defn pn-search-doc
+  "显示搜索到"
+  [in request]
+  (let [pid (left in " ")
+        row (with-mdb2 "espfj" (fetch-one :pn-apply :where {:pid pid}))]
+    (if row
+      (admin-resp (str (:_id row)) request) 
+      (html-body [:h1 "未搜索到结果"] (eui-button-close))
+      )))
 
 ;(def doc1 (with-mdb2 "espfj" (fetch-by-id :pn-apply (object-id "5004f3fe2823f20ced2a6249")))) ; 1104  603
 ;  (doseq [[k v] (rest dd-admin-fj)]

@@ -423,7 +423,7 @@
        (name-cid-search-input tb) [:br][:br]
 ;       [:label (format "请输入要撤销资质的%s证书号：" nam)]
 ;       (eui-text {:id "cid" :name "cid" :value v0}) (space 3) 
-       (eui-button {:onclick "$('#fm1').submit()"} "查询")
+       (eui-button {:onclick "$('#fm1').submit()"} " 查 询 ")
        ] )))
 
 (defn cert-cancel-doc

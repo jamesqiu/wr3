@@ -392,15 +392,10 @@ function dict_onload() {
  * 用于：wr3.clj.crud/form
  */
 function crud_form_onload() {
-// $("form.wr3form").submit(function () {
-// //alert($(this).serialize());
-// return false;
-// });
-	
     $("input, textarea, select, button").uniform();
 
 	$(":submit").click(function() {
-		var d = $("form.wr3form").serialize();
+		var d = $("form.wr3form").serializeArray();
 		$.ajax({
 			type: "POST",
 			url: wr3path+"../c/crud/save",
@@ -415,7 +410,7 @@ function crud_form_onload() {
 	$(":button").click(function() {
 		var rt = window.confirm("删除此文档？");
 		if (rt==false) return false; 
-		var d = $("form.wr3form").serialize();
+		var d = $("form.wr3form").serializeArray();
 		$.post(wr3path+"../c/crud/delete", d, function(msg) {
 			alert(msg);
 			window.location.href = wr3path+"../c/crud/view/"+$("input[name='form']").val();
@@ -484,7 +479,7 @@ function crud_design_onload() {
 		$("form#design input:hidden[name='size']").val(lis.size());
 		// Ajax提交保存
 		var url = wr3path+"../c/crud/design-save";
-		var d = form.serialize();
+		var d = form.serializeArray();
 		$.post(url, d, function(msg) { 
 			alert("保存结果：" + msg);
 		});		
@@ -2893,19 +2888,27 @@ function esp_onload() {
 //	alert($.browser.mozilla) // msie opera safari
 }
 
+/**
+ * 保存证书申请
+ * @param form 'pn' 'en' 'org'
+ */
 function esp_input_save(form) {
-	var url = '/c/esp/input-save/'+form +'?' + $("form").serialize() 
-	ajax_post(url)
+	var url = '/c/esp/input-save/'+form 
+	ajax_form($('form'), url)
 }
 
+/**
+ * 保存并提交证书申请
+ * @param form
+ */
 function esp_input_submit(form) {
-	var url = '/c/esp/input-submit/'+form +'?' + $("form").serialize() 
-	ajax_post(url)
+	var url = '/c/esp/input-submit/'+form 
+	ajax_form($('form'), url)
 }
 
 function esp_report_save(form) {
-	var url = '/c/esp/report-save/'+form +'?' + $("form").serialize() 
-	ajax_post(url)
+	var url = '/c/esp/report-save/'+form 
+	ajax_form($("form"), url)
 }
 
 //------------------------ 3个通用函数：文件上传。@see esp.clj/fileupload, esp.clj/filesave
@@ -2965,10 +2968,8 @@ function fileupload_ok(fname) {
 function esp_save_backup(id) {
 	$.messager.confirm('确认提交', '提交变更备案？', function(r){
 		if (r) {
-			var url = '/c/esp/backup-save/'+id+'?' + $('#fm1').serialize()
-			$.post(url, function(data) {
-				$.messager.alert('提交结果', data, 'info');
-			})
+			var url = '/c/esp/backup-save/'+id
+			ajax_form($('#fm1'), url)
 		}
 	})		
 }
@@ -3118,8 +3119,8 @@ function esp_stand_grade() {
 }
 
 function esp_stand_save(id) {
-	var url = '/c/esp/stand-save/'+id+'?'+$('#fm1').serialize()
-	ajax_post(url)
+	var url = '/c/esp/stand-save/'+id
+	ajax_form($('#fm1'), url)
 }
 
 /**
@@ -3138,6 +3139,19 @@ function textarea_val(id) {
  */
 function ajax_post(url, func) {
 	$.post(url, function(data) {
+		alert('提示：' + data)
+		if (func) func()
+	})
+}
+
+/**
+ * 共同函数，提交含大量内容，尤其是有textarea等控件，序列化后的url可能超过2k大小的表单。
+ * @param fm form的jquery表达式如$('#fm1')
+ * @param url 提交的action地址
+ * @param func 提交后的客户化动作
+ */
+function ajax_form(fm, url, func) {
+	$.post(url, fm.serializeArray(), function(data) {
 		alert('提示：' + data)
 		if (func) func()
 	})
@@ -3199,8 +3213,8 @@ function esp_org_en_apply(y_or_n, oid) {
  * @param uid
  */
 function esp_pn_train_save(uid) {
-	var url = '/c/esp/pn-train-save/' + uid + "?"+$('#fm1').serialize()
-	ajax_post(url)
+	var url = '/c/esp/pn-train-save/' + uid
+	ajax_form($('#fm1'), url)
 }
 
 /**
@@ -3245,7 +3259,28 @@ function esp_name_cid_autocomplete(typ) {
 		},
 		minLength: 2
 	});
-	
+}
+
+/**
+ * 通用函数。
+ * 实现模糊id为"in"的搜索框[:input#in ..]的自动完成初始化。输入字符串超过2个的时候开始自动搜索
+ * @url 自动完成service的url
+ * @minLen 输入多少个字符后就开始搜索，无此参数则使用缺省值2
+ */
+function input_autocomplete(url, minLen) {
+	// 输入框hover效果设置
+	$("input#in").hover(function() {
+		this.select();
+	});
+
+	$("input#in").autocomplete({
+		source: url,
+		select: function (event, ui) {
+			$("input#in").val(ui.item.label);
+			return false;
+		},
+		minLength: (minLen || 2)
+	});
 }
 
 /**
@@ -3336,8 +3371,8 @@ function espfj_input_submit_check() {
  */
 function espfj_input_submit(form) {
 	if (espfj_input_submit_check()) {
-		var url = '/c/espfj/input-submit/'+form +'?' + $("form").serialize() 
-		ajax_post(url, function() {
+		var url = '/c/espfj/input-submit/'+form 
+		ajax_form($("form"), url, function() {
 			window.location.href = '/c/espfj'			
 		})
 	}
@@ -3367,6 +3402,10 @@ function espfj_admin_resp_del(flag) {
 	});
 }
 
+/**
+ * 考评员用户名密码登录校验
+ * @param fm
+ */
 function espfj_input_login(fm) {
 	$.post('/c/espfj/input-login-check', fm.serialize(), function(data) {
 		var json = $.parseJSON(data)
@@ -3388,5 +3427,6 @@ function espfj_pn_list_onchange(isPagers) {
 	url += '&del='+ $('#del').val() + '&resp='+$('#resp').val()
 	ajax_load($('#list'),  url)
 }
+
 
 
