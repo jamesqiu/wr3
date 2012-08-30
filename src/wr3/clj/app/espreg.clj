@@ -35,9 +35,10 @@
 
 ;; bjca登录页面的js
 (defn bjca-js 
+  "先和CA服务器通讯"
   [strServerSignedData strServerRan strServerCert]
-  (str "<script type='text/javascript' src='/esp/js/date.js'></script>"
-       "<script type='text/javascript' src='/esp/js/XTXApp.js'></script>"
+  (str "<script type='text/javascript' src='/js/bjca-date.js'></script>"
+       "<script type='text/javascript' src='/js/bjca-XTXApp.js'></script>"
        (format "<script LANGUAGE=javascript>
                   var strServerSignedData = \"%s\"; 
 			            var strServerRan = \"%s\";
@@ -52,27 +53,53 @@
 		       LoginForm.UserPwd.focus();
 	      </SCRIPT>"))
 
+;; bjca新版所需2个.js文件
+(def bjca-js2 ["bjca-date.js" "bjca-XTXApp.js"])
+
+(defn bjca-activex2 
+  "不和CA服务器通讯，可包含在<head>之外 "
+  []
+  "")
+;  (str "<script type='text/javascript' src='/js/bjca-date.js'></script>"
+;       "<script type='text/javascript' src='/js/bjca-XTXApp.js'></script>"))
+;       "<SCRIPT LANGUAGE=javascript event=OnUsbKeyChange for=XTXAPP>
+;           esp_bjca_onchange()
+;           //alert('插拔ukey')
+;		       //ChangeUserList('LoginForm.UserList');
+;	      </SCRIPT>"))
+
 ; bjca usbkey 插拔响应代码
 (def bjca-on-change
-  (html bjca-activex
-        [:script "if ($.browser.msie) XTXAPP.attachEvent('OnUsbkeyChange', esp_bjca_onchange)"] ))
+  (html [:script {:type "text/javascript" :src "/js/bjca-date.js"}]
+        [:script {:type "text/javascript" :src "/js/bjca-XTXApp.js"}]
+        [:script {:LANGUAGE "javascript" :event "OnUsbKeyChange" :for "XTXAPP"} 
+         "alert('bjca-on-change')" 
+         "esp_bjca_onchange()" ]))
+;  (html bjca-activex
+;        [:script "if ($.browser.msie) XTXAPP.attachEvent('OnUsbkeyChange', esp_bjca_onchange)"] ))
 
-(def ca-prompt 
+(def bjca-onchange
+  "<SCRIPT LANGUAGE=javascript event=OnUsbKeyChange for=XTXAPP>
+		 ChangeUserList('LoginForm.UserList');
+	</SCRIPT>")
+
+(def bjca-prompt 
   (str "提示：请将本系统证书U盘插入计算机"
-       "（<a href='http://gotoreal.com:8080/userregister/firstpage.html' style='color:#fcc'>点击申请</a>）。"))
+       "（<a href='http://gotoreal.com:8080/userregister/firstpage.html' target='_blank' style='color:#fcc'>点击申请</a>）。"))
 
 (defn ca-local
-  "app: bjca不联服务器本地提交ukey，提交到ca-local-submit函数"
+  "app: bjca不联服务器本地提交ukey，提交到ca-local-submit函数
+  todo: 改为新bjca js api，使之适用于chrome "
   [request]
   (let [sed (SecurityEngineDeal/getInstance "SM")]
     (html-body
-      {:class "login_body"}
+      {:class "login_body" :js bjca-js2 :onload "esp_bjca_onload_local()"}
       [:img {:src "/img/idp-webfirst.png" :style "position: absolute; top: 50%; left: 50%; margin-top: -80px; margin-left: -110px;"}]
         [:form {:method "post" :ID "LoginForm" :name "LoginForm" :action "/c/espreg/ca-local-submit" :class "login_form ui-corner-all"
-                :onsubmit "return XTXAPP.AddSignInfo(LoginForm.UserPwd.value)"}
-         [:center [:div {:style "color:yellow;margin-bottom:9px"} ca-prompt]]
+                :onsubmit "return esp_bjca_check_local()"}
+         [:center [:div {:style "color:yellow;margin-bottom:9px"} bjca-prompt]]
          "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br]
-         "选择口令：" [:input {:id "UserPwd" :name "pwd1" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
+         "选择口令：" [:input {:id "UserPwd" :name "UserPwd" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
          [:p {:align "center" :style "padding:6px"}
           [:input {:type "submit" :value " 登 录 " :class "ui-state-default ui-corner-all" :style "font-weight:bold;color:green"}] ]
          [:center 
@@ -81,8 +108,10 @@
          [:input {:type "hidden" :ID "UserSignedData" :name "UserSignedData"}]
          [:input {:type "hidden" :ID "UserCert" :name "UserCert"}]
          [:input {:type "hidden" :ID "ContainerName" :name "ContainerName"}]
-         [:input {:type "hidden" :ID "strRandom" :name "strRandom"}] ]
-        bjca-activex
+         [:input {:type "hidden" :ID "strRandom" :name "strRandom"}] 
+         [:input {:type "hidden" :ID "strUserList" :name ""}] ; 保存 中文名称等
+         ]
+        bjca-onchange
         [:script "document.title='标准化系统证书登录' "] )))
 
 (defn ca-server
@@ -118,7 +147,7 @@
   "app: 可通过本地或者服务器认证bjca ukey"
   [request]
   ; 可调用 ca-local 或者 ca-remote
-  (ca-server request)) 
+  (ca-local request)) 
 
 (defn- bjca-verify
   "bjca服务器认证结果"
@@ -233,8 +262,41 @@
   [request]
   (check3 request))
 
+(defn ca-test2
+  [request]
+  (let [sed (SecurityEngineDeal/getInstance "SM")]
+    (html-body
+       {:js bjca-js2 :onload "GetUserList('LoginForm.UserList') "}
+       [:h1 "js 离线读取ukey属性"]
+       [:form {:method "post" :ID "LoginForm" :name "LoginForm" 
+               :action "/c/espreg/ca-test2-submit" :target "ifrm1" 
+               :onsubmit "return esp_bjca_check_local()"}
+        "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br][:br]
+        "选择口令：" [:input {:id "UserPwd" :name "pwd1" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
+        (eui-button {:onclick "var uniqueid = XTXAPP.SOF_GetCertInfoByOid(SOF_ExportUserCert($('#UserList').val(),KEY_SIGNOREXCHANGE),'1.2.156.112562.2.1.1.24'); 
+                alert(uniqueid)"} "得到 uniqueId") (space 5)
+        [:input {:type "submit" :value " 提 交 " :class "ui-state-default ui-corner-all" :style "font-weight:bold;color:green"}]
+        [:input {:type "hidden" :ID "UserSignedData" :name "UserSignedData"}]
+        [:input {:type "hidden" :ID "UserCert" :name "UserCert"}]
+        [:input {:type "hidden" :ID "ContainerName" :name "ContainerName"}]
+        [:input {:type "hidden" :ID "strRandom" :name "strRandom" :value "NDYxNjY1NTEwNzc0NTk1NTM4NTcxOTY0"}]
+        ] 
+       [:iframe#ifrm1 {:name "ifrm1" :style "width:90%; height:200px; border:1px solid red"}]
+       bjca-onchange )))
+  
+(defn ca-test2-submit
+  "ca-test提交的结果测试"
+  [request]
+  (let [vars (query-vars2 request)
+        clientCert (:UserCert vars)
+        rt (bjca-decode clientCert)
+        ]
+    (html-body
+      [:h1 "rt: " rt]
+      [:table (for [[k v] vars] [:tr [:td k] [:td v]])] )))
+
 (defn ca-test
-  "app: 不与服务器通讯直接读bjca UKey内容。仅用于ie"
+  "app: 不与ca服务器通讯直接读bjca UKey内容。仅用于ie"
   [request]
   (let [sed (SecurityEngineDeal/getInstance "SM") ]
     (html-body

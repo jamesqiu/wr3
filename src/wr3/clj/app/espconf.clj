@@ -66,7 +66,7 @@
          ]   
    :frame-main (html [:script "layout_load_center('/c/esp/mot-resp-sum')"]
                      (set-title "主管机关管理系统（试行）"))
-   :frame-top (html espreg/bjca-on-change)
+;   :frame-top (html espreg/bjca-on-change)
    })
 
 ;; 考评员界面配置
@@ -85,7 +85,7 @@
    :frame-main (html [:h2 "考评员用户主界面"]
                      [:script "layout_load_center('/static/esp/about-pn.html')"]
                      (set-title "考评员在线申请系统（试行）"))
-   :frame-top (html espreg/bjca-on-change)
+;   :frame-top (html espreg/bjca-on-change)
    })
 
 ;; 考评机构界面配置
@@ -120,7 +120,7 @@
    :frame-main (html [:h2 "考评机构用户主界面"]
                      [:script "layout_load_center('/c/esp/apply-resp/en')"]
                      (set-title "考评机构管理系统（试行）"))
-   :frame-top (html espreg/bjca-on-change)
+;   :frame-top (html espreg/bjca-on-change)
    })
 
 ;; 交通运输企业界面配置
@@ -142,7 +142,8 @@
          ]   
    :frame-main (html [:h2 "交通运输企业用户主界面"]
                      (set-title "企业在线填报管理系统（试行）"))
-   :frame-top (html espreg/bjca-on-change)
+   :js espreg/bjca-js2
+;   :frame-top (html espreg/bjca-on-change)
    })
 
 ; 主界面子系统菜单
@@ -446,6 +447,8 @@
      :ctype "证书类型"
      :date "日期"
      :death "死亡人数"
+     :direct-name "签发人姓名" ; 用于pn证书直接颁发
+     :direct-title "签发人职务" ; 用于pn证书直接颁发
      :enid "企业ID"
      :exam-date "考试日期"
      :exam-score "考试分数"

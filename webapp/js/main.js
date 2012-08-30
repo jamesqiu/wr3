@@ -3179,10 +3179,12 @@ function esp_mot_apply(type, oid, yes_or_no) {
 		+'?resp=' +yes_or_no
 		+'&oid='+oid
 		+'&advice='+$('#advice').val().replace(/\n/g,'<br/>')
-	if (type=="en") {
+	if (type=="en") { // 对于en，添加2选1的结果
 		url += ('&orgid1='+$('#orgid').val())
-	} else if (type=="pn") {
+	} else if (type=="pn") { // 对于pn，添加直接颁发的字段
 		url += ('&pass-direct='+$('#pass-direct').prop('checked'))
+		url += '&direct-name=' + $('#direct-name').val()
+		url += '&direct-title=' + $('#direct-title').val()
 	}
 	ajax_post(url)
 }
@@ -3284,6 +3286,20 @@ function input_autocomplete(url, minLen) {
 }
 
 /**
+ * 直接颁发录入确认
+ */
+function esp_mot_pn_direct() {
+	var pass1 = $('#pass-direct').prop('checked')
+	var name1 = $('#direct-name').val()
+	var title1 = $('#direct-title').val()
+	var opener = window.opener
+	opener.$('#pass-direct').prop('checked', pass1)
+	opener.$('#direct-name').val(name1)
+	opener.$('#direct-title').val(title1)
+	window.close()
+}
+
+/**
  * bjca 登录初始化ukey
  */
 function esp_bjca_onload() {
@@ -3293,7 +3309,82 @@ function esp_bjca_onload() {
 }
 
 /**
- * BJCA 提交前验证
+ * bjca 登录页面初始化（无需ca服务器）
+ */
+function esp_bjca_onload_local() {
+	GetUserList("LoginForm.UserList");
+	var strUserList = SOF_GetUserList();
+	var containerName = $("#UserList").val()
+	alert('strUserList=' + strUserList + '\n\n containerName=' + containerName)
+}
+
+/**
+ * bjca提交前验证，无需bjca服务器的登录页面
+ * @returns
+ */
+function esp_bjca_check_local() {
+		
+	var objForm = LoginForm;
+	var strCertID = LoginForm.UserList.value
+	var strPin = LoginForm.UserPwd.value
+	if (objForm == null) {
+		alert("表单错误");
+		return false;
+	}
+	if (strCertID == null || strCertID == "") {
+		alert("获取用户信息失败");
+		return false;
+	}
+	if (strPin == null || strPin == "") {
+		alert("请输入证书密码");
+		return false;
+	}
+	if (strPin.length < 6 || strPin.length > 16) {
+		alert("密码长度应该在4-16位之间");
+		return false;
+	}
+	var ret = SOF_Login(strCertID, strPin);
+	if (!ret) {
+		var retryCount = SOF_GetPinRetryCount(strCertID);
+		if (retryCount > 0) {
+			alert("校验证书密码失败!您还有" + retryCount + "次机会重试!");
+			return false;
+		} else if (retryCount == 0) {
+			alert("您的证书密码已被锁死,请联系\n数字证书办理机构或点击北京CA服务直通车\n进行解锁!");
+			return false;
+		} else {
+			alert("登录失败!");
+			return false;
+		}
+	}
+	var userCert = SOF_ExportUserCert(strCertID, KEY_SIGNOREXCHANGE);
+	if (userCert == null || userCert == "") {
+		alert("导出用户证书失败!");
+		return false;
+	}
+	if (!CheckValid(userCert)) {
+		return false;
+	}	
+
+	var strSignItem = "<input type=\"hidden\" name=\"UserSignedData\" value=\"\">";
+	if (objForm.UserSignedData == null) {
+		objForm.insertAdjacentHTML("BeforeEnd", strSignItem);
+	}
+	var strCertItem = "<input type=\"hidden\" name=\"UserCert\" value=\"\">";
+	if (objForm.UserCert == null) {
+		objForm.insertAdjacentHTML("BeforeEnd", strCertItem);
+	}
+	var strContainerItem = "<input type=\"hidden\" name=\"ContainerName\" value=\"\">";
+	if (objForm.ContainerName == null) {
+		objForm.insertAdjacentHTML("BeforeEnd", strContainerItem);
+	}
+	objForm.UserCert.value = userCert;
+	objForm.ContainerName.value = strCertID;
+	return true;
+}
+
+/**
+ * BJCA 提交前验证（登录页面需bjca服务器）
  * @returns {Boolean}
  */
 function esp_bjca_onsubmit(srand) {

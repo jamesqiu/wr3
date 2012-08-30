@@ -440,8 +440,7 @@
         row (with-mdb2 "espfj" (fetch-one :pn-apply :where {:pid pid}))]
     (if row
       (admin-resp (str (:_id row)) request) 
-      (html-body [:h1 "未搜索到结果"] (eui-button-close))
-      )))
+      (html-body [:h1 "未搜索到结果"] (eui-button-close)) )))
 
 ;(def doc1 (with-mdb2 "espfj" (fetch-by-id :pn-apply (object-id "5004f3fe2823f20ced2a6249")))) ; 1104  603
 ;  (doseq [[k v] (rest dd-admin-fj)]

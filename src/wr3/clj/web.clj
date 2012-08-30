@@ -81,15 +81,6 @@
       (zipmap (map keyword (keys m)) (map #(join % "&") (vals m)))))) ; ?k1=a&k1=b 变为{"k1" "a&b"}
 
 ;;; ------------ html wrapper
-(defmacro html-body
-  "常用的html body模板，使用jquery ui和easyui，参数：
-  m：属性，body：内容
-  usage：(html-body {:onload 'my_function()'} '...') "
-  [m & body]
-  `(html [:html head-set [:body ~m ~@body]]))
-
-(def #^{:macro true} html-jquery #'html-body) ; 别名
-;(defmacro html-jquery [m & body] `(html-body ~m ~@body))
 
 (defn html-head
   "第一个参数为自定义head内容；之后多个字符串参数放在html body内"
@@ -115,6 +106,12 @@
   "生成<head>中包含<webapp>/js/下指定.js文件的html片段"
   [js] (html [:script {:type "text/javascript" :src (format "%s/js/%s" webapp js)} ""]))
 
+(defn head-set-join-js
+  "除了head-set, 在<head>内添加1个或多个<webapp>/js/下的.js文件，如['a.js' 'b.js'] 
+  @js 1个js文件 'a.js'，多个js文件 ['a.js' 'b,js' ..] "
+  [js]
+  (html [:head meta-utf8 js-main (map head-js (if (string? js) (list js) js))]))
+  
 (defn html-js
   "生成含js代码的html片段"
   [& s] (html [:script {:type "text/javascript"} (apply str s)]))
@@ -129,20 +126,33 @@
   [& s]
   (html [:style (apply str s)]))
 
-(defn html-main
-  "把多个字符串参数放在定义了main.css, main.js的html body内，参加html-body"
-  [& ss]
-  (html-body nil (apply str ss)))
+(defn get-id
+  "得到id第一个值或者缺省值"
+  [id default]
+  (if-let [id0 (first id)] id0 default))
+
+(defmacro html-body
+  "常用的html body模板，使用jquery ui和easyui，参数：
+  @m：属性，例如 {:onload 'a()'}, :js属性表示1个或多个<head>中的.js文件如：{:js 'a.js'} {:js ['a.js' 'b.js']}
+  @body：内容
+  usage：(html-body {:onload 'my_function()'} '...') "
+  [m & body]
+  `(html [:html 
+          (if (:js ~m) (head-set-join-js (:js ~m)) head-set) 
+          [:body (if (:js ~m) (dissoc ~m :js) ~m) ~@body]]))
+
+(def #^{:macro true} html-jquery #'html-body) ; 别名
+;(defmacro html-jquery [m & body] `(html-body ~m ~@body))
 
 (defn html-apps
   "应用主导航界面，列出所有app（类手机界面方式）"
   [apps]
   (html-body {:onload "app_onload();"} (for [app apps] [:div.app app])))
 
-(defn get-id
-  "得到id第一个值或者缺省值"
-  [id default]
-  (if-let [id0 (first id)] id0 default))
+(defn html-main
+  "把多个字符串参数放在定义了main.css, main.js的html body内，@see html-body"
+  [& ss]
+  (html-body nil (apply str ss)))
 
 ;;----------------------------------- dojo wrapper
 
@@ -266,15 +276,15 @@ m2: [{'File' ['Edit' 'Exit']} {'Help' ['About' 'Index']}]"
 
 (defn dojo-dialog
   "得到一个dojo Dialog,
-m: {:title 'Title1' :html 'this is content'}"
+  m: {:title 'Title1' :html 'this is content'}"
   [m]
   [:div (merge {:dojoType "dijit.Dialog" :title "对话框"} (dissoc m :html))
    (:html m)])
 
 (defn dojo-tooltip
   "得到一个dojo DropDownButton，
-m: 如{:id 'd1' :html 'click here'}
-m2: [:div [:label 'Name:'] (dojo-text ..) (dojo-button {:type 'submit'} 'Save')]"
+  @m: 如{:id 'd1' :html 'click here'}
+  @m2: [:div [:label 'Name:'] (dojo-text ..) (dojo-button {:type 'submit'} 'Save')]"
   [m m2]
   [:div (merge {:dojoType "dijit.form.DropDownButton"} (dissoc m :html))
     [:span (:html m)]
@@ -411,7 +421,7 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   
 (defn eui-dialog
   "显示一个对话框，参数：
-  @id: 对话框id, 如myid1，对应按钮id为 '#myid1_ok', '#myid1_cancel'，需要自己写js响应click事件
+  @id: 对话框id, 如myid1，对应按钮id为 '#myid1_ok', '#myid1_cancel'，需要自己写js响应click事件（否则报错）
   @m: 对话框属性
   @body: 对话框内容"
   [id m & body]
@@ -554,9 +564,7 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
          (for [[label nam icon] (rest (:searcher cfg))]
            [:div {:name nam :iconCls icon :style "margin: 0px"} label] ))])
     ; 1、2级导航条
-    (when (:menu cfg) (frame-top-menu cfg)) 
-    ; 一般为js等不可见内容（如ukey插件）
-    (:frame-top cfg) ))
+    (when (:menu cfg) (frame-top-menu cfg)) ))
 
 (defn frame-left-right
   "layout.west | layout.east"
@@ -604,11 +612,12 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   :menu      2层菜单条，位于上方
   @m 客户化定制hashmap，有如下参数：
   :left-or-right 'left' or 'right'
+  :js 包含在<head>中的.js文件，如： 'a.js' 或 ['a.js' 'b.js']
   :top/left/right/main/foot 或者 frame-top | frame-left | frame-right | frame-main | frame-foot 的html片段
   "
   [cfg]
   (eui-layout
-    {:id "layout1" :onload (str (:name cfg) "_onload()")}
+    {:id "layout1" :onload (str (:name cfg) "_onload()") :js (:js cfg) }
     ;----------------------- north
     (frame-top cfg)   
     ;----------------------- west or east

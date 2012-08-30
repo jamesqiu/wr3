@@ -113,9 +113,7 @@
 
 (defn- format-pass-direct
   [on-off]
-  (case on-off
-    "on" "直接颁发"
-    "否"))
+  (case on-off "true" "直接颁发" "否"))
 
 (defn- format-type
   "把形如 '1&2&5' 或者 '3'的多个或者1个类型转换成名称显示 "
@@ -250,6 +248,7 @@
     :reason (or (get (case tb :org-backup dd-org-backup :en-backup dd-en-backup) (to-int v)) v) ; 考评机构备案原因
     (:safe :photo :perf2 :proof :proof2 :proof3 :titlefile :beginfile) [:a {:href v} "查看"] ; 考评机构安全生产组织架构等
     (:resp :resp-review) [:b (format-resp- v)]
+    :pass-direct (format-pass-direct v)
     v))
 
 (defn doc-

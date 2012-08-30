@@ -14,7 +14,7 @@
 (require '[wr3.clj.app.auth :as au])
 
 ;;;-------------------------------------------------------------------------------------------------------- 公共函数
-(def auth-login-url (first ["/login.html" "/c/espreg/ca"])) ; 本ns的登录页面：可选缺省认证或者bjca认证
+(def auth-login-url (second ["/login.html" "/c/espreg/ca"])) ; 本ns的登录页面：可选缺省认证或者bjca认证
 (defn auth
   "该 CljServlet 调用，用于本应用各函数的权限控制 "
   [request fname ids & args]
@@ -495,6 +495,10 @@
   [request]
   (apply-input- request :pn))
 
+(defn pn-input-test
+  [request]
+  (html-body (pn-input request)))
+    
 (defn pn-list
   "service: 考评员列表
   @id name的pattern如'张' "
@@ -939,8 +943,13 @@
                            rs (with-esp- (fetch :pn-train :where {:uid uid :type t}))]
                        (html [:h2 "该考评员“" (dd-type (to-int t 0)) "”类型的培训、考试记录："]
                              (result-html- rs [] [:name :type :train-id :exam-date :exam-score]) [:br][:br]
-                             (eui-tip "直接从事交通运输安全生产行政管理工作10年以上，熟悉掌握交通运输安全生产相关法规和企业安全生产标准化规定者：")
-                             (eui-text {:id "pass-direct" :type "checkbox"}) (space 2) "直接颁发" ))
+                             [:div {:style "border:1px solid lightgray; padding: 10px"}
+                              (eui-tip "直接从事交通运输安全生产行政管理工作10年以上，熟悉掌握交通运输安全生产相关法规和企业安全生产标准化规定者：") [:br]
+                              (eui-button {:href "/c/esp/mot-pn-direct" :target "_blank"} "直接颁发操作") [:br][:br]
+                              "操作结果：（ "
+                              (eui-text {:id "pass-direct" :type "checkbox" :disabled "true"}) (space 2) "直接颁发" (space 5)
+                              "签发人姓名：" (eui-text {:id "direct-name" :disabled "true" :value ""}) (space 5) 
+                              "签发人职务：" (eui-text {:id "direct-title" :disabled "true" :value ""}) " ）" ] ))
                  :org ""
                  :en (eui-tip "注意：请指派一个考评机构对该企业进行考评！")
                  nil)
@@ -949,8 +958,18 @@
            :orders (map second ({:pn cfg-apply-pn :org cfg-apply-org :en cfg-apply-en} type))
            })))
 
-;(println (map second cfg-apply-en))
-  
+(defn mot-pn-direct
+  "app: 填写直接颁发的信息"
+  []
+  (let []
+    (html-body
+      [:h1 (dd-cert :pn) "直接颁发"] 
+      (eui-tip "提示：直接颁发则签发人姓名和职务必填。修改后请点击 “确定” 按钮；若要放弃修改请直接点击 “关闭” 按钮。")
+      (eui-text {:id "pass-direct" :type "checkbox"}) (space 2) "直接颁发" [:br][:br]
+      [:label {} "签发人姓名："](eui-text {:id "direct-name"}) [:br]
+      [:label {} "签发人职务："](eui-text {:id "direct-title"}) [:br][:br]
+      (eui-button {:onclick "esp_mot_pn_direct()"} "确定") (space 5) (eui-button-close) )))
+
 (defn mot-pn-apply [id] (mot-apply- :pn id))
 (defn mot-org-apply [id] (mot-apply- :org id))
 (defn mot-en-apply [id request] (mot-apply- :en id true))
