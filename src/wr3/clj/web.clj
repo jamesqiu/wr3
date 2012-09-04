@@ -552,10 +552,10 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
     "north" 
     {:id (first (:style cfg)) :style (format "height: %spx; padding: 10px;" (if (:menu cfg) 135 70)) }
     [:span {:class (second (:style cfg))} (:title cfg)]
-    [:div {:style "position: absolute; right: 10px; top: 8px; color: gray"} "当前用户: " 
-     [:span#wr3user {:style "color:red; font-weight:bold"} ".."] (space 3)
+    [:div {:style "position: absolute; right: 10px; top: 8px; color: lightgray"} "当前用户: " 
+     [:span#wr3user {:style "color:lightgray; font-weight:bold"} ".."] (space 3)
      [:script (format "app_user('%s')" (:name cfg))]
-     [:a {:href "#" :onclick (format "app_exit('/%s')" (:name cfg))} "退出"]]
+     [:a {:href "#" :onclick (format "app_exit('/%s')" (:name cfg))} "退出"] ]
     ; 搜索条
     (when (:searcher cfg)
       [:div {:style "position: absolute; right: 10px; top: 35px"}
@@ -613,6 +613,7 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   @m 客户化定制hashmap，有如下参数：
   :left-or-right 'left' or 'right'
   :js 包含在<head>中的.js文件，如： 'a.js' 或 ['a.js' 'b.js']
+  :after 包含在<body>最后的html片段
   :top/left/right/main/foot 或者 frame-top | frame-left | frame-right | frame-main | frame-foot 的html片段
   "
   [cfg]
@@ -625,7 +626,9 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
     ;----------------------- center
     (frame-main cfg)  
     ;----------------------- south
-    (frame-foot cfg) ))
+    (frame-foot cfg) 
+    (:after cfg) ; 补充在top部分后面的html片段 
+    ))
   
 ;---------------------------------- eui frame layout (-end-)
 

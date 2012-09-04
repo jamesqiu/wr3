@@ -8,112 +8,145 @@
 
 ;;;;------------------------- esp 无证书登录验证
 (defn check0
-  "用户名密码不对返回nil，否则返回用户名和角色"
+  "用户名密码不对返回nil，否则返回用户名和角色，被auth.clj的login函数调用"
   [uid pwd]
   (let [r (with-mdb2 "esp" (fetch-one :user :where {:uid uid}))]
-;    (println "-- check0 --" r)
     (when (= (:pwd r) (wr3.util.Stringx/md5 pwd))
       {:name (:name r) :roles (:role r)}) ))
 
 ;;;;------------------------- BJCA 证书登录页面及验证
 ; bjca证书验证返回值代表的含义
-(def dd-retValue 
-  {-1 "登录证书的根不被信任"
-   -2 "登录证书超过有效期"
-   -3 "登录证书为作废证书" 
-   -4 "登录证书被临时冻结" })
-
-(def bjca-activex
-  "<OBJECT ID=\"XTXAPP\" CLASSID=\"CLSID:3F367B74-92D9-4C5E-AB93-234F8A91D5E6\" height=1 style=\"HEIGHT: 1px; LEFT: 10px; TOP: 28px; WIDTH: 1px\" width=1 VIEWASTEXT>
-  <param name=\"CertListFormElement\" value=\"LoginForm.UserList\">
-  <param name=\"ServerMode\" value=\"2\">
-  <param name=\"AlertBeforeCertDate\" value=\"60\">
-  <param name=\"ServerSignedData\" value= \"MEUCIFnTlKtaTG354EI4F5SKU1FBMpOTLToJs2t6FOZ8yK5kAiEA7f5vw1qLMUGlvAmfcPU5KFORUn1wVIPdVhpDjSTptsk=\" >
-  <param name=\"ServerRan\" value= \"NDYxNjY1NTEwNzc0NTk1NTM4NTcxOTY0\" >
-  <param name=\"ServerCert\" value= \"MIIEFjCCA72gAwIBAgIKGhAAAAAAAABGIzAKBggqgRzPVQGDdTBEMQswCQYDVQQGDAJDTjENMAsGA1UECgwEQkpDQTENMAsGA1UECwwEQkpDQTEXMBUGA1UEAwwOQmVpamluZyBTTTIgQ0EwHhcNMTExMTA4MTYwMDAwWhcNMTIxMTA5MTU1OTU5WjBeMRAwDgYDVQQpDAdURVNUMDAyMRAwDgYDVQQDDAdzbTJjZXJ0MQ0wCwYDVQQLDARiamNhMQ0wCwYDVQQKDARCSkNBMQ0wCwYDVQQKDARiamNhMQswCQYDVQQGDAJDTjBZMBMGByqGSM49AgEGCCqBHM9VAYItA0IABCmZyEamE/rn+h8avGyDHQKxHiVFoZIndsz+QVzYc7ma6tut7Widce80FTtHpyt6Pe1C8uyfZFJXaddwZWNYrzCjggJ7MIICdzAfBgNVHSMEGDAWgBQf5s/Uj8UiKpdKKYoV5xbJkjTEtjAdBgNVHQ4EFgQU2q8YnzPs3rS+SndwB4WIZ3Q9rAswCwYDVR0PBAQDAgbAMIGbBgNVHR8EgZMwgZAwX6BdoFukWTBXMQswCQYDVQQGDAJDTjENMAsGA1UECgwEQkpDQTENMAsGA1UECwwEQkpDQTEXMBUGA1UEAwwOQmVpamluZyBTTTIgQ0ExETAPBgNVBAMTCGNhMjFjcmwxMC2gK6AphidodHRwOi8vY3JsLmJqY2Eub3JnLmNuL2NybC9jYTIxY3JsMS5jcmwwGQYKKoEchu8yAgEBAQQLDAlKSlRFU1QwMDIwYAYIKwYBBQUHAQEEVDBSMCMGCCsGAQUFBzABhhdPQ1NQOi8vb2NzcC5iamNhLm9yZy5jbjArBggrBgEFBQcwAoYfaHR0cDovL2NybC5iamNhLm9yZy5jbi9jYWlzc3VlcjCBiQYDVR0gBIGBMH8wMAYDVR0gMCkwJwYIKwYBBQUHAgEWGyBodHRwOi8vd3d3LmJqY2Eub3JnLmNuL2NwczBLBgNVHSAwRDBCBggrBgEFBQcCARY2aHR0cDovL3d3dy5iamNhLm9yZy5jbi9zaXRlcy9kZWZhdWx0L2ZpbGVzL3NtMi1jcHMucGRmMBEGCWCGSAGG+EIBAQQEAwIA/zAXBgoqgRyG7zICAQEIBAkMB1RFU1QwMDIwGQYKKoEchu8yAgECAgQLDAlKSlRFU1QwMDIwHwYKKoEchu8yAgEBDgQRDA8xMDIwMDAwMDAwMDAwNzcwGQYKKoEchu8yAgEBBAQLDAlKSlRFU1QwMDIwCgYIKoEcz1UBg3UDRwAwRAIgCOM85UU7E2FjT5oddOxP/iEbbDd9skH4QdjHWG+Nm1gCIChXTmCbXcXbSlLNgdjxDl/JFNzXF8RMyr3Y+R2KkVk1\" >
-  </OBJECT>")
-
-;; bjca登录页面的js
-(defn bjca-js 
-  "先和CA服务器通讯"
-  [strServerSignedData strServerRan strServerCert]
-  (str "<script type='text/javascript' src='/js/bjca-date.js'></script>"
-       "<script type='text/javascript' src='/js/bjca-XTXApp.js'></script>"
-       (format "<script LANGUAGE=javascript>
-                  var strServerSignedData = \"%s\"; 
-			            var strServerRan = \"%s\";
-			            var strServerCert = \"%s\";
-                </script>" strServerSignedData strServerRan strServerCert)
-       "<SCRIPT LANGUAGE=JAVASCRIPT event=OnLoad for=window>
-		       GetUserList(\"LoginForm.UserList\");
-		       LoginForm.UserPwd.focus();
-	      </SCRIPT>
-	      <SCRIPT LANGUAGE=javascript event=OnUsbKeyChange for=XTXAPP>
-		       ChangeUserList(\"LoginForm.UserList\");
-		       LoginForm.UserPwd.focus();
-	      </SCRIPT>"))
+(def dd-retValue {-1 "登录证书的根不被信任"
+                  -2 "登录证书超过有效期"
+                  -3 "登录证书为作废证书" 
+                  -4 "登录证书被临时冻结" })
 
 ;; bjca新版所需2个.js文件
 (def bjca-js2 ["bjca-date.js" "bjca-XTXApp.js"])
 
-(defn bjca-activex2 
-  "不和CA服务器通讯，可包含在<head>之外 "
-  []
-  "")
-;  (str "<script type='text/javascript' src='/js/bjca-date.js'></script>"
-;       "<script type='text/javascript' src='/js/bjca-XTXApp.js'></script>"))
-;       "<SCRIPT LANGUAGE=javascript event=OnUsbKeyChange for=XTXAPP>
-;           esp_bjca_onchange()
-;           //alert('插拔ukey')
-;		       //ChangeUserList('LoginForm.UserList');
-;	      </SCRIPT>"))
+;; bjca登录页面设置服务器Login函数所需的几个全局变量
+(defn bjca-vars 
+  "先和CA服务器通讯"
+  [strServerSignedData strServerRan strServerCert]
+  (format "<script LANGUAGE=javascript>
+             var strServerSignedData = \"%s\"; 
+			       var strServerRan = \"%s\";
+			       var strServerCert = \"%s\";
+           </script>" 
+          strServerSignedData strServerRan strServerCert))
 
-; bjca usbkey 插拔响应代码
-(def bjca-on-change
-  (html [:script {:type "text/javascript" :src "/js/bjca-date.js"}]
-        [:script {:type "text/javascript" :src "/js/bjca-XTXApp.js"}]
-        [:script {:LANGUAGE "javascript" :event "OnUsbKeyChange" :for "XTXAPP"} 
-         "alert('bjca-on-change')" 
-         "esp_bjca_onchange()" ]))
-;  (html bjca-activex
-;        [:script "if ($.browser.msie) XTXAPP.attachEvent('OnUsbkeyChange', esp_bjca_onchange)"] ))
-
+; ie浏览器会调用该内容；非ie浏览器解释不了如下内容，直接执行 bjca-XTXAPP.js 中的OnUsbKeyChange函数，但也是同样的内容。
 (def bjca-onchange
-  "<SCRIPT LANGUAGE=javascript event=OnUsbKeyChange for=XTXAPP>
-		 ChangeUserList('LoginForm.UserList');
-	</SCRIPT>")
+  "<SCRIPT LANGUAGE=javascript event=OnUsbKeyChange for=XTXAPP> OnUsbKeyChange() </SCRIPT>")
 
+;; 第一行用于ie浏览器，第二行用于非ie浏览器。用于各子系统主页
+(def bjca-onpull
+  "<SCRIPT LANGUAGE=javascript event=OnUsbKeyChange for=XTXAPP> esp_bjca_onpull(); </SCRIPT>
+   <script language=javascript> function OnUsbKeyChange() { esp_bjca_onpull() } </script> ")
+
+; 登录页面的提示
 (def bjca-prompt 
   (str "提示：请将本系统证书U盘插入计算机"
        "（<a href='http://gotoreal.com:8080/userregister/firstpage.html' target='_blank' style='color:#fcc'>点击申请</a>）。"))
 
-(defn ca-local
-  "app: bjca不联服务器本地提交ukey，提交到ca-local-submit函数
-  todo: 改为新bjca js api，使之适用于chrome "
+(defn container-name
+  "service: 获取bjca登录时写入session的证书U盘唯一号 "
   [request]
-  (let [sed (SecurityEngineDeal/getInstance "SM")]
-    (html-body
-      {:class "login_body" :js bjca-js2 :onload "esp_bjca_onload_local()"}
-      [:img {:src "/img/idp-webfirst.png" :style "position: absolute; top: 50%; left: 50%; margin-top: -80px; margin-left: -110px;"}]
-        [:form {:method "post" :ID "LoginForm" :name "LoginForm" :action "/c/espreg/ca-local-submit" :class "login_form ui-corner-all"
-                :onsubmit "return esp_bjca_check_local()"}
-         [:center [:div {:style "color:yellow;margin-bottom:9px"} bjca-prompt]]
-         "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br]
-         "选择口令：" [:input {:id "UserPwd" :name "UserPwd" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
-         [:p {:align "center" :style "padding:6px"}
-          [:input {:type "submit" :value " 登 录 " :class "ui-state-default ui-corner-all" :style "font-weight:bold;color:green"}] ]
-         [:center 
-          [:a {:href "/esp" :style "color:white"} "返回主页"] [:br] 
-          [:img {:alt "nasoft" :src "/img/nasoft-rnd.png"}]]
-         [:input {:type "hidden" :ID "UserSignedData" :name "UserSignedData"}]
-         [:input {:type "hidden" :ID "UserCert" :name "UserCert"}]
-         [:input {:type "hidden" :ID "ContainerName" :name "ContainerName"}]
-         [:input {:type "hidden" :ID "strRandom" :name "strRandom"}] 
-         [:input {:type "hidden" :ID "strUserList" :name ""}] ; 保存 中文名称等
-         ]
-        bjca-onchange
-        [:script "document.title='标准化系统证书登录' "] )))
+  (session request "ContainerName"))
 
+(defn- ca-login0
+  "bjca登录页面（原先的样式0）
+  @type :server :local
+  @vars-js @type为:server时传入，@type为:local时无效 "
+  [type vars-js]
+  (let [action ({:local "ca-local-submit" :server "ca-submit"} type)
+        onsubmit ({:local "esp_bjca_onsubmit_local()" :server "esp_bjca_onsubmit_server()"} type)]
+    (html-body
+      {:class "login_body" :js bjca-js2 :onload "esp_bjca_onload()"}
+      (when (= type :server) vars-js) 
+      [:img {:src "/img/idp-webfirst.png" :style "position: absolute; top: 50%; left: 50%; margin-top: -80px; margin-left: -110px;"}]
+      [:form {:method "post" :ID "LoginForm" :name "LoginForm" :class "login_form ui-corner-all"
+              :action (str "/c/espreg/" action) :onsubmit (str "return " onsubmit)}
+       [:center [:div {:style "color:yellow;margin-bottom:9px"} bjca-prompt]]
+       "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br]
+       "选择口令：" [:input {:id "UserPwd" :name "UserPwd" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
+       [:p {:align "center" :style "padding:6px"}
+        [:input {:type "submit" :value " 登 录 " :class "ui-state-default ui-corner-all" :style "font-weight:bold;color:green"}] ]
+       [:center 
+        [:a {:href "/esp" :style "color:white"} "返回主页"] [:br] 
+        [:img {:alt "nasoft" :src "/img/nasoft-rnd.png"}]]
+       [:input {:type "hidden" :ID "UserSignedData" :name "UserSignedData"}]
+       [:input {:type "hidden" :ID "UserCert" :name "UserCert"}]
+       [:input {:type "hidden" :ID "ContainerName" :name "ContainerName"}]
+       [:input {:type "hidden" :ID "strRandom" :name "strRandom"}] 
+       [:input {:type "hidden" :ID "strUserList" :name ""}] ]
+      bjca-onchange
+      [:script "document.title='标准化系统证书登录' "] )))
+
+(defn- ca-login
+  "bjca登录页面（新样式）
+  @type :server :local
+  @vars-js @type为:server时传入，@type为:local时无效 "
+  [type vars-js]
+  (let [action ({:local "ca-local-submit" :server "ca-submit"} type)
+        onsubmit ({:local "esp_bjca_onsubmit_local()" :server "esp_bjca_onsubmit_server()"} type)]
+    (html-body
+      {:style "margin:0; padding:0" :js bjca-js2 :onload "esp_bjca_onload()"}
+      (when (= type :server) vars-js) 
+      [:div#moc_login
+       [:div.moc_login_main
+        ; 1 上：系统名称
+        [:div.login_left_h2 [:img {:src "/esp/img/jtb_r2_c3.jpg"}]]
+        ; 2 中
+        [:div.login_left_con 
+         ; 2.1 中左
+         [:div.login_left_pic [:img {:src "/esp/img/jtb_r4_c2.jpg"}]]
+         ; 2.2 中中
+         [:div.login_left_log
+          [:div.login_log_h3 [:img {:src "/esp/img/jtb_r4_c.jpg"}]]
+          [:div.login_log_user
+           [:div.user_info {:style "border:1px dashed #ccf"}
+            [:form {:method "post" :ID "LoginForm" :name "LoginForm" 
+                    :action (str "/c/espreg/" action) :onsubmit (str "return " onsubmit)}
+             [:ul [:span "证书："] [:select {:id "UserList" :name "UserList" :style "width:215px" :class "ui-corner-all"} ""]]
+             [:ul [:span "口令："] [:input {:id "UserPwd" :name "UserPwd" :type "password" :size 16 :maxlength 16}]] 
+             [:input {:type "hidden" :ID "UserSignedData" :name "UserSignedData"}]
+             [:input {:type "hidden" :ID "UserCert" :name "UserCert"}]
+             [:input {:type "hidden" :ID "ContainerName" :name "ContainerName"}]
+             [:input {:type "hidden" :ID "strRandom" :name "strRandom"}] 
+             [:input {:type "hidden" :ID "strUserList" :name ""}] ; 保存 中文名称等
+             [:center [:a {:href "/esp" :style "color:#069"} "返回主页"]] ]]
+           [:div.user_sub
+            [:ul [:img {:src "/esp/img/login_enter.png" :onclick "$('#LoginForm').submit()"}]]
+            [:ul [:img {:src "/esp/img/login_reset.png" :onclick "$('#LoginForm').reset()"}]] ] ]]
+         ; 2.3 中右
+         [:div.login_right_pic [:img {:src "/esp/img/jtb_r4_c5.jpg"}]] ]
+        ; 3 下：技术支持
+        [:div {:class "login_bottom_txt"} "@CopyRight 2012 技术支持电话：13301357860、13301357875"] ]]
+      bjca-onchange
+      [:script "document.title='标准化系统证书登录' "] )))
+
+(defn ca-local0
+  "app: bjca不联服务器本地提交ukey，提交到ca-local-submit函数，原样式0"
+  [request]
+  (ca-login0 :local nil))
+
+(defn ca-server0
+  "app: BJCA服务器认证UKey，win下配置文件：%USERPROFILE%\\BJCAROOT\\SVSClient.properties，原样式0 "
+  [request]
+  (let [sed (SecurityEngineDeal/getInstance "SM")
+        strServerCert (.getServerCertificate sed)
+        strRandom (.genRandom sed 24)
+        strSignedData (.signData sed (.getBytes strRandom))
+        sr (session! request "Random" strRandom) 
+        vars-js (bjca-vars strSignedData strRandom strServerCert) ]
+    (ca-login0 :server vars-js)))
+
+(defn ca-local
+  "app: bjca不联服务器本地提交ukey，提交到ca-local-submit函数"
+  [request]
+  (ca-login :local nil))
+  
 (defn ca-server
   "app: BJCA服务器认证UKey，win下配置文件：%USERPROFILE%\\BJCAROOT\\SVSClient.properties "
   [request]
@@ -121,39 +154,25 @@
         strServerCert (.getServerCertificate sed)
         strRandom (.genRandom sed 24)
         strSignedData (.signData sed (.getBytes strRandom))
-        sr (session! request "Random" strRandom) ]
-    (html
-      [:html
-       (head-set-join (bjca-js strSignedData strRandom strServerCert))
-       [:body {:class "login_body" :onload "esp_bjca_onload()" }
-        [:img {:src "/img/idp-webfirst.png" :style "position: absolute; top: 50%; left: 50%; margin-top: -80px; margin-left: -110px;"}]
-        [:form {:method "post" :ID "LoginForm" :name "LoginForm" :action "/c/espreg/ca-submit" :class "login_form ui-corner-all"
-                :onsubmit (format "return esp_bjca_onsubmit('%s')" strRandom)}
-         [:center [:div {:style "color:yellow;margin-bottom:9px"} ca-prompt]]
-         "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br]
-         "选择口令：" [:input {:id "UserPwd" :name "pwd1" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
-         [:p {:align "center" :style "padding:6px"}
-          [:input {:type "submit" :value " 登 录 " :class "ui-state-default ui-corner-all" :style "font-weight:bold;color:green"}] ]
-         [:center 
-          [:a {:href "/esp" :style "color:white"} "返回主页"] [:br] 
-          [:img {:alt "nasoft" :src "/img/nasoft-rnd.png"}]]
-         [:input {:type "hidden" :ID "UserSignedData" :name "UserSignedData"}]
-         [:input {:type "hidden" :ID "UserCert" :name "UserCert"}]
-         [:input {:type "hidden" :ID "ContainerName" :name "ContainerName"}]
-         [:input {:type "hidden" :ID "strRandom" :name "strRandom"}] ]
-        [:script "document.title='标准化系统证书登录' "]]] )))
+        sr (session! request "Random" strRandom) 
+        vars-js (bjca-vars strSignedData strRandom strServerCert) ]
+    (ca-login :server vars-js)))
 
+(require '[wr3.clj.app.espconf :as espconf])
 (defn ca
   "app: 可通过本地或者服务器认证bjca ukey"
   [request]
-  ; 可调用 ca-local 或者 ca-remote
-  (ca-local request)) 
+  ; 可调用 ca-local 或者 ca-server
+  (case espconf/login-mode
+    :ca-local  (ca-local request)
+    :ca-server (ca-server request) ))
 
 (defn- bjca-verify
   "bjca服务器认证结果"
   [request]
   (let [vars (query-vars2 request)
         ;<bjca>
+        _ (session! request "ContainerName" (:ContainerName vars)) ; session中保存登录U盘的唯一号
         sed (SecurityEngineDeal/getInstance "SM")
         ranStr (session request "Random") ; (:strRandom vars)
         clientCert (:UserCert vars)
@@ -246,6 +265,7 @@
        (if (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。"
          (do (session! request "wr3user" (:uid rs))
            (session! request "wr3role" (:role rs))
+           (session! request "ContainerName" (:ContainerName vars)) ; ukey 的唯一号   
            (html (format "%s（%s）认证成功！" (:name rs) pid)
                  [:script (format "window.location.href='%s' " wr3url)])) )])))
 
@@ -262,19 +282,34 @@
   [request]
   (check3 request))
 
-(defn ca-test2
+(defn pn-ca-read
+  "app: 读取考评员U盘信息。用于org聘用pn "
+  [request]
+  (let []
+    (html-body
+      {:js bjca-js2 :onload "esp_pn_ca_onload()"}
+      [:h1 "请选取考评员证书U盘并点击确定"]
+      [:form {:method "post" :ID "LoginForm" :name "LoginForm" :onsubmit "return esp_bjca_onsubmit_local()"}
+       "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br]
+       ] 
+      (eui-button {:onclick "esp_pn_ca_ok()"} "确定")
+      bjca-onchange )))
+
+(defn ca-test
+  "bjca本地测试获取U盘信息"
   [request]
   (let [sed (SecurityEngineDeal/getInstance "SM")]
     (html-body
-       {:js bjca-js2 :onload "GetUserList('LoginForm.UserList') "}
+       {:js bjca-js2 :onload "esp_bjca_onload()"}
        [:h1 "js 离线读取ukey属性"]
        [:form {:method "post" :ID "LoginForm" :name "LoginForm" 
                :action "/c/espreg/ca-test2-submit" :target "ifrm1" 
-               :onsubmit "return esp_bjca_check_local()"}
+               :onsubmit "return esp_bjca_onsubmit_local()"}
         "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br][:br]
         "选择口令：" [:input {:id "UserPwd" :name "pwd1" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
-        (eui-button {:onclick "var uniqueid = XTXAPP.SOF_GetCertInfoByOid(SOF_ExportUserCert($('#UserList').val(),KEY_SIGNOREXCHANGE),'1.2.156.112562.2.1.1.24'); 
-                alert(uniqueid)"} "得到 uniqueId") (space 5)
+        (eui-button {:onclick "var uniqueid = 
+          XTXAPP.SOF_GetCertInfoByOid(SOF_ExportUserCert($('#UserList').val(),KEY_SIGNOREXCHANGE),'1.2.156.112562.2.1.1.24');
+          alert(uniqueid)"} "得到 uniqueId") (space 5)
         [:input {:type "submit" :value " 提 交 " :class "ui-state-default ui-corner-all" :style "font-weight:bold;color:green"}]
         [:input {:type "hidden" :ID "UserSignedData" :name "UserSignedData"}]
         [:input {:type "hidden" :ID "UserCert" :name "UserCert"}]
@@ -284,43 +319,12 @@
        [:iframe#ifrm1 {:name "ifrm1" :style "width:90%; height:200px; border:1px solid red"}]
        bjca-onchange )))
   
-(defn ca-test2-submit
-  "ca-test提交的结果测试"
-  [request]
-  (let [vars (query-vars2 request)
-        clientCert (:UserCert vars)
-        rt (bjca-decode clientCert)
-        ]
-    (html-body
-      [:h1 "rt: " rt]
-      [:table (for [[k v] vars] [:tr [:td k] [:td v]])] )))
-
-(defn ca-test
-  "app: 不与ca服务器通讯直接读bjca UKey内容。仅用于ie"
-  [request]
-  (let [sed (SecurityEngineDeal/getInstance "SM") ]
-    (html-body
-      {:class "login_body"}
-      [:img {:src "/img/idp-webfirst.png" :style "position: absolute; top: 50%; left: 50%; margin-top: -80px; margin-left: -110px;"}]
-      [:form {:method "post" :ID "LoginForm" :name "LoginForm" :action "/c/espreg/ca-test-submit" :class "login_form ui-corner-all"
-              :target "ifrm1" :onsubmit "return XTXAPP.AddSignInfo(LoginForm.UserPwd.value)"}
-       "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br]
-       "选择口令：" [:input {:id "UserPwd" :name "pwd1" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
-       [:p {:align "center" :style "padding:6px"}
-        [:input {:type "submit" :value " 提 交 " :class "ui-state-default ui-corner-all" :style "font-weight:bold;color:green"}] ]
-       [:input {:type "hidden" :ID "UserSignedData" :name "UserSignedData"}]
-       [:input {:type "hidden" :ID "UserCert" :name "UserCert"}]
-       [:input {:type "hidden" :ID "ContainerName" :name "ContainerName"}]
-       [:input {:type "hidden" :ID "strRandom" :name "strRandom" :value "NDYxNjY1NTEwNzc0NTk1NTM4NTcxOTY0"}] ]
-      bjca-activex
-      [:iframe#ifrm1 {:name "ifrm1" :style "width:90%; height:200px; border:1px solid red"}] )))
-
 (defn ca-test-submit
   "ca-test提交的结果测试"
   [request]
   (let [vars (query-vars2 request)
         clientCert (:UserCert vars)
-        rt (bjca-decode clientCert)]
+        rt (bjca-decode clientCert) ]
     (html-body
       [:h1 "rt: " rt]
       [:table (for [[k v] vars] [:tr [:td k] [:td v]])] )))
@@ -343,6 +347,7 @@
       [:h2 (str "strRandom:<br/>" strRandom)]
       [:h2 (str "strSignedData:<br/>" strSignedData)])))
 
+;;--------------------------------------------
 (defn who
   "service: 返回session中名为'wr3user'的当前已登录用户的json对象{:uid .. :name .. :roles ..}，未登录则返回'null' "
   [request]

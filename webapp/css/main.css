@@ -569,6 +569,34 @@ form.app input[type=text] {
 	background-color: #036;
 }
 
+#layout_north_mot {
+	background-image: url(/esp/img/banner-mot.jpg);
+	background-repeat: no-repeat;
+	background-color: #0e87d8;
+}
+
+#layout_north_en {
+	background-image: url(/esp/img/banner-en.jpg);
+	background-repeat: repeat-x;
+	background-color: #09c;
+}
+
+#layout_north_pn {
+	background-image: url(/esp/img/banner-pn.jpg);
+	background-repeat: repeat-x;
+	background-color: #09c;
+}
+
+#layout_north_org {
+	background-image: url(/esp/img/banner-org.jpg);
+	background-repeat: repeat-x;
+	background-color: #09c;
+}
+
+.layout_title_esp {
+	visibility: hidden;
+}
+
 /*--------------- 用于登录页面 -----------------*/
 .login_body {
 	background-image: url("/img/idp-main.png");
@@ -595,3 +623,22 @@ form.app input[type=text] {
 	font-size: 14px;
 	margin: 3px;
 }
+
+/*------------- 用于esp ca登录页面 ---------------*/
+#moc_login { 
+	width:100%; height:455px; position:absolute; top:50%; margin-top:-227px; 
+	background:url(/esp/images/jtb_r3_c1.jpg) repeat-x 0 0;
+}
+.moc_login_main { width:960px; height:455px; margin:0 auto; }
+.login_left_h2 { width:848px; height:28px; }
+.login_left_con { width:960px; height:400px; }
+.login_left_pic { width:517px; height:380px; padding:10px 0; float:left;}
+.login_left_log { width:320px; height:380px; float:left; background:#C1EBFF; padding:10px 0;}
+.login_log_h3 { width:320px; height:35px; }
+.login_log_user { width:320px; height:345px; background:url(/esp/images/jtb_r5_c4.jpg) no-repeat;}
+.user_info { width:270px; height:100px; padding:80px 20px 0 20px; margin:0 auto; font-size:14px; font-weight:bold; color:#069;}
+.user_info ul { width:260px; height:50px; margin:0px; padding:0px;}
+.user_sub { width:300px; height:34px; margin:0 auto; padding-top:30px;}
+.user_sub ul { width:79px; height:34px; float:left; display:block;}
+.login_right_pic { width:123px; height:380px; padding:10px 0; float:right; }
+.login_bottom_txt { width:405px; height:32px; text-align:center; margin-left:112px; font-size:12px; color:#069; line-height:25px;}

@@ -4,10 +4,14 @@
 (use 'wr3.clj.web)
 (require '[wr3.clj.app.espreg :as espreg])
 
+;; 登录模式： :ca-local ca本地认证 :ca-server ca服务器认证 :user-pass 用户名密码认证 
+(def login-mode :user-pass) ; [:ca-local :ca-server :user-pass]
+  
 ;; 交通运输主管部门界面配置
 (def cfg-frame-mot
   {:name "esp"
-   :style (map #(str % "") ["layout_north" "layout_title"])  ; "" 或者 "1"
+   ; :style (map #(str % "") ["layout_north" "layout_title"])  ; "" 或者 "1"
+   :style ["layout_north_mot" "layout_title_esp"]
    :title "交通运输企业安全生产标准化——主管机关管理系统（试行）"
    :searcher ["张" ; default-value
               ["考评员搜索" "range_pn" "icon-user"] ; label name icon
@@ -66,13 +70,15 @@
          ]   
    :frame-main (html [:script "layout_load_center('/c/esp/mot-resp-sum')"]
                      (set-title "主管机关管理系统（试行）"))
-;   :frame-top (html espreg/bjca-on-change)
+   :js espreg/bjca-js2
+   :after espreg/bjca-onpull
    })
 
 ;; 考评员界面配置
 (def cfg-frame-pn
   {:name "esp"
-   :style (map #(str % 1) ["layout_north" "layout_title"])  ; "" 或者 "1"
+   ; :style (map #(str % "") ["layout_north" "layout_title"])  ; "" 或者 "1"
+   :style ["layout_north_pn" "layout_title_esp"]
    :title "交通运输企业安全生产标准化——考评员在线申请系统（试行）"
    :nav [
          ["考评员" "icon-user" ; title id
@@ -85,13 +91,15 @@
    :frame-main (html [:h2 "考评员用户主界面"]
                      [:script "layout_load_center('/static/esp/about-pn.html')"]
                      (set-title "考评员在线申请系统（试行）"))
-;   :frame-top (html espreg/bjca-on-change)
+   :js espreg/bjca-js2
+   :after espreg/bjca-onpull
    })
 
 ;; 考评机构界面配置
 (def cfg-frame-org
   {:name "esp"
-   :style (map #(str % 1) ["layout_north" "layout_title"])  ; "" 或者 "1"
+   ; :style (map #(str % "") ["layout_north" "layout_title"])  ; "" 或者 "1"
+   :style ["layout_north_org" "layout_title_esp"]
    :title "交通运输企业安全生产标准化——考评机构管理系统（试行）"
    :nav [
          ["待办事宜" "icon-arrow" ; title icon
@@ -120,13 +128,15 @@
    :frame-main (html [:h2 "考评机构用户主界面"]
                      [:script "layout_load_center('/c/esp/apply-resp/en')"]
                      (set-title "考评机构管理系统（试行）"))
-;   :frame-top (html espreg/bjca-on-change)
+   :js espreg/bjca-js2
+   :after espreg/bjca-onpull
    })
 
 ;; 交通运输企业界面配置
 (def cfg-frame-en
   {:name "esp"
-   :style (map #(str % 1) ["layout_north" "layout_title"])  ; "" 或者 "1"
+   ; :style (map #(str % "") ["layout_north" "layout_title"])  ; "" 或者 "1"
+   :style ["layout_north_en" "layout_title_esp"]
    :title "交通运输企业安全生产标准化——企业在线填报管理系统（试行）"
    :nav [
          ["企业申请" "icon-star" ; title id
@@ -143,7 +153,7 @@
    :frame-main (html [:h2 "交通运输企业用户主界面"]
                      (set-title "企业在线填报管理系统（试行）"))
    :js espreg/bjca-js2
-;   :frame-top (html espreg/bjca-on-change)
+   :after espreg/bjca-onpull
    })
 
 ; 主界面子系统菜单

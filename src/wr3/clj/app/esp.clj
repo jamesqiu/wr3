@@ -3,7 +3,7 @@
   pn：考评员person，en：企业enterprise，org：考评机构organization，mot：交通部Ministry Of Transport
   pot：省级交通厅/委/局 Pronvince department Of Transport
   暂定的企业达标证书格式：2012-type-grade-admin-%05d "
-      :todo "" }
+      :todo "评分指标控制带必填星号的是否完成" }
      wr3.clj.app.esp)
 
 (use 'wr3.clj.app.espc 'wr3.clj.app.espconf :reload) ; 发布时去除reload
@@ -14,7 +14,8 @@
 (require '[wr3.clj.app.auth :as au])
 
 ;;;-------------------------------------------------------------------------------------------------------- 公共函数
-(def auth-login-url (second ["/login.html" "/c/espreg/ca"])) ; 本ns的登录页面：可选缺省认证或者bjca认证
+(def auth-login-url (case login-mode :user-pass "/login.html" "/c/espreg/ca")) ; 本ns的登录页面：可选缺省认证或者bjca认证
+;  (first ["/login.html" "/c/espreg/ca"])) 
 (defn auth
   "该 CljServlet 调用，用于本应用各函数的权限控制 "
   [request fname ids & args]
@@ -574,10 +575,12 @@
       [:h1 (format "本机构当前在职考评人员 %s 名" (count (filter #(nil? (:contract1 %)) rt)))]
       [:div#hire {:style "margin:15px"}
        (eui-tip "受聘考评员需提供其证书U盘；已聘用的考评员可以点击详情查看后进行解聘。")
-       (eui-button {} "读取受聘考评员证书U盘") [:br] ; todo 打开一个新窗口，选择证书
-       [:label "@deprecated: 聘用考评员，请输入资质证书号："]
+       "1、" (eui-button {:onclick "esp_org_pn_ukey()"} "读取受聘考评员证书U盘") [:br][:br]
+       "2、" (eui-text {:id "pid" :name "pid" :disabled "true" :style "width: 200px"}) (space 5) 
+       (eui-button {:onclick "esp_org_hire('pid')"} "继续") [:br][:br]
+       [:label "或通过资质证书号聘用考评员（<font color=red>注：此功能将被移除</font>）："]
        (eui-text {:id "cid"}) (space 3)
-       (eui-button {:onclick "esp_org_hire()"} "查询聘用") ]
+       (eui-button {:onclick "esp_org_hire('cid')"} "查询聘用") ]
       (result-html- rt '[姓名 证书类别 证书编号 专兼职 聘用日期 解聘日期 详情] 
                     [:name :type :cid :fulltime :contract0 :contract1 :_id] {:form "org-hire-view"})
       [:br][:br])))
@@ -589,27 +592,28 @@
 (defn org-hire-view
   "app: 考评员情况，能否聘用
   @如果有id，如果有cid，先通过cid查出文档:_id"
-  [id cid request]
-  (let [r (if id 
-            (with-oid- :pn id)
-            (with-mdb2 "esp" (fetch-one :pn :where {:cid cid})))
+  [id type request]
+  (let [field (if (= type "cid") :cid :pid) 
+        r (with-mdb2 "esp" (fetch-one :pn :where {field id}))
         oid (:_id r)
         cid (:cid r)
-        c0 (:contract0 r)
-        c1 (:contract1 r)
+        c0 (:contract0 r) ; 合同开始日
+        c1 (:contract1 r) ; 合同到期日
         belong (:belong r)
+        fulltime? (:fulltime r)
         uid (wr3user request)]
     (if r
       (doc- :pn (str oid) 
-            {:before (if (and c0 (not c1)) 
-                       (html
+            {:before (if (and fulltime? c0 (not c1)) 
+                       (html ; 未到期的专职考评员，可解聘
                          (eui-tip (format "该考评员目前已经聘用于【%s】。" (wr3user-name belong))) [:br]
                          (when (= belong uid)
                            (eui-button {:onclick (format "esp_fire('%s')" cid) :style "margin:10px"} (str "解聘考评员" (:name r)))) )
-                       (html (eui-combo {:id "fulltime" :value 1} {1 "专职" 0 "兼职"} ) (space 5)
-                             (eui-button {:onclick (format "esp_hire('%s')" cid)} 
-                                         (str "聘用考评员" (:name r))) [:br][:br]))})
-      "无效证书号")))
+                       (html ; 到期的专职考评员，或兼职考评员，可聘用
+                         (eui-combo {:id "fulltime" :value 1} {1 "专职" 0 "兼职"} ) (space 5)
+                         (eui-button {:onclick (format "esp_hire('%s')" cid)} 
+                                     (str "聘用考评员" (:name r))) [:br][:br]))})
+      "未查到相关考评员")))
 
 (defn org-hire
   "service: 考评机构后台聘用指定证书号的考评员

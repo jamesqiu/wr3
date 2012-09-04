@@ -2975,14 +2975,55 @@ function esp_save_backup(id) {
 }
 
 /**
- * 考评机构通过证书号查询要聘用的考评员情况
+ * org聘用、解聘pn时弹出读取pn U盘的窗口，
  */
-function esp_org_hire() {
-	var v = $('#cid').val()
-	if (v=="") {
-		$.messager.alert('提示', '请输入资质证书号如：<br/> 2011-2-0471-07959', 'warning')								
+function esp_org_pn_ukey() {
+	var rv = showModalDialog('/c/espreg/pn-ca-read', window, 
+			"dialogHeight:400px; dialogWidth:500px; resizable:no; center:yes; help:no; status:no");
+	if(typeof(rv) == 'undefined' || rv == 'undefined'){
+		alert("请选择考评员证书！");
 	} else {
-		window.open('/c/esp/org-hire-view?cid='+v, "_blank")
+//		alert("获得考评员证书的唯一标识：" + rv);
+		$('#pid').val(rv.substring(2))
+	}
+}
+
+/**
+ * 初始化证书列表，并隐藏登录org的证书，只显示pn的证书
+ */
+function esp_pn_ca_onload() {
+	esp_bjca_onload()
+	$.get('/c/espreg/container-name', function(data) {
+		var ContainerName = $.trim(data)
+		$('#UserList option').each(function() {
+			if ($(this).val()==ContainerName) {
+				$(this).remove() // 隐藏登录id
+			}
+		})
+	})	
+}
+
+function esp_pn_ca_ok() {
+	var uniqueid = XTXAPP.SOF_GetCertInfoByOid(SOF_ExportUserCert($("#UserList").val(),KEY_SIGNOREXCHANGE),"1.2.156.112562.2.1.1.24");
+	if (uniqueid.indexOf("SF") > -1){
+		window.returnValue = uniqueid;
+		window.close();
+	} else {
+		alert("请从列表中选择考评员证书！");
+	}
+}
+
+/**
+ * 考评机构通过证书号查询要聘用的考评员情况
+ * t 'cid' 'pid'
+ */
+function esp_org_hire(t) {
+	var v = (t=='cid') ? $('#cid').val() : $('#pid').val()
+	var msg = (t=='cid') ? '请输入资质证书号如：<br/> 2011-2-0471-07959' : '请通过考评员U盘获取身份证号'
+	if (v=="") {
+		$.messager.alert('提示', msg, 'warning')								
+	} else {
+		window.open('/c/esp/org-hire-view/' + v + '?type=' + t, "_blank")
 	}
 }
 
@@ -3305,27 +3346,31 @@ function esp_mot_pn_direct() {
 function esp_bjca_onload() {
 	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
 	GetUserList("LoginForm.UserList");
-	LoginForm.UserPwd.focus();	
 }
 
 /**
- * bjca 登录页面初始化（无需ca服务器）
+ * 响应拔下登录ukey的动作。 插入新ukey不理睬，拔下非登录ukey也不理睬
  */
-function esp_bjca_onload_local() {
-	GetUserList("LoginForm.UserList");
-	var strUserList = SOF_GetUserList();
-	var containerName = $("#UserList").val()
-	alert('strUserList=' + strUserList + '\n\n containerName=' + containerName)
+function esp_bjca_onpull() {
+	$.get('/c/espreg/container-name', function(data) {
+		var strUserList = SOF_GetUserList();
+		var index = strUserList.indexOf($.trim(data))
+		if (-1 == index) {
+			alert('提示：您已经拔出登录所用证书U盘，当前用户将注销！')
+			app_exit('/esp')			
+		}
+	})
 }
 
 /**
- * bjca提交前验证，无需bjca服务器的登录页面
+ * bjca提交前验证，无需bjca服务器的登录页面。
+ * 来源：bjca-XTXAPP.js 的Login函数中去除了和server相关的部分，并设置了 UserCert 和 ContainerName 
  * @returns
  */
-function esp_bjca_check_local() {
+function esp_bjca_onsubmit_local() {
 		
 	var objForm = LoginForm;
-	var strCertID = LoginForm.UserList.value
+	var strCertID = LoginForm.UserList.value // ContainerName
 	var strPin = LoginForm.UserPwd.value
 	if (objForm == null) {
 		alert("表单错误");
@@ -3380,6 +3425,7 @@ function esp_bjca_check_local() {
 	}
 	objForm.UserCert.value = userCert;
 	objForm.ContainerName.value = strCertID;
+	
 	return true;
 }
 
@@ -3387,26 +3433,17 @@ function esp_bjca_check_local() {
  * BJCA 提交前验证（登录页面需bjca服务器）
  * @returns {Boolean}
  */
-function esp_bjca_onsubmit(srand) {
+function esp_bjca_onsubmit_server() {
 	var strContainerName = LoginForm.UserList.value;
 	var strPin = LoginForm.UserPwd.value;
-	LoginForm.strRandom.value = srand //'NDYxNjY1NTEwNzc0NTk1NTM4NTcxOTY0' // srand
+	LoginForm.strRandom.value = strServerRan //'NDYxNjY1NTEwNzc0NTk1NTM4NTcxOTY0' 
 	var ret = Login("LoginForm", strContainerName, strPin);
-//	var ret = XTXAPP.AddSignInfo(strPin);
 	if(ret) {
-		LoginForm.UserPwd.value = "";
+		LoginForm.UserPwd.value = ""; // 不暴露密码
 		return true;
 	} else {
 		return false;
 	}
-}
-
-/**
- * BJCA 响应KEY插入/拔出事件
- */
-function esp_bjca_onchange() {
-	alert('提示：您已经插入/拔出USBKey，当前用户将注销！')
-	app_exit('/esp')
 }
 
 /**
