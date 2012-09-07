@@ -213,3 +213,4 @@
           values (map #((keyword (between % "${" "}")) var-value-map) vars)]
       (reduce #(apply replace-all %1 %2) s (zipmap vars values)))))
 
+(defn valid-rune [s] (fill (str (apply + (map int s))) 6))

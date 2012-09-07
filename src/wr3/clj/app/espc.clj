@@ -179,6 +179,7 @@
       :contract0 (format-date- v)
       :contract1 (if v0 (format-date- v0) "<b>目前在职</b>")
       :uid (if (:mot-user m) v0 (wr3user-name v0))
+      :admin-uid (wr3user-name v0)
       :role (if-let [dd (:admin m)] (get dd v) v) ; espfj 角色
       :freport [:a {:href v0 :target "_blank"} "查看"]
       :info (replace-all v "\r\n" "<br/>")
@@ -201,6 +202,7 @@
       :pass-direct (format-pass-direct v)
       :orgid1 (format-orgid1 v {:link true})
       :pnids (join (format-ids- :pn v0 {:link true :form "pn-doc" :uid true}) "、")
+      :belong (str v (when-let [n (wr3user-name v)] (format " (%s)" n)))
       v)))
 
 (defn result-html-
@@ -237,6 +239,7 @@
     :belong (str v (when-let [n (wr3user-name v)] (format " (%s)" n)))
     :fulltime (if v "专职" "兼职")
     :admin (or (get (or (:admin m) dd-admin) (str v)) v) ; espfj 可在m中指定 {:admin dd-admin-fj}
+    (:uid :admin-uid) (wr3user-name v)
     :from (or (get (or (:from m) dd-province) v) v) ; espfj 可在m中指定 {:admin dd-province-fj}
     :orgid (if (:orgid-as-select m) 
              (eui-combo {:id "orgid" :name "orgid"} (zipmap v (format-ids- :org v {:uid true})))
@@ -521,7 +524,7 @@
   [tb]
   (let [nam (dd-form tb)]
     (html
-      (eui-tip (format "请输入%s名称或证书号进行模糊查询，并选定%s。" nam nam))
+      (eui-tip (format "以下输入框提供自动完成功能，请输入%s名称或证书号关键字，并选定列表中的一个%s。" nam nam))
       [:label (format "%s名称或证书号：" nam)]
       [:input#in {:name "in" :type "text" :style "width:500px;" :value ""}]
       [:script (format "esp_name_cid_autocomplete('%s')" (name tb))])))
@@ -529,10 +532,43 @@
 (defn name-cid-autocomplete
   "service: en-search-input函数提交的自动完成查询
   @id 'en' 'pn' 'org' 
-  @term 自动搜索控件自动附上的参数，带搜索字符串 "
+  @term 自动完成控件自动附上的参数，带搜索字符串 "
   [id term request]
   (let [tb (keyword id)
-        rs (search-auto- tb term {:limit 20 :where {:cid {:$exists true}}})]
+        rs (search-auto- tb term {:limit 20})] ;  :where {:cid {:$exists true}}
     (json-str (map #(format "%s, 证书号:%s" (:name %) (:cid %)) rs))))
 
+;;;-------------------------------------------------------------------------------------------------------- hot 热线举报投诉
+(def hot---------- nil)
+
+(defn hot
+  "app: 举报热线"
+  []
+  (let [sid "fhot"]
+    (html-body
+      [:h1 "实名举报"]
+      (eui-tip "任何单位和个人对考评机构的考评行为，有权向主管机关进行实名举报，主管机关会及时受理、组织调查处理，并为举报人保密。") [:br][:br]
+      [:form {:id "fm1" :action "/c/espc/hot-save" :method "post"}
+       [:label [:b "举报人信息等："]] (eui-textarea {:name "info"} "姓 名：\n身份证号：\n联系方式：\n\n其 他：\n") [:br][:br]
+       [:label [:b "填写举报内容："]] (eui-textarea {:name "content" :style "width: 500px; height: 300px"} "") [:br][:br]
+       [:label [:b "选择主管机关："]] (eui-combo {:name "admin"} dd-admin) [:br][:br]
+       (eui-button {:onclick "esp_hot_submit()"} "提 交")] 
+      (set-title "举报热线"))))
+  
+(defn hot-save
+  "app: "
+  [request]
+  (let [vars (query-vars request)]
+    (with-mdb2 "esp"
+      (insert! :hot (into vars {:date (datetime)})))
+    "举报信息已经保存"))
+  
+;;------------------------------------------------- test
+;(use 'wr3.clj.datagen)
+;--- 注：文件大小不能大于64k（65536）字节，否则报错
+;(with-esp- (fetch :en :where {:admin {:$exists false}}))
+;(with-mdb2 "esp" (destroy! :user {:name #"^0815"}))
+;(update- :refine {} (fn [r] (dissoc r :admin)) :replace)
+;(insert- :user  {:name "考评员证书", :pid "110103198506020022", :role "pn", :uid "pn-110103198506020022", :admin "02"})
+;(with-esp- (fetch :en-apply :where {:orgid ["4f8aebd175e0ae92833680f4" "4f8aebd175e0ae92833680ff"]}))
 ;(pager-options 201)

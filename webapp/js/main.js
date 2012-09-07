@@ -3128,6 +3128,28 @@ function esp_hot_submit() {
  * 指标评分计算分值
  */
 function esp_get_score() {
+	// 校验所申请等级的打星是否全部满足
+	var grade = $('#grade').val()
+	var cond = 'input[group="score"]'
+	switch(grade) {
+	case "1": cond += '[star!="0"]'; break;
+	case "2": cond += '[star!="0"][star!="1"]';break;
+	case "3": cond += '[star="3"]';break;
+	default: break;
+	}
+	var scores_grade = $(cond)
+	var err = false
+	scores_grade.each(function(i,e) {
+		if ($(e).val() != $(e).attr('max')) {
+			alert("提示：所申请等级中对应打星号的项必须全部满分。")
+			$('#sum').val('0')
+			err = true
+			return false; // 停止循环
+		}
+	})	
+	if (err) return;
+	
+	// 计算分数
 	var scores = $('input[group="score"]')
 	var s = ""
 	var err = false
@@ -3189,7 +3211,7 @@ function ajax_post(url, func) {
  * 共同函数，提交含大量内容，尤其是有textarea等控件，序列化后的url可能超过2k大小的表单。
  * @param fm form的jquery表达式如$('#fm1')
  * @param url 提交的action地址
- * @param func 提交后的客户化动作
+ * @param func 提交后的客户化动作，可选
  */
 function ajax_form(fm, url, func) {
 	$.post(url, fm.serializeArray(), function(data) {
@@ -3353,9 +3375,11 @@ function esp_bjca_onload() {
  */
 function esp_bjca_onpull() {
 	$.get('/c/espreg/container-name', function(data) {
+		var containerName = $.trim(data)
 		var strUserList = SOF_GetUserList();
-		var index = strUserList.indexOf($.trim(data))
-		if (-1 == index) {
+		var index = strUserList.indexOf(containerName) 
+//		alert('strUserList='+strUserList+';\ncontainer-name='+containerName+';index='+index)
+		if (data!="" && (-1 == index)) { // 所有正插入的证书中没有已登录证书
 			alert('提示：您已经拔出登录所用证书U盘，当前用户将注销！')
 			app_exit('/esp')			
 		}

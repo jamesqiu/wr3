@@ -71,7 +71,7 @@
       (in? role (keys dd-admin-fj)) true
       :else false)))
 
-(defn index
+(defn index-close
   "2012-7-31 8:00PM，2012-8-23 8：00PM后关闭"
   []
   (html-body
@@ -91,7 +91,7 @@
 (def body-tail [:h2 {:style "padding:15px; background-color:lightgray; margin-bottom:0px; color:#333; text-shadow:0 1px 0 #EEE;"}
                 "版权所有：福建省交通运输厅 2012 年"])
   
-(defn index-close
+(defn index
   "app: 直接填写或者用身份证（密码：后4位）登录修改原来提交的内容"
   []
   (html-body

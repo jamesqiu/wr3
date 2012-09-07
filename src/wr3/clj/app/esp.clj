@@ -1,19 +1,17 @@
 (ns ^{:doc "企业安全生产标准化管理系统 Enterprise Safety Production Standardization。
-  后来的文档中有这么叫的“安全生产标准化（work safety standardization）” 
-  pn：考评员person，en：企业enterprise，org：考评机构organization，mot：交通部Ministry Of Transport
-  pot：省级交通厅/委/局 Pronvince department Of Transport
-  暂定的企业达标证书格式：2012-type-grade-admin-%05d "
-      :todo "评分指标控制带必填星号的是否完成" }
+  “安全生产标准化（work safety standardization）” 
+  pn：考评员person，en：企业enterprise，org：考评机构organization，mot：交通部Ministry Of Transport "
+      :todo "" }
      wr3.clj.app.esp)
 
-(use 'wr3.clj.app.espc 'wr3.clj.app.espconf :reload) ; 发布时去除reload
+(use 'wr3.clj.app.espc 'wr3.clj.app.espconf); :reload)
 (use 'wr3.clj.web 'wr3.clj.tb 'wr3.clj.s 'wr3.clj.n 'wr3.clj.chart 'wr3.clj.u 'wr3.clj.nosql 'wr3.clj.chart)
 (use 'hiccup.core 'somnium.congomongo)
 (use 'clojure.contrib.json)
 (import 'wr3.util.Charsetx)
 (require '[wr3.clj.app.auth :as au])
 
-;;;-------------------------------------------------------------------------------------------------------- 公共函数
+;;;--------------------------------------------------------------------------------------------------- 公共函数
 (def auth-login-url (case login-mode :user-pass "/login.html" "/c/espreg/ca")) ; 本ns的登录页面：可选缺省认证或者bjca认证
 ;  (first ["/login.html" "/c/espreg/ca"])) 
 (defn auth
@@ -29,12 +27,11 @@
         (and (= id "en") (= role "en")) true
         (and (= id "org") (= role "org")) true
         (and (= id "mot") (= role "mot")) true
-        (and (= id "pot") (= role "pot")) true
         :else false)
       ; 其他页面注册用户都能访问
       (cond 
         uid true
-        (.startsWith fname "hot") true ; 热线投诉匿名用户即可访问   
+        ; (.startsWith fname "hot") true ; 实名举报不登录可访问   
         :else false))))
 
 (defn- index-all
@@ -165,7 +162,7 @@
 
 (defn- has-digit4- [n] (some #(= \4 %) (str n)))
 (defn- cert-sid-max 
-  "得到保存在:cert表中的最大证书号。
+  "得到保存在:cert表中某主管机关颁发过的最大证书号。
   @id :pn :en :org 
   @admin 主管机关代码如：'01' '02' '34' "
   [id admin]
@@ -416,16 +413,12 @@
   "service: 主管机关对pn、org、en证书的撤销
   @id 'pn' 'org' 'en' "
   [id]
-  (let [tb (keyword id)
-        v0 (tb {:pn "2011-2-022-20789" :org "2012-D-00-丙7585" :en "2012-2-1-0551-00844"})]
+  (let [tb (keyword id)]
     (html
       [:h1 (format "%s撤销" (dd-cert tb))]
       [:form {:id "fm1" :action (format "/c/esp/cert-cancel-doc/%s" id) :method "get" :target "_blank"}
        (name-cid-search-input tb) [:br][:br]
-;       [:label (format "请输入要撤销资质的%s证书号：" nam)]
-;       (eui-text {:id "cid" :name "cid" :value v0}) (space 3) 
-       (eui-button {:onclick "$('#fm1').submit()"} " 查 询 ")
-       ] )))
+       (eui-button {:onclick "$('#fm1').submit()"} " 查 询 ") ] )))
 
 (defn cert-cancel-doc
   "service: 查询指定证书号，显示信息并撤销
@@ -468,22 +461,63 @@
       (eui-button {:onclick f-yes :iconCls "icon-ok"} s-yes) (space 10)
       (eui-button {:onclick f-no :iconCls "icon-cancel"} s-no) br2 br2 )))
 
-(defn refine-
-  "org或en处理mot下发的整改意见和整改通知。
-  @type :org :en
-  todo"
+(defn- refine
+  "mot 下发整改意见给org或者en "
   [type]
-  (let []
+  (let [tb type]
+    (html
+      [:h1 (format "选择%s下发整改通知" (dd-form type))]
+      [:form {:id "fm1" :action (format "/c/esp/refine-doc/%s" (name type)) :method "get" :target "_blank"}
+       (name-cid-search-input tb) [:br][:br]
+       (eui-button {:onclick "$('#fm1').submit()"} " 查 询 ") ] )))
+  
+(defn refine-doc
+  "service: 查询指定名称，显示信息并整改
+  @id 'org' 'en', 
+  @in 名称及证书号
+  @cid cid证书号
+  @type :pn :org "
+  [id in]
+  (let [tb (keyword id)
+        [nam cid] (split in ", 证书号:")
+        r (first (with-esp- (fetch tb :where {:name nam})))
+        oid (str (:_id r))]
+    (if r
+      (doc- tb oid 
+            {:after (html [:br] 
+                          [:form#fm1 {:action "/c/esp/refine-save" :method "POST"}
+                           [:input {:name "uid" :type "hidden" :value (:uid r)}]
+                           [:label "整改意见："](eui-textarea {:name "advice-refine" :style "width:500px"} "整改……") [:br][:br] 
+                           (eui-button {:onclick "$('#fm1').submit()"} "下发整改意见") [:br][:br]] )})
+      (html-body (eui-tip (format "未找到该%s！" (dd-form tb))) [:br] (eui-button-close)) )))
+
+(defn refine-save
+  [request]
+  (let [admin-uid (wr3user request)
+        vars (query-vars2 request)
+        m (merge vars {:admin-uid admin-uid :date (datetime)})]
+    (do (insert- :refine m)
+      (html-body "整改通知已经下发。" [:br][:br] (eui-button-close)))))
+      
+(defn refine-resp
+  "org或en处理mot下发的整改意见和整改通知。"
+  [request]
+  (let [uid (wr3user request)
+        rs (with-esp- (fetch :refine :where {:uid uid} :sort {:date -1}))]
     (html 
       [:h1 "整改意见及报告"]
-      [:table.wr3table
-       [:thead 
-        [:tr [:th "整改意见"] [:th "整改报告"] ]]
-       [:tbody 
-        [:tr [:td "主管机关整改意见"] [:td (dd-form type) "整改报告（文字+附件）"] ]] 
-       ] )))
+      (result-html- rs [] [:date :uid :advice-refine :_id] {:form "refine-resp-doc"}))))
+
+(defn refine-resp-doc
+  "app: org或en显示整改通知，并提交整改报告。todo：更新整改报告记录，添加整改报告附件"
+  [id]
+  (doc- :refine id {:after (html [:br] 
+                                 [:form#fm1 {:action "" :method "POST"}
+                                  [:label "整改报告："] (fileupload-field "整改报告" "refine-doc" "" {}) [:br][:br] 
+                                  (eui-button {:onclick ""} "提交整改报告") [:br][:br]] 
+                                 (fileupload-dialog))}))
   
-;;;-------------------------------------------------------------------------------------------------------- pn  考评员
+;;;--------------------------------------------------------------------------------------------------- pn  考评员
 (def pn---------- nil)
 
 (defn pn-apply
@@ -537,7 +571,16 @@
   [id]
   (doc- :pn id {:after (pn-history id)}))
 
-;;;-------------------------------------------------------------------------------------------------------- org 考评机构
+(defn pn-org
+  "service: pn本人受聘org的情况"
+  [request]
+  (let [uid (wr3user request)
+        rs (with-esp- (fetch :pn :where {:uid uid :belong {:$exists true}}))]
+    (html (if (empty? rs) [:h1 "尚未受聘于考评机构"] 
+            (html [:h1 "已受聘于如下考评机构："]
+                  (result-html- rs [] [:name :belong :fulltime :contract0 :contract1] {}) )))))
+
+;;;--------------------------------------------------------------------------------------------------- org 考评机构
 (def org---------- nil)
 
 (defn org-apply
@@ -584,10 +627,6 @@
       (result-html- rt '[姓名 证书类别 证书编号 专兼职 聘用日期 解聘日期 详情] 
                     [:name :type :cid :fulltime :contract0 :contract1 :_id] {:form "org-hire-view"})
       [:br][:br])))
-
-(defn org-refine
-  []
-  (refine- :org))
 
 (defn org-hire-view
   "app: 考评员情况，能否聘用
@@ -757,7 +796,7 @@
         m (merge (:stand doc) {:role (wr3role request)})] 
     (stand- type2 enid m)))
   
-;;;-------------------------------------------------------------------------------------------------------- en  企业
+;;;--------------------------------------------------------------------------------------------------- en  企业
 (def en---------- nil)
 
 (defn en-apply
@@ -839,11 +878,7 @@
         (html [:h2 (format "已提交过%s次申请：" (count rs))]
               (result-html- rs [] [:date :grade :type2 :admin :_id] {:form "docv/en-apply"}) )))))
 
-(defn en-refine
-  []
-  (refine- :en))
-
-;;;-------------------------------------------------------------------------------------------------------- mot 主管机关
+;;;--------------------------------------------------------------------------------------------------- mot 主管机关
 (def mot---------- nil)
 
 (defn- mot-role
@@ -1360,13 +1395,11 @@
   
 (defn mot-org-refine
   []
-  (html
-    (eui-tip "Todo：选择考评机构下发整改通知。")))
+  (refine :org))
   
 (defn mot-en-refine
   []
-  (html
-    (eui-tip "Todo：选择企业下发整改通知。")))
+  (refine :en))
   
 (defn mot-resp-sum
   "service: 在主页面上显示待办事宜统计信息"
@@ -1386,57 +1419,21 @@
             (format "%s （<font color=%s>%s</font>）" title (if (zero? sum ) "lightgray" "red") sum)]]])] ) ))
 
 (defn mot-portal
-  "service: mot对首页进行维护"
+  "service: mot对首页进行维护. todo: 改为ajax提交 "
   [request]
-  (html-body
-    {}
-    (input-form cfg-portal {:title "首页栏目内容维护"
-                            :action "/c/esp/mot-portal-save"
-                            :buttons (html (eui-button-submit "fm1") (space 5)
-                                           (eui-button-reset "fm1") ) })
+  (html
+    (input-form cfg-portal 
+                {:title "首页栏目内容维护"
+                 :action "/c/esp/mot-portal-save"
+                 :buttons (html (eui-button-submit "fm1" {:ajax "/c/esp/mot-portal-save"}) (space 5) 
+                                (eui-button-reset "fm1") ) })
     (fileupload-dialog) ))
 
 (defn mot-portal-save
   [request]
   (let [vars (query-vars2 request)
         {rt :rt err :error} (input-check-require vars cfg-portal)]
-    (html-body 
+    (html
       (if rt
-        (str "成功提交：" vars)
-        (eui-tip (str "如下必填字段尚未填写：" (join err "，")))))))
-
-;;;-------------------------------------------------------------------------------------------------------- hot 热线举报投诉
-(def hot---------- nil)
-
-(defn hot
-  "app: 举报热线"
-  []
-  (let [sid "fhot"]
-    (html-body
-      [:h1 "实名举报"]
-      (eui-tip "任何单位和个人对考评机构的考评行为，有权向主管机关进行实名举报，主管机关会及时受理、组织调查处理，并为举报人保密。") [:br][:br]
-      [:form {:id "fm1" :action "/c/esp/hot-save" :method "post"}
-       [:label [:b "举报人信息等："]] (eui-textarea {:name "info"} "姓 名：\n身份证号：\n联系方式：\n\n其 他：\n") [:br][:br]
-       [:label [:b "填写举报内容："]] (eui-textarea {:name "content" :style "width: 500px; height: 300px"} "") [:br][:br]
-       [:label [:b "选择主管机关："]] (eui-combo {:name "admin"} dd-admin) [:br][:br]
-       (eui-button {:onclick "esp_hot_submit()"} "提 交")] 
-      (set-title "举报热线"))))
-  
-(defn hot-save
-  "app: "
-  [request]
-  (let [vars (query-vars request)]
-    (with-mdb2 "esp"
-      (insert! :hot (into vars {:date (datetime)})))
-    "举报信息已经保存"))
-  
-;;------------------------------------------------- test
-;(use 'wr3.clj.datagen)
-;--- 注：文件大小不能大于64k字节，否则报错
-;(with-esp- (fetch :en :where {:admin {:$exists false}}))
-;(with-mdb2 "esp" (destroy! :user {:name #"^0815"}))
-;(update- :pn {:admin {:$exists true}} (fn [r] {:cid (format "2011-%s-%s-0%s"  (:type r) (:admin r) (subs+ (:cid r) -1 -5) )}))
-;(insert- :user  {:name "北京交通测试1", :pid "X0009980-7" :role "mot", :uid "mot-X0009980-7"})
-;(print-seq (with-esp- (fetch :en-apply :only [:name :pnids] :where {:pnids {:$in ["4f8aeb2a75e0ae92833680e2"]}})))
-;(with-esp- (fetch :en-apply :where {:orgid ["4f8aebd175e0ae92833680f4" "4f8aebd175e0ae92833680ff"]}))
-;(sum (with-esp- (map :score (fetch :indic3 :only [:score] :where {:type2 51}))))
+        (str "成功提交：\n\n" vars) ; todo: 完成保存
+        (str "如下必填字段尚未填写：\n\n" (join err "，"))))))

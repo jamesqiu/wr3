@@ -343,9 +343,15 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   (eui-button {:onclick "window.close();"} "关闭"))
 
 (defn eui-button-submit
-  "submit form的按钮. @fm fm的id字符串，如'fm1' "
-  [form-id]
-  (eui-button {:onclick (format "$('#%s').submit()" form-id) :iconCls "icon-ok"} "提交"))
+  "submit form的按钮. 
+  @fm fm的id字符串，如'fm1'
+  @m 使用ajax提交时的参数 {:ajax '/c/esp/portal-save'} "
+  ([form-id] (eui-button {:onclick (format "$('#%s').submit()" form-id) :iconCls "icon-ok"} "提交"))
+  ([form-id m] 
+    (let [js (if-let [url (:ajax m)]
+               (format "ajax_form($('#%s'), '%s')" form-id url)
+               (format "$('#%s').submit()" form-id))]
+      (eui-button {:onclick js} "提交"))))
 
 (defn eui-button-reset
   "reset form的按钮. @fm fm的id字符串，如'fm1' "

@@ -2,11 +2,33 @@
 
 (use 'hiccup.core)
 (use 'wr3.clj.web)
-(require '[wr3.clj.app.espreg :as espreg])
 
 ;; 登录模式： :ca-local ca本地认证 :ca-server ca服务器认证 :user-pass 用户名密码认证 
-(def login-mode :user-pass) ; [:ca-local :ca-server :user-pass]
-  
+(def login-mode (last [:ca-local :ca-server :user-pass]))
+
+; bjca证书验证返回值代表的含义
+(def dd-retValue {-1 "登录证书的根不被信任"
+                  -2 "登录证书超过有效期"
+                  -3 "登录证书为作废证书" 
+                  -4 "登录证书被临时冻结" })
+
+;; bjca新版所需2个.js文件
+(def bjca-js2 ["bjca-date.js" "bjca-XTXApp.js"])
+
+; ie浏览器会调用该内容；非ie浏览器解释不了如下内容，直接执行 bjca-XTXAPP.js 中的OnUsbKeyChange函数，但也是同样的内容。
+(def bjca-onchange
+  "<SCRIPT LANGUAGE=javascript event=OnUsbKeyChange for=XTXAPP> OnUsbKeyChange() </SCRIPT>")
+
+;; 第一行用于ie浏览器，第二行用于非ie浏览器。用于各子系统主页
+(def bjca-onpull
+  "<SCRIPT LANGUAGE=javascript event=OnUsbKeyChange for=XTXAPP> esp_bjca_onpull(); </SCRIPT>
+   <script language=javascript> function OnUsbKeyChange() { esp_bjca_onpull() } </script> ")
+
+; 登录页面的提示
+(def bjca-prompt 
+  (str "提示：请将本系统证书U盘插入计算机"
+       "（<a href='http://gotoreal.com:8080/userregister/firstpage.html' target='_blank' style='color:#fcc'>点击申请</a>）。"))
+
 ;; 交通运输主管部门界面配置
 (def cfg-frame-mot
   {:name "esp"
@@ -31,7 +53,7 @@
           ["企业换证申请受理" "icon-star"    "cert-renew-resp/en"]  
           ["投诉举报受理" "icon-tip"    "mot-hot"]  
           ]
-         ["考评员" "icon-user" ; title id
+         ["考评员管理" "icon-user" ; title id
           ["考评员列表" "icon-list"    "pn-list"] ; title icon id 
           ["资格证书制发" "icon-list"    "cert-resp/pn"] ; title icon id 
           ["考评员培训、考试" "icon-list"    "mot-pn-train"] ; title icon id 
@@ -39,7 +61,7 @@
           ["考评员统计查询" "icon-bar"    "mot-olap/pn"] ; title icon id 
           ["考评员考试统计" "icon-list"    "mot-pn-exam"] ; title icon id 
           ]
-         ["考评机构" "icon-earth" ; title id
+         ["考评机构管理" "icon-earth" ; title id
           ["考评机构列表" "icon-list"  "org-list"] ; title icon id 
           ["资质证书制发" "icon-list"    "cert-resp/org"] ; title icon id 
           ["问题整改" "icon-list"    "mot-org-refine"] ; title icon id 
@@ -48,7 +70,7 @@
           ["考评机构统计查询" "icon-bar"    "mot-olap/org"] ; title icon id 
           ["考评情况汇总表"          "icon-list"    "mot-org-eval"] ; title icon id 
           ]
-         ["交通运输企业"           "icon-star" ; title id
+         ["交通运输企业管理"           "icon-star" ; title id
           ["企业列表" "icon-list"  "en-list"] ; title icon id 
           ["已达标企业" "icon-list"  "mot-en-passed"] ; title icon id 
           ["企业统计查询" "icon-bar"  "mot-olap/en"] ; title icon id 
@@ -57,21 +79,26 @@
           ["达标证书撤销" "icon-list"    "cert-cancel/en"] ; title icon id 
           ["年度工作报告"          "icon-list"    "report-view/en"] ; title icon id 
           ]
-         ["下级机构管理"           "icon-pen" ; title id
-          ["统计分析"          "icon-list"    "mot-sub-olap"] ; title icon id 
+         ["下级机构管理"           "icon-list" ; title id
           ["机构维护"          "icon-list"    "mot-admin"] ; title icon id 
           ["用户列表"          "icon-list"    "mot-user"] ; title icon id 
+          ["下级机构统计分析"          "icon-list"    "mot-sub-olap"] ; title icon id 
           ]
-         ["系统管理及帮助"     "icon-search"
-          ["装载更新配置"     "icon-search" "reload" "/c/console/reload/app.espconf"]
-          ["网站样式"          "icon-search" "site_bt"]
-          ["使用帮助"          "icon-help"   "help_bt"]
+         ["查询及统计分析"           "icon-pie" ; title id
+          ["企业统计查询" "icon-bar"  "mot-olap/en"] ; title icon id 
+          ["考评机构统计查询" "icon-bar"    "mot-olap/org"] ; title icon id 
+          ["考评员统计查询" "icon-bar"    "mot-olap/pn"] ; title icon id 
+          ["下级机构统计分析"          "icon-list"    "mot-sub-olap"] ; title icon id 
+          ]
+         ["系统管理"     "icon-setting"
+          ["装载更新配置"     "icon-reload" "mot-reload" "/c/console/reload/app.espconf"]
+          ["首页内容维护"     "icon-reload" "mot-portal"]
           ]
          ]   
    :frame-main (html [:script "layout_load_center('/c/esp/mot-resp-sum')"]
                      (set-title "主管机关管理系统（试行）"))
-   :js espreg/bjca-js2
-   :after espreg/bjca-onpull
+   :js bjca-js2
+   :after bjca-onpull
    })
 
 ;; 考评员界面配置
@@ -85,14 +112,15 @@
           ["资格申请" "icon-list"    "pn-apply"] ; title icon id url 
           ["培训、考试情况" "icon-list"  "pn-learn"] 
           ["换证申请" "icon-list"  "cert-renew/pn"] 
+          ["签约考评机构" "icon-list"  "pn-org"]
           ["使用帮助" "icon-help" "pn-help" "/static/esp/about-pn.html"]
           ]
          ] 
    :frame-main (html [:h2 "考评员用户主界面"]
                      [:script "layout_load_center('/static/esp/about-pn.html')"]
                      (set-title "考评员在线申请系统（试行）"))
-   :js espreg/bjca-js2
-   :after espreg/bjca-onpull
+   :js bjca-js2
+   :after bjca-onpull
    })
 
 ;; 考评机构界面配置
@@ -104,9 +132,9 @@
    :nav [
          ["待办事宜" "icon-arrow" ; title icon
           ["企业考评待办工作" "icon-list" "apply-resp/en"] ; title icon id 
-          ["整改报告" "icon-list" "org-refine"] ; title icon id 
+          ["整改报告" "icon-list" "refine-resp"] ; title icon id 
           ]
-         ["考评机构" "icon-earth" ; title id
+         ["考评机构工作" "icon-earth" ; title id
           ["资质申请" "icon-list"    "org-apply"] ; title icon id 
           ["变更申请" "icon-list"    "backup/org"] ; title icon id 
           ["换证申请" "icon-list"    "cert-renew/org"] 
@@ -118,7 +146,7 @@
           ["考评员培训考试" "icon-list"    "org-pn-train"] 
           ["考评员档案管理" "icon-list"    "org-pn-archive"] 
           ]
-         ["企业考评管理" "icon-pen" ; title id
+         ["达标企业管理" "icon-pen" ; title id
           ["企业达标等级证书制发" "icon-list" "cert-resp/en"] ; title icon id 
           ["工作进度查询" "icon-list" "org-en-process"] 
           ["考评企业档案管理" "icon-list" "org-en-archive"] 
@@ -128,8 +156,8 @@
    :frame-main (html [:h2 "考评机构用户主界面"]
                      [:script "layout_load_center('/c/esp/apply-resp/en')"]
                      (set-title "考评机构管理系统（试行）"))
-   :js espreg/bjca-js2
-   :after espreg/bjca-onpull
+   :js bjca-js2
+   :after bjca-onpull
    })
 
 ;; 交通运输企业界面配置
@@ -147,13 +175,13 @@
           ["企业年度工作报告" "icon-list"  "report/en"] 
           ["变更申请" "icon-list"    "backup/en"] 
           ["换证申请" "icon-list"    "cert-renew/en"] 
-          ["整改报告" "icon-list" "en-refine"] ; title icon id 
+          ["整改报告" "icon-list" "refine-resp"] ; title icon id 
           ]
          ]   
    :frame-main (html [:h2 "交通运输企业用户主界面"]
                      (set-title "企业在线填报管理系统（试行）"))
-   :js espreg/bjca-js2
-   :after espreg/bjca-onpull
+   :js bjca-js2
+   :after bjca-onpull
    })
 
 ; 主界面子系统菜单
@@ -278,6 +306,7 @@
    :en-backup "企业变更申请"
    :pn-train "考评员培训考试记录"
    :hot "实名举报信息"
+   :refine "整改通知"
    })
 ; 证书年限
 (def dd-cert-year
@@ -444,8 +473,10 @@
      :_id "详情"
      :_issue "证书"
      :_select "选择"
+     :admin-uid "主管机关用户"
      :advice "处理意见"
      :advice-eval "考评意见"
+     :advice-refine "整改意见"
      :advice-review "审核意见"
      :belong "所属考评机构"
      :birth "出生日期"
