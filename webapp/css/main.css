@@ -636,7 +636,7 @@ form.app input[type=text] {
 .login_left_log { width:320px; height:380px; float:left; background:#C1EBFF; padding:10px 0;}
 .login_log_h3 { width:320px; height:35px; }
 .login_log_user { width:320px; height:345px; background:url(/esp/images/jtb_r5_c4.jpg) no-repeat;}
-.user_info { width:270px; height:100px; padding:80px 20px 0 20px; margin:0 auto; font-size:14px; font-weight:bold; color:#069;}
+.user_info { width:270px; height:160px; padding:20px 20px 0 20px; margin:0 auto; font-size:14px; font-weight:bold; color:#069;}
 .user_info ul { width:260px; height:50px; margin:0px; padding:0px;}
 .user_sub { width:300px; height:34px; margin:0 auto; padding-top:30px;}
 .user_sub ul { width:79px; height:34px; float:left; display:block;}

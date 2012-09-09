@@ -27,7 +27,7 @@
 ; 登录页面的提示
 (def bjca-prompt 
   (str "提示：请将本系统证书U盘插入计算机"
-       "（<a href='http://gotoreal.com:8080/userregister/firstpage.html' target='_blank' style='color:#fcc'>点击申请</a>）。"))
+       "（<a href='http://gotoreal.com:8080/userregister/firstpage.html' target='_blank'>点击申请</a>）。"))
 
 ;; 交通运输主管部门界面配置
 (def cfg-frame-mot
@@ -238,10 +238,17 @@
    7 "（七）其他不能胜任考评工作的。" 
    })
 ; 考评员换证原因
+   :pn "考评员资格证"
+   :org "考评机构资质证书"
+   :en "企业达标等级证书"
+
 (def dd-renew
   {
-   1 "1、考评员资格证书到期"
-   2 "2、户籍所在地或常住地发生省际间变更"
+   0 ""
+   1 "1、考评员：资格证书到期"
+   2 "2、考评员：户籍所在地或常住地发生省际间变更"
+   3 "3、企业：达标等级证书到期"
+   4 "4、考评机构：资质证书到期"
    })
 ; 对企业附加考评的原因
 (def dd-recheck 
@@ -438,6 +445,7 @@
    ["联系人邮箱" :email {:require true}]
    ["单位基本情况相关材料" :met {:t 'file :require true}]
    ["专职考评员相关材料" :pns {:t 'file :require true :title "文件10M以内大小"}]
+   ["换证原因<b>（仅换证申请）</b>" :renew {:t dd-renew}]
    ])
 ; 企业申请表
 (def cfg-apply-en ; en-input-form 
@@ -457,6 +465,7 @@
    ["企业法人资格证件" :qual {:t 'file :require true }] 
    ["经营许可证" :license {:t 'file :require true }]
    ["企业安全生产工作报告" :report {:t 'file :require true :title "Word文档"}]
+   ["换证原因<b>（仅换证申请）</b>" :renew {:t dd-renew}]
    ])
 ;---------------- end
 
@@ -506,11 +515,13 @@
      :pnids "选择的考评员"
      :province "省份"
      :reason "原因"
+     :refine-doc "整改报告"
      :resp "受理结果"
      :resp-eval "考评结果"
      :resp-review "审核结果"
      :respdate "受理日期"
      :respdate-eval "考评日期"
+     :respdate-refine "整改报告日期"
      :respdate-review "审核日期"
      :score "分数"
      :score0 "自评分数"

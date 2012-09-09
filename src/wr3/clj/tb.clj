@@ -182,6 +182,12 @@
         col (map #(nth % j1) table)]
     (vec col)))
 
+(defn table-trans
+  "table转置"
+  [table]
+  (vec (apply map vector table)))
+;(let [t (table 3 2)] (table-print t) (println) (table-print (table-trans t)))
+
 ;;; ------------- table 类型（form-table list-table rotate-table aggre-table group-table frame-table cross-table cube-table）
 
 ; (form-table data 
@@ -189,11 +195,6 @@
 ;    :meta {:name "名称" :age "年龄" :gender "性别"} 
 ;    :dd {:gender {0 "女" 1 "男" 2 "未知"}}
 ;    })
-
-; (list-table data
-;
-;
-;
 
 ;;; ------------- table 输出
 

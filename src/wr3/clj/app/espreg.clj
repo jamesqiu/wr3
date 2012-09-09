@@ -90,6 +90,7 @@
            [:div.user_info {:style "border:1px dashed #ccf"}
             [:form {:method "post" :ID "LoginForm" :name "LoginForm" 
                     :action (str "/c/espreg/" action) :onsubmit (str "return " onsubmit)}
+             conf/bjca-prompt [:br][:br][:br]
              [:ul [:span "证书："] [:select {:id "UserList" :name "UserList" :style "width:215px" :class "ui-corner-all"} ""]]
              [:ul [:span "口令："] [:input {:id "UserPwd" :name "UserPwd" :type "password" :size 16 :maxlength 16}]] 
              [:input {:type "hidden" :ID "UserSignedData" :name "UserSignedData"}]
