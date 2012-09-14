@@ -642,7 +642,7 @@
       (result-html- rs [] [:name :date :type :renew :_id] 
                     {:form (format "mot-%s-apply" id)} ) )))
 
-;(println (cert-renew-resp "en"))
+;(println (cert-renew-resp "org"))
 
 (defn cert-resp
   "service: 用户：org和mot；mot制发考评员、考评机构证书，org制发企业证书。
@@ -904,11 +904,9 @@
         rs (with-esp- (fetch tb ))]
     (html
       [:h1 (format "%s 变更备案受理" (dd-form (keyword id)))]
-      (eui-tip "主管机关处理：（同意/不同意）+意见")
-      (result-html- rs []
-                    [:reason :content :date :respdate :_id] 
-                    {:form (format "backup-resp-doc/%s" id) :id id}) 
-      [:br] )))
+      (result-html- rs [(str (dd-form (keyword id)) "名称") "原因" "申请日期" "受理日期" "详情"]
+                    [:uid :reason :date :respdate :_id] 
+                    {:form (format "backup-resp-doc/%s" id) :id id}) [:br] )))
 
 (defn backup-resp-doc
   "app: 主管机关受理考评机构、企业变更记录

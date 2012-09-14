@@ -71,7 +71,7 @@
   "service: 考评员列表
   @id name的pattern如'张' "
   [id skip]
-  (list- id :pn [] [:name :type :org :from :_id] {:skip (to-int skip 0)}))
+  (list- id :pn [] [:name :type :sex :edu :cid :admin :_id] {:skip (to-int skip 0)}))
 
 (defn pn-learn
   "service: 考评员培训、考试查询
@@ -86,7 +86,7 @@
         [:h3 "尚无培训和考试记录。"]
         (html
           [:h3 (format "有 %s 次培训和考试记录" (count rs))]
-          (result-html- rs '["培训证书" "培训类型" "培训日期" "培训学时" "考试日期" "考试分数" "查看"]
+          (result-html- rs '["培训证书" "培训类型" "培训日期" "培训学时" "考试日期" "考试分数" "详情"]
                         [:train-id :type :train-start :train-hour :exam-date :exam-score :_id] {:form "docv/pn-train"})) ) )))
 
 (defn- pn-history
@@ -130,7 +130,7 @@
   "service: 考评机构列表
   @id name的pattern如'学校' "
   [id skip]
-  (list- id :org [] [:name :grade :province :_id] {:skip (to-int skip 0)}))
+  (list- id :org [] [:name :type :grade :cid :admin :_id] {:skip (to-int skip 0)}))
 
 (defn org-pn-archive
   "service: 考评机构-考评员档案管理"
@@ -163,10 +163,11 @@
 
 (defn org-hire-view
   "app: 考评员情况，能否聘用
-  @如果有id，如果有cid，先通过cid查出文档:_id"
+  @id cid或pid或oid
+  @type 'cid' 'pid' 为空则通过id查 "
   [id type request]
-  (let [field (if (= type "cid") :cid :pid) 
-        r (with-mdb2 "esp" (fetch-one :pn :where {field id}))
+  (let [where (case  type "cid" {:cid id} "pid" {:pid id} {:_id (object-id id)}) 
+        r (with-mdb2 "esp" (fetch-one :pn :where where))
         oid (:_id r)
         cid (:cid r)
         c0 (:contract0 r) ; 合同开始日
@@ -346,7 +347,7 @@
   "service: 企业列表
   @id name的pattern如'安徽' "
   [id skip]
-  (list- id :en [] [:name :type :grade :province :_id] {:skip (to-int skip 0)}))
+  (list- id :en [] [:name :type :grade :cid :admin :_id] {:skip (to-int skip 0)}))
 
 (defn en-stand
   "service: 列出所有的达标标准"
@@ -446,7 +447,7 @@
        (when (not= tb :pn) 
          (html [:label ({:org "资质" :en "达标"} tb) "等级："] (eui-combo {:name "grade"} (into option0 dd-grade))))
        [:br][:br]
-       [:label "姓名或者证书号："] (eui-text {:name "s" 
+       [:label "名称或者证书号："] (eui-text {:name "s" 
                                       :onkeypress "if(event.keyCode==13||event.which==13){return false;}"}) (space 5)
        (eui-button {:onclick (format "ajax_load($('#result'), '/c/esp/mot-search/%s?'+$('#fm1').serialize())" id) 
                     :iconCls "icon-ok"} " 搜 索 ") (space 5) 

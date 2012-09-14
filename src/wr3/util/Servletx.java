@@ -16,7 +16,7 @@ public class Servletx {
 	public static String baseurl(HttpServletRequest req) {
 		
 		// 假设req的url如下：
-		// http://server:80/mywebapp/servlet/MyServlet/a/b;c=123?d=789
+		// http://server:80/mywebapp/servlet/MyServlet/a/b;c=123?d=789 
 		String scheme = req.getScheme(); 			// http
 		String serverName = req.getServerName(); 	// server
 		int serverPort = req.getServerPort(); 		// 80
