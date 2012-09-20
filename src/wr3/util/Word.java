@@ -220,6 +220,28 @@ public class Word {
 		}
 	}
 
+	/**
+	 * 
+	 * @param filePath
+	 */
+	public static void toHtml(String wordPath, String htmlPath) {
+		ActiveXComponent activeApp = new ActiveXComponent("Word.Application");
+		try {
+			activeApp.setProperty("Visible", new Variant(false));
+			Dispatch docs = activeApp.getProperty("Documents").toDispatch();
+			Dispatch doc = Dispatch.invoke(docs, "Open", Dispatch.Method, 
+					new Object[] { wordPath, new Variant(false), new Variant(true) }, new int[1])
+					.toDispatch();
+			Dispatch.invoke(doc, "SaveAs", Dispatch.Method, new Object[] {
+					htmlPath, new Variant(8) }, new int[1]);
+			Dispatch.call(doc, "Close", new Variant(false));
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		} finally {
+			activeApp.invoke("Quit", new Variant[] {});
+		}
+	}	
+
 	// ----------------- main() -----------------//
 	public static void main(String[] args) {
 

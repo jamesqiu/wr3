@@ -36,7 +36,8 @@ public class Datetime {
 	}
 
 	public static String date(Calendar cal) {
-		return DateFormat.getDateInstance().format(asDate(cal));
+//		return DateFormat.getDateInstance().format(asDate(cal));
+		return new SimpleDateFormat("yyyy-MM-dd").format(asDate(cal));
 	}
 
 	public static String date(Date date) {

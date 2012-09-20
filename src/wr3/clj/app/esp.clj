@@ -134,12 +134,29 @@
 
 (defn org-pn-archive
   "service: 考评机构-考评员档案管理"
-  []
-  (html
-    [:h1 "考评员档案管理"]
-    (eui-button {:plain "true" :iconCls "icon-sum"} "安全生产标准化考评员汇总表、登记表") [:br]
-    (eui-button {:plain "true" :iconCls "icon-list"} "考评员学历和专业技术能力证明汇总表") [:br]
-    (eui-button {:plain "true" :iconCls "icon-file"} "考评员培训情况汇总表（何时培训，多长时间，取得何种培训合格证书）") [:br] ))
+  [request]
+  (let [uid (wr3user request)
+        where1 {:fulltime true :contract1 nil}
+        where2 {:fulltime false :contract1 nil}
+        count1 (with-mdb2 "esp" (fetch-count :pn :where (merge {:belong uid} where1)))
+        count2 (with-mdb2 "esp" (fetch-count :pn :where (merge {:belong uid} where2)))
+        rt-edu (sort-by :count > (with-esp- (mdb-group :pn [:edu])))
+        rt-exam (sort-by :exam-date (with-esp- (mdb-group :pn-train [:exam-date])))
+        ]
+    (html
+      [:h1 "考评员档案管理"]
+      (eui-button {:plain "true" :iconCls "icon-sum"} "安全生产标准化考评员汇总表、登记表") [:br]
+      (eui-button {:plain "true" :iconCls "icon-list"} "考评员学历和专业技术能力证明汇总表") [:br]
+      (eui-button {:plain "true" :iconCls "icon-file"} "考评员培训情况汇总表（何时培训，多长时间，取得何种培训合格证书）") [:br] 
+      [:h2 "本机构专兼职考评员："]
+      (result-html- [{:fulltime true :count count1} {:fulltime false :count count2}] 
+                    ["专兼职" "数量小计"] [:fulltime :count] {}) 
+      [:h2 "考评员学历一览："]
+      (result-html- rt-edu ["学历" "数量小计"] [:edu :count] {})
+      [:h2 "考评员培训考试："]
+      (result-html- rt-exam ["考试时间" "数量小计"] [:exam-date :count] {})
+      
+      )))
 
 (defn org-pn
   "service: 本考评机构机构的所有考评员 "
@@ -217,7 +234,7 @@
   (let [uid (wr3user request)
         rt (with-esp- (fetch :pn :only ["_id"] :where {:belong uid :contract1 nil} ))
         ids (vec (map #(-> % :_id str) rt))
-        rt2 (with-esp- (fetch :pn-train :where {:_id {:$in (map #(object-id %) ids)}}))]
+        rt2 (with-esp- (fetch :pn-train :where {:_id {:$in (map #(object-id %) ids)}})) ]
     (html
       [:h1 "本机构考评员培训、考试情况一览"]
       [:h2 "培训时间，培训学时（不少于24个学时），培训类别，培训合格证号"]
@@ -231,14 +248,14 @@
   "service: 考评机构目前证书"
   [request]
   (let [uid (wr3user request)
-        rs (with-esp- (fetch :org :where {:uid uid :cid {:$exists true}}))]
+        rs (with-esp- (fetch :org-apply :where {:uid uid :cid {:$exists true}}))]
     (html
       [:h1 "考评机构资质证书"]
       (if (empty? rs)
         (eui-tip "还没有资质证书。")
         (html
-          (result-html- rs '["证书号" "证书类型" "发证日期" "证书状态" "查看"] 
-                        [:cid :type :cdate :cstate :_id] {:form "docv/org"}))))))
+          (result-html- rs '["证书号" "证书类型" "证书等级" "发证日期" "证书状态" "查看"] 
+                        [:cid :type :grade :cdate :cstate :_id] {:form "docv/org-apply"}))))))
 
 (defn org-en-apply
   "app: 考评机构受理企业申请记录
@@ -315,10 +332,14 @@
 
 (defn org-en-eval
   "service: org查看en的考评情况汇总"
-  []
-  (html
-    [:h1 "企业考评情况汇总表"]
-    (eui-tip "暂无记录")))
+  [request]
+  (let [uid (wr3user request)
+        rs (with-esp- (fetch :en-apply :where {:orgid1 uid}))]
+    (html
+      [:h1 "企业考评情况汇总表"]
+      [:h2 (count rs) "条考评记录"]
+      (result-html- rs [] [:name :date :type2 :grade :score0 :score1] {})
+      )))
 
 (defn org-stand-view
   "org, mot查看org对en达标评估的结果
@@ -764,9 +785,12 @@
 (defn mot-org-eval
   "service: mot查看org的考评情况汇总"
   []
-  (html
-    [:h1 "考评机构考评情况汇总表"]
-    (eui-tip "暂无记录")))
+  (let [rs (with-esp- (fetch :en-apply :where {:orgid1 {:$exists true}} :sort {:orgid1 1} :limit 100))]
+    (html
+      [:h1 "考评机构考评情况汇总表"]
+      [:h2 (format "%s 条考评记录：" (count rs))]
+      (result-html- rs [] [:orgid1 :name :type2 :grade :date :admin] {})
+      )))
   
 (defn mot-en-recheck
   "service：主管机关对企业进行附加考评"
@@ -792,7 +816,7 @@
         typ (keyword type)
         type-name ({:grade "达标等级" :type "业务类型"} typ)
         dd ({:grade dd-grade :type dd-type} typ)
-        rt1 (with-mdb2 "esp" (mdb-group :en [:admin typ]))
+        rt1 (with-esp- (mdb-group :en [:admin typ]))
         data (cross-data rt1 [:admin typ :count])]
     (html
       (eui-button {:onclick "layout_load_center('/c/esp/mot-sub-olap?type=grade')"} "主管机关——企业达标等级") (space 5)
@@ -940,9 +964,9 @@
   "service: 在主页面上显示待办事宜统计信息"
   []
   (let [items (-> cfg-frame-mot :nav first rest rest rest)
-        sums [(tb-count :pn-apply) 0 
-              (tb-count :org-apply) (tb-count :org-backup) 0 
-              (tb-count :en-apply) (tb-count :en-apply) (tb-count :en-backup) 0
+        sums [(tb-count :pn-apply) (cert-renew-count "pn") 
+              (tb-count :org-apply) (tb-count :org-backup) (cert-renew-count "org") 
+              (tb-count :en-apply) (tb-count :en-apply) (tb-count :en-backup) (cert-renew-count "en")
               (tb-count :hot)]]
     (html
       (eui-tip "待办事宜中个项目的数量提示：")

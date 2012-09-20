@@ -35,3 +35,30 @@
     {:onload "test_cookie()"}
     [:h1 "测试cookie"]
     [:div (cookie request "wr3user")]))
+
+(defn host
+  [request]
+  (let [sn (.getServerName request)]
+  (html
+    (case sn
+      ("t430" "T430") "aaaaaaaaaaaaaaaaaaa"
+      "localhost" "bbbbbbbbbbbbbbbbbb"
+      "cccccccccccccccccc")
+    [:br]
+    (str sn))))
+
+(import wr3.util.Word)
+(import wr3.util.Filex)
+
+(defn fpath
+  [request]
+  (let [fpath1 (.getRealPath request "/file/en1-1336557674246.doc")
+        fpath2 (.getRealPath request "/file/en1-1336557674246.html")
+        has-file? (Filex/has fpath2)]
+    (html-body
+      [:h1 "fpath"]
+      [:h2 fpath1]
+      [:h2 has-file?]
+      (do (when-not has-file? (Word/toHtml fpath1 fpath2))
+        "toHtml")
+      [:a {:href "/file/en1-1336557674246.html"} "查看html文档"])))

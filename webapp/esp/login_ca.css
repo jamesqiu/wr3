@@ -1,0 +1,24 @@
+@charset "utf-8";
+/* CSS Document */
+body,DIV,UL,LI,img { margin:0; padding:0; }
+
+#moc_login { width:100%; height:455px; position:absolute; top:50%; margin-top:-227px; background:url(jtb_r3_c1.jpg) repeat-x 0 0;}
+
+.moc_login_main { width:960px; height:455px; margin:0 auto; }
+
+.login_left_h2 { width:848px; height:28px; }
+.login_left_con { width:960px; height:400px; }
+.login_left_pic { width:517px; height:380px; padding:10px 0; float:left;}
+.login_left_log { width:320px; height:380px; float:left; background:#C1EBFF; padding:10px 0;}
+.login_log_h3 { width:320px; height:35px; }
+.login_log_user { width:320px; height:345px; background:url(jtb_r5_c4.jpg) no-repeat;}
+.user_info { width:220px; height:100px; padding:130px 20px 0 20px; margin:0 auto; font-size:14px; font-weight:bold; color:#069;}
+.user_info ul { width:260px; height:50px;}
+.user_info ul span { width:60px; height:50px; float:left; display:block;}
+.user_info ul laber { width:160px; height:50px; float:left; display:block;}
+.user_sub { width:260px; height:34px; margin:0 auto; padding-top:30px;}
+.user_sub ul { width:79px; height:34px; float:left; padding:0 25px; display:block;}
+.login_right_pic { width:123px; height:380px; padding:10px 0; float:right; }
+.login_bottom_txt { width:405px; height:32px; text-align:center; padding-left:112px; font-size:12px; color:#069; line-height:25px;}
+
+

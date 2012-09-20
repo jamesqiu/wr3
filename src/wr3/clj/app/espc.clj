@@ -181,7 +181,8 @@
       :uid (if (:mot-user m) v0 (wr3user-name v0))
       :admin-uid (wr3user-name v0)
       :role (if-let [dd (:admin m)] (get dd v) v) ; espfj 角色
-      (:freport :refine-doc) [:a {:href v0 :target "_blank"} "查看"]
+      (:freport :refine-doc) (html [:a {:href v0 :target "_blank"} "下载"] (space 3)
+                                   [:a {:href (str "/c/esp/doc-html?fname=" v0) :target "_blank"} "查看"])
       :info (replace-all v "\r\n" "<br/>")
       :admin (or (get (or (:admin m) dd-admin) v) v)
       :respdate (if (nil? v0) "<font color=gray>尚未处理</font>" 
@@ -629,20 +630,28 @@
   [id request]
   (html-body (apply-input- request (keyword id))))
 
+(defn- cert-renew-sql
+  "@f fetch 或 fetch-count"
+  [f id]
+  (let [tb (keyword (str id "-apply"))
+        v (case id "pn" ["1" "2"] "en" ["3"] "org" ["4"])] ; @see dd-renew
+    (with-mdb2 "esp" 
+      (let [rs (f tb :where {:renew {:$in v}})]
+        (if (= f fetch) (vec rs) rs)))))
+    
+(defn cert-renew-data [id] (cert-renew-sql fetch id))
+(defn cert-renew-count [id] (cert-renew-sql fetch-count id))
+
 (defn cert-renew-resp
   "service: 主管机关对考评员、考评机构、企业的换证申请受理
   @id pn或org或en "
   [id]
   (let [cname (dd-form (keyword id))
-        tb (keyword (str id "-apply"))
-        v (case id "pn" ["1" "2"] "en" ["3"] "org" ["4"]) ; @see dd-renew
-        rs (with-esp- (fetch tb :where {:renew {:$in v}}))]
+        rs (cert-renew-data id)]
     (html
       [:h1 (format "%s换证申请受理" cname)]
       (result-html- rs [] [:name :date :type :renew :_id] 
                     {:form (format "mot-%s-apply" id)} ) )))
-
-;(println (cert-renew-resp "org"))
 
 (defn cert-resp
   "service: 用户：org和mot；mot制发考评员、考评机构证书，org制发企业证书。
@@ -1048,12 +1057,27 @@
       (update- :refine {:_id (object-id id)} m)
       (html-body [:h2 "已上传整改报告。"] (eui-button-close)))))
 
+(import wr3.util.Filex)
+(import wr3.util.Word)
+(defn doc-html
+  [fname request]
+  (let [fpath1 (.getRealPath request fname)
+        fname2 (str (leftback fname ".") ".html")
+        fpath2 (.getRealPath request fname2)
+        has-file? (Filex/has fpath2)]
+  (html-body
+    (if has-file? 
+      [:h1 "文档已存在"]
+      (do (Word/toHtml fpath1 fpath2)
+        [:h1 "文档生成"] ))
+    [:a {:href fname2} "点击查看"])))  
+
 ;;------------------------------------------------- test
 ;(use 'wr3.clj.datagen)
 ;--- 注：文件大小不能大于64k（65536）字节，否则报错
 ;(with-esp- (fetch :indic3 :where {:type2 11 :i 9 :j 4 :k 3}))
 ;(with-mdb2 "esp" (destroy! :indic2 {:type2 21 :i 8 :j 6}))
-;(update- :indic3 {:type2 11 :i 9 :j 4 :k 3} {:name "③客运车辆每日运行里程超过400公里（高速公路直达超过600公里）的，按规定配备两名以上驾驶员；驾驶员连续驾驶时间不超过4个小时，或者24小时内累计驾驶不超过8小时；"})
+;(update- :pn-train {} (fn [r] {:train-start (date-format (:train-start r) "yyyy-MM-dd")}))
 ;(insert- :indic3  {:i 15, :j 2, :k 5, :name "⑤按“四不放过”原则严肃查处事故，严格追究责任领导和相关责任人。处理结果报有关部门备案。", :star 1, :score 10, :type2 12})
 ;(with-esp- (fetch :en-apply :where {:orgid ["4f8aebd175e0ae92833680f4" "4f8aebd175e0ae92833680ff"]}))
 ;(pager-options 201)
