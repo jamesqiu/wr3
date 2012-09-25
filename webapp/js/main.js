@@ -3471,9 +3471,9 @@ function esp_bjca_onsubmit_server() {
 }
 
 /**
- * 考评员申请
+ * 考评员申请表
  */
-function espfj_onload() {
+function espfj_onload(type_vals) {
 	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
 	$('#type').combobox({multiple:true, width:250,
 		onChange: function(v1, v0) {
@@ -3491,7 +3491,7 @@ function espfj_onload() {
 				$('#type').combobox('setText', typeText)				
 			}
 		}
-	})	
+	}).combobox('setValues', type_vals)	
 }
 
 function espfj_input_submit_check() {

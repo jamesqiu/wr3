@@ -126,10 +126,13 @@
   [id request]
   (let [wr3user (session! request "wr3user" "fj")
         wr3role (session! request "wr3role" "pn")
+        rs (when id (with-pid- id))
         cfg-pn (if (not id) cfg-pn
-                 (espc/cfg-set-values- cfg-pn (with-pid- id)))]
+                 (espc/cfg-set-values- cfg-pn rs))]
     (html-body
-      {:onload "espfj_onload()"}
+      {:onload (format (format "espfj_onload(%s)" 
+                               (if rs (str "[" (join (split (:type rs) "&") ",") "]")
+                                 "[]")))}
       [:center {:style "border: 1px solid #369"}
        [:h1 {:style "padding:20px; background-color:#369; color: white; font-size: 22px; margin-top:0px"} 
         "福建省交通运输厅——考评员在线报名系统"]

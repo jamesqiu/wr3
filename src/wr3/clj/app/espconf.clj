@@ -4,7 +4,7 @@
 (use 'wr3.clj.web)
 
 ;; 登录模式： :ca-local ca本地认证 :ca-server ca服务器认证 :user-pass 用户名密码认证 
-(def login-mode (last [:ca-local :ca-server :user-pass]))
+(def login-mode (first [:ca-local :ca-server :user-pass]))
 
 ; bjca证书验证返回值代表的含义
 (def dd-retValue {-1 "登录证书的根不被信任"

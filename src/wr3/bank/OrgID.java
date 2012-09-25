@@ -69,11 +69,13 @@ public class OrgID {
 	}
 	
 	public static void main(String[] args) {
-		System.out.println(c2n('3'));
-		System.out.println(c2n('Z'));
-		System.out.println(isid("00002106-3")); // 00359131-X 00002106-3
+//		System.out.println(c2n('3'));
+//		System.out.println(c2n('Z'));
+//		System.out.println(isid("00002106-3")); // 00359131-X 00002106-3
 		if (args.length>0) {
 			System.out.println(toid(args[0]));
+		} else {
+			System.out.println("usage:\n  java wr3.bank.OrgID 00927629");
 		}
 	}
 }
