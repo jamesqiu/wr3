@@ -2,8 +2,11 @@ package test;
 
 import static java.lang.System.out;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.security.Key;
@@ -28,6 +31,8 @@ import java.util.prefs.Preferences;
 import javax.persistence.Basic;
 
 import wr3.bank.Areacode;
+import wr3.text.LineFilter;
+import wr3.text.TextFile;
 import wr3.util.Numberx;
 import wr3.util.Stringx;
 import domain.Person;
@@ -435,6 +440,7 @@ public class Test1 {
 		temp();
 		System.out.println(indexOfAny("hello world", new char[]{'z','m','n'}));
 		System.out.println("------- end --------c");
+		
 	}
 
 }

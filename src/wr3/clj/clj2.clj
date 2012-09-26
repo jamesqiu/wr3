@@ -76,7 +76,7 @@
 ;; 判断闰年
 (defn leap [y] (or (zero? (rem y 400)) (and (zero? (rem y 4)) (not= 0 (rem y 100)))))
 ;; 判断y年m月有多少天
-(defn days [y m] (cond
+(defn test-days [y m] (cond
   (and (leap y) (= m 2)) 29
   (= m 2) 28
   (some (partial = m) [4 6 9 11]) 30
@@ -464,6 +464,7 @@
 ;(print-m (put-rand (put-rand m0 2 8) 0 1))
 ;(put-r m0 8)
 ;(shudu m0)
-
-
+;
+;(time (with-open [r (clojure.java.io/reader "f:/cust2.txt" :encoding "gbk")]
+;  (reduce (fn [i line] (if (.startsWith line "000") (inc i) i)) 0 (line-seq r))))
 
