@@ -159,7 +159,7 @@
                 webapp)
               (format
                 ;"map.setDataURL(\"%s/chartf/chinamap.xml\");"		   
-                "map.setDataURL(\"%s/c/chartf/chinamap2?charset=gbk\");"		   
+                "map.setDataURL(\"%s/c/chartf/chinamap2?content-type=text/xml&charset=gbk\");"		   
                 webapp)
               "map.render(\"mapdiv\");"
               ]

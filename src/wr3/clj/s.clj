@@ -213,4 +213,11 @@
           values (map #((keyword (between % "${" "}")) var-value-map) vars)]
       (reduce #(apply replace-all %1 %2) s (zipmap vars values)))))
 
+;; 计算espreg码值
 (defn valid-rune [s] (fill (str (apply + (map int s))) 6))
+
+;; 大小写字母列表
+(def a-z (map char (range 97 123)))
+(def A-Z (map char (range 65 91)))
+
+

@@ -210,11 +210,15 @@
 (defn result-html-
   "共用函数：对没有特殊要求的结果进行列表展示
   @rt Clojure.sql结果集 [{:c1 v :c2 v ..} ..]
-  @head 表头名称 [活期余额 业务类型 币种 日期]，如果(empty? head)如[] nil，则使用dd-meta自动从cols参数得到head
-  @cols 列名称 [:ye :yw_type :bz :_created] 
+  @head 表头名称 [余额 币种 日期]，如果为空如[] '() nil，则使用dd-meta自动从cols参数得到head；
+    如果为map如{:name '姓名'}，则为覆盖dd-meta的定制字段名称；
+    如果为非空列表如['姓名' '年龄' ..]，则直接用作表头。
+  @cols 列名称 [:ye :bz :_created] 
   @m 客户化定制 {} 设置 :form 表示cols中含 :_id 时文档显示所使用的form "
   ([rt head cols m]
-    (let [head (if (empty? head) (for [c cols] (or (dd-meta c) c)) head)]
+    (let [head (if (and (seq head) (sequential? head)) head
+                 (let [dd (if (map? head) (merge dd-meta head) dd-meta)]
+                   (for [c cols] (or (dd c) c))))]
       (result-html 
         rt 
         {:f-head (fn [thead] (for [th (cons "序号" head)] [:th th]))
@@ -254,6 +258,7 @@
     (:safe :photo :perf2 :proof :proof2 :proof3 :titlefile :beginfile :refine-doc) [:a {:href v} "查看"]
     (:resp :resp-review) [:b (format-resp- v)]
     :pass-direct (format-pass-direct v)
+    :otype (or (dd-form (keyword v)) v)
     v))
 
 (defn doc-
@@ -546,7 +551,8 @@
 (def hot---------- nil)
 
 (defn hot
-  "app: 举报热线"
+  "app: 举报热线
+  @todo: 举报对象为en、pn时可以搜索名称以便跟踪"
   []
   (let [sid "fhot"]
     (html-body
@@ -554,6 +560,7 @@
       (eui-tip "任何单位和个人对考评机构的考评行为，有权向主管机关进行实名举报，主管机关会及时受理、组织调查处理，并为举报人保密。") [:br][:br]
       [:form {:id "fm1" :action "/c/espc/hot-save" :method "post"}
        [:label [:b "举报人信息等："]] (eui-textarea {:name "info"} "姓 名：\n身份证号：\n联系方式：\n\n其 他：\n") [:br][:br]
+       [:label [:b "要举报的对象："]] (eui-combo {:name "otype"} {:en "交通运输企业" :pn "考评员" :org "考评机构"}) [:br][:br]
        [:label [:b "填写举报内容："]] (eui-textarea {:name "content" :style "width: 500px; height: 300px"} "") [:br][:br]
        [:label [:b "选择主管机关："]] (eui-combo {:name "admin"} dd-admin) [:br][:br]
        (eui-button {:onclick "esp_hot_submit()"} "提 交")] 
@@ -675,7 +682,7 @@
                 (result-html- rs [] [:name :resp :respdate :_id :_issue] 
                               {:form "docv/org-apply" :issue "org-apply"}))
         "pn" (let [rs (with-esp- (fetch :pn-apply :where {:resp "yes"}))]
-               (result-html- rs [] [:name :resp :respdate :_id :_issue]
+               (result-html- rs {:name "姓名"} [:name :resp :respdate :_id :_issue]
                              {:form "docv/pn-apply" :issue "pn-apply"}))
         nil) )))
 
@@ -866,11 +873,9 @@
     (html
       [:h1 (format "受理%s申请" cname)]
       (eui-tip tip)
-      (result-html- rs []
-                    [:name (if (= id "en") :type2 :type) :date :resp (if (= id "en") :respdate-review :respdate) :_id :_select] 
-                    {:form form}) [:br]
-      (when (= id "pn") 
-        (eui-button {:onclick "esp_pn_apply_resp()"} "资格证书制发")) )))
+      (result-html- rs {:name (case id "pn" "姓名" "名称")}
+                    [:name (if (= id "en") :type2 :type) :date :resp (if (= id "en") :respdate-review :respdate) :_id] 
+                    {:form form}) [:br] )))
 
 (defn backup
   "service: 考评机构、企业变更申请录入表单
@@ -1084,5 +1089,5 @@
 ;(insert- :indic3  {:i 15, :j 2, :k 5, :name "⑤按“四不放过”原则严肃查处事故，严格追究责任领导和相关责任人。处理结果报有关部门备案。", :star 1, :score 10, :type2 12})
 ;(with-esp- (fetch :en-apply :where {:orgid ["4f8aebd175e0ae92833680f4" "4f8aebd175e0ae92833680ff"]}))
 ;(pager-options 201)
-;(for [[k v] m] (let [orgid (str (subs v 0 8) "-" (last v)) ]
-;                 (insert- :user {:name k :pid orgid :role "mot" :uid (str "mot-" orgid) :admin "01"})))
+;(doseq [[k v] m] 
+;  (insert- :user {:name k :pid v :role "mot" :uid (str "mot-" v) :admin "01"}))

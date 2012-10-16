@@ -20,7 +20,7 @@
 (defn index
   "app: 分析特定一个数据库"
   [id]
-  (let [dbname (or id "mssql")] ; postgre, abs, mssql
+  (let [dbname (or id "bank")] ; postgre, abs, mssql/bank
     (with-open [dbs (dbserver dbname)]
       (let [tables (.tables dbs)
             db (.database dbs)]

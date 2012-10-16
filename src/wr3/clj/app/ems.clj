@@ -130,6 +130,12 @@
                (format "%s. %s" (inc i) (first e))])))
         t1)
       )))
+
+(defn- other
+  "layout、layout2的连接"
+  []
+  (for [[k v] {"layout" "有色界面" "layout2" "黄金界面"}]
+    (html (eui-button {:href (str "/c/ems/" k) :target "_blank"} v) (space 5))))
   
 (defn app-right-main
   "app: 右边主框架"
@@ -145,13 +151,16 @@
     (eui-accord-
       {:iconCls "icon-search"} "重点风险监测"
       (tailings))
+    (eui-accord-
+      {:iconCls "icon-search"} "其他"
+      (other))
     ))
 
 (defn index
   "app: 应用框架"
   []
   (eui-layout
-    {:id "layout1" :onload "ems_onload()"}
+    {:id "layout1" :onload "ems_onload()" :js "app-ems.js"}
     ;----------------------- north
     ;----------------------- west
     ;----------------------- center
@@ -204,7 +213,7 @@
   "app: 常用应用框架"
   []
   (eui-layout
-    {:id "layout1" :onload "ems_onload()"}
+    {:id "layout1" :onload "ems_onload()" :js "app-ems.js"}
     ;----------------------- north
     (app-top1)
     ;----------------------- west
@@ -292,7 +301,7 @@
   "app: 常用应用框架"
   []
   (eui-layout
-    {:id "layout1" :onload "ems_layout2()"}
+    {:id "layout1" :onload "ems_layout2()" :js "app-ems.js"}
     ;----------------------- north
     (app-top2)
     ;----------------------- west

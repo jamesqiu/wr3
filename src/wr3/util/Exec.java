@@ -3,6 +3,7 @@ package wr3.util;
 import java.io.*;
 
 /**
+ * @todo: jdk1.5+有个更好的 java.lang.ProcessBuilder 类，为进程执行提供了更多的控制 （2012-10-10）
  * 在操作系统单独进程（Process）中执行命令，获取输出
  * Runtime process execute process.
  * windows下，cmd的命令如：ver、type等，可用：

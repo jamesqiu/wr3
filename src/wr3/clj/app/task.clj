@@ -116,7 +116,7 @@
         tb :person]
     (when id1
       (with-mdb dbname
-        (mdb-add tb (into {:name id1} (pinyin id1))) ))))
+        (mdb-add tb (into {:name id1} (test-pinyin id1))) ))))
 
 (defn task-order-save
   "service: 保存task的顺序列表"

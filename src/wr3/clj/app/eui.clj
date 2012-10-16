@@ -1,5 +1,5 @@
 (ns wr3.clj.app.eui)
-;;;; JQuery EasyUI 测试
+;;;; 1、JQuery EasyUI 测试；2、google map earth 测试；
 (use 'wr3.clj.s 'wr3.clj.u 'wr3.clj.web); :reload)
 (use 'hiccup.core)
 
@@ -160,7 +160,7 @@
   "app: easyui的例子" 
   []
   (html-jquery
-    {:onload "eui_onload()"}
+    {:onload "eui_onload()" :js "app-eui.js"}
     [:h1 "打开EasyUI自带Demo: " (space 3)
      [:a {:href "F:/lib/jQuery/EasyUI/jquery-easyui-1.2.4/demo/" :target "_blank"} "[Demo]"] (space 3) 
      [:a {:href "http://easyui.btboys.com/api/" :target "_blank"} "[API doc]"] (space 6)
@@ -346,7 +346,7 @@
   "app: 常用应用框架"
   []
   (eui-layout
-    {:id "layout1" :onload "eui_layout()"}
+    {:id "layout1" :onload "eui_layout()" :js "app-eui.js"}
     ;----------------------- north
     (app-top)
     ;----------------------- west

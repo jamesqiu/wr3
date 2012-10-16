@@ -192,7 +192,10 @@
 (defmacro demo 
   "打开 clojuredocs.org 查询 clojure.core 的函数使用样例"
   [f]
-  `(clojure.java.browse/browse-url (format "http://clojuredocs.org/clojure_core/clojure.core/%s#examples" '~f)))
+  `(let [~'f2 (str '~f) ; map? 等以?结尾的变为map_q
+         ~'f2 (if (.endsWith ~'f2 "?") (str (.substring ~'f2 0 (dec (count ~'f2))) "_q") ~'f2)]
+     (clojure.java.browse/browse-url ; 形如 “->” 需要encode成 -%3E 这样browse-url才能打开
+       (str "http://clojuredocs.org/clojure_core/clojure.core/" (java.net.URLEncoder/encode ~'f2) "#examples"))))
 
 ;;;------------- datetime
 (import wr3.util.Datetime)

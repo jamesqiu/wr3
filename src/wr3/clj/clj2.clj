@@ -468,3 +468,12 @@
 ;(time (with-open [r (clojure.java.io/reader "f:/cust2.txt" :encoding "gbk")]
 ;  (reduce (fn [i line] (if (.startsWith line "000") (inc i) i)) 0 (line-seq r))))
 
+;'20000001'.split('').reverse().join('').match(/\d{3}|\d+$/g).map(function(s){ return s.split('').reverse().join(''); })
+;.reverse().join(' ');
+;//produces "20 000 001"
+;(join (reverse (map #(join (reverse (split % "")) "") (re-seq #"\d{3}|\d+$" (join (reverse (split "20000001" "")) "")))) " ")
+;(-> (map #(-> % (split "") reverse (join "")) (->> (-> "20000001" (split "") reverse (join "")) (re-seq #"\d{3}|\d+$"))) reverse (join " "))
+;(-> "20000001" (split "") reverse (join "") (->> (re-seq #"\d{3}|\d+$") (map #(-> % (split "") reverse (join "")))) reverse (join " "))
+
+
+

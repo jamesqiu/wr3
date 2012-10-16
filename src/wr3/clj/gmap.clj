@@ -12,7 +12,7 @@
   body: 多个hiccup片段"
   [js & body]
   (html-jquery
-    {:onload js}
+    {:onload js :js ["app-eui.js" "app-ems.js"]}
     [:script {:type "text/javascript" :src "http://maps.googleapis.com/maps/api/js?sensor=false&libraries=panoramio,geometry"}]
     (html (or body
               [:div {:id "map_canvas" :style "width:100%; height:100%"}] ))))
@@ -24,8 +24,9 @@
   body: 多个hiccup片段"
   [js & body]
   (html-jquery
-    {:onload js}
-    [:script {:type "text/javascript" :src "http://www.google.com/jsapi?key=ABQIAAAAs0-6DGuC36Q_Mdia37v4_hSshEQf46CYbggpaYkzXbm0SNgG0hSrUwpcoSHk2D87MXVow8mPgAnw4Q"}]
+    {:onload js :js "app-eui.js"}
+;    [:script {:type "text/javascript" :src "http://www.google.com/jsapi?key=ABQIAAAAs0-6DGuC36Q_Mdia37v4_hSshEQf46CYbggpaYkzXbm0SNgG0hSrUwpcoSHk2D87MXVow8mPgAnw4Q"}]
+    [:script {:type "text/javascript" :src "http://www.google.com/jsapi"}]
     [:script "google.load('earth', '1');"]
     (html (or body
               [:div {:id "map3d" :style "border: 1px solid gray; width:100%; height:100%"}] ))))

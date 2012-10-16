@@ -112,6 +112,7 @@ A: 主要为了区分第一、二版的WebReport，另一个原因是因为中�
 	-core.incubator.jar    mongodb的依赖包
 	-data.json.jar         mongodb的依赖包
 	-jline.jar             支持Clojure repl的tab autocomplete
+	-clj-tools-ns.jar      自动重载所有ns，用于repl不重启
 
   jetty.jar                内嵌servlet/web服务器，把tool等做成web应用
     -jetty-util.jar        必须，否则编译出错

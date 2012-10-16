@@ -5,7 +5,8 @@
 (use 'wr3.clj.web 'wr3.clj.s 'wr3.clj.n 'wr3.clj.u 'wr3.clj.nosql)
 (use 'wr3.clj.app.espconf)
 
-(require '[wr3.clj.app.esp :as esp ] :reload)
+(require '[wr3.clj.app.esp :as esp ])
+(require '[wr3.clj.app.espc :as espc ])
 
 (def jm-head
   (html
@@ -207,7 +208,7 @@
 (defn applys
   [id]
   (let [tb (keyword (str id "-apply"))
-        rs (esp/with-esp- (fetch tb))]
+        rs (espc/with-esp- (fetch tb))]
     (jm-frame
       nil
       (jm-list

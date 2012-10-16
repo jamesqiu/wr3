@@ -4,7 +4,7 @@
 
 ;;------------------------ 各种常用JDBC Drivers
 (def drivers {
-  :sqlserver    "com.microsoft.jdbc.sqlserver.SQLServerDriver"
+  :sqlserver    "com.microsoft.sqlserver.jdbc.SQLServerDriver"
   :oracle       "oracle.jdbc.driver.OracleDriver"
   :db2          "COM.ibm.db2.jdbc.net.DB2Driver"
   :mysql        "com.mysql.jdbc.Driver"
@@ -17,7 +17,7 @@
 
 ;;------------------------ 各种常用JDBC url pattern
 (def urls {
-  :sqlserver    "jdbc:microsoft:sqlserver://${ip};DatabaseName=${db}"
+  :sqlserver    "jdbc:sqlserver://${ip};databaseName=${db}"
   :db2          "jdbc:db2://${ip}/${db}"
   :mysql        "jdbc:mysql://${ip}/${db}"
   :postgresql   "jdbc:postgresql://${ip}/${db}"
