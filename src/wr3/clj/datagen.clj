@@ -86,4 +86,3 @@
 ;(dotimes [i 10] (println (rand-orgid)))
 ;(count peoples)
 
- 

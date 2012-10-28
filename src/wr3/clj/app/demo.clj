@@ -122,7 +122,7 @@
 (defn index
   []
   (eui-layout
-    {:id "layout1" :onload (str (:name app-conf) "_onload()")}
+    {:id "layout1" :onload (str (:name app-conf) "_onload()") :js "app-demo.js"}
     ;----------------------- north
     (app-top)   
     ;----------------------- west

@@ -32,7 +32,7 @@
   "app: 测试jquery.cookie是否可用"
   [request]
   (html-body
-    {:onload "test_cookie()"}
+    {:onload "alert($.cookie('wr3user'))"}
     [:h1 "测试cookie"]
     [:div (cookie request "wr3user")]))
 

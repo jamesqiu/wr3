@@ -49,10 +49,18 @@
   (with-esp- (fetch tb :where {:uid uid})))
 
 (defn tb-count
-  "得到tb的全记录数；或者tb中字段f符合匹配条件s的记录数。"
+  "得到tb的全记录数；或者tb中字段f符合匹配条件s的记录数。
+  @tb 表名称如 :user 
+  @m 客户方参数 {:f :age :s '张' :where ..}，其中： :s 匹配的字符串 '张' :f 字段如':name' 
+  @usage: (tb-count :pn {:f :cid :s '2011' :where {:admin '14'}}) 
+    (tb-count :pn) (tb-count :pn {:s '张'}
+    (tb-count {:s '张' :where {:admin '14'}}) "
   ([tb] (with-mdb2 "esp" (fetch-count tb)))
-  ([tb s] (let [f (if (wr3.util.Charsetx/hasChinese s) :name :cid)] (tb-count tb f s)))
-  ([tb f s] (with-mdb2 "esp" (fetch-count tb :where {f (re-pattern (or s ""))}))))
+  ([tb m] (let [where1 (if-let [s (:s m)] 
+                         (let [f (or (:f m) (if (wr3.util.Charsetx/hasChinese s) :name :cid))] {f (re-pattern s)})
+                         {})
+                where2 (or (:where m) {})]
+            (with-mdb2 "esp" (fetch-count tb :where (merge where1 where2))))))
   
 (defn data-
   "取出数据表所有记录（1000条以内）并持久化。
@@ -60,8 +68,9 @@
   ([tb] (with-esp- (fetch tb :limit 100)))
   ([tb m] 
     (let [limit (or (:limit m) 100)
-          skip (or (:skip m) 0)]
-      (with-esp- (fetch tb :skip skip :limit limit)))))
+          skip (or (:skip m) 0)
+          where (or (:where m) {})]
+      (with-esp- (fetch tb :skip skip :limit limit :where where)))))
 
 (defn insert-
   "共用函数：保存新纪录到esp的tb表中，不需要用with-mdb2包围
@@ -279,6 +288,7 @@
                                                      (for [[k v] rt :when (not (in? k orders))] [k v]))))
                rt)]
       (html-body
+        {:js "app-esp.js"}
         (when-let [before (:before m)] (if (fn? before) (before rt) before))
         [:table.wr3table {:border 1}
          [:caption (format "%s <u>%s</u>" (dd-form tb) (if-let [n (:name rt)] n ""))]
@@ -346,11 +356,12 @@
   @id name的pattern如'张' 或者为nil
   @tb :pn :org :en 
   @col-names @col-ids 列显示名称，存储名称
-  @m 含:skip等参数"
+  @m 含:skip、limit、where等参数"
   [id tb col-names col-ids m]
   (let [nam (tb {:pn "考评员" :org "考评机构" :en "交通运输企业"})
         rt (search-auto- tb id m)
-        count1 (if id (tb-count tb id) (tb-count tb))]
+        where (or (:where m) {})
+        count1 (if id (tb-count tb {:s id :where where}) (tb-count tb {:where where}))]
     (html
       [:h1 (format "%s 列表（%s 名）" nam (count rt))]
       (pager-html count1 (:skip m) (format "esp_pager('/c/esp/%s-list/%s')" (name tb) (if id id "")))
@@ -360,7 +371,7 @@
         (format "文件导出（全部%s行）" count1))
       (result-html- rt col-names col-ids {:form (str "docv/" (name tb))})
       [:br] )))
-
+                   
 (defn result-csv
   [rt col-names col-ids]
   (let [fcol (fn [r c] (let [v (c r)] 
@@ -493,6 +504,7 @@
                         (f2 (first rt2i))] ; 产生后面2、3级指标的多个[:tr]html片段 
                        (for [r (rest rt2i)] (f2 r))))) ]
       (html-body
+        {:js "app-esp.js"}
         [:form#fm1 {:method "POST" :action "/c/esp/stand-save"}
          (when enid (let [r (first (with-uid- :en enid))]
                       (html [:center [:h1 "被考评企业：" (:name r)]]
@@ -556,6 +568,7 @@
   []
   (let [sid "fhot"]
     (html-body
+      {:js "app-esp.js"}
       [:h1 "实名举报"]
       (eui-tip "任何单位和个人对考评机构的考评行为，有权向主管机关进行实名举报，主管机关会及时受理、组织调查处理，并为举报人保密。") [:br][:br]
       [:form {:id "fm1" :action "/c/espc/hot-save" :method "post"}
@@ -637,7 +650,9 @@
 (defn cert-renew-input
   "采用申请表单，但录入一些换证特定的字段"
   [id request]
-  (html-body (apply-input- request (keyword id))))
+  (html-body 
+    {:js "app-esp.js"}
+    (apply-input- request (keyword id))))
 
 (defn- cert-renew-sql
   "@f fetch 或 fetch-count"

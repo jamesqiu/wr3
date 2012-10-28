@@ -135,7 +135,8 @@
   "常用的html body模板，使用jquery ui和easyui，参数：
   @m：属性，例如 {:onload 'a()'}, :js属性表示1个或多个<head>中的.js文件如：{:js 'a.js'} {:js ['a.js' 'b.js']}
   @body：内容
-  usage：(html-body {:onload 'my_function()'} '...') "
+  usage：(html-body {:onload 'my_function()'} :js ['app1.js' 'app2.js'])
+  @todo 增加 :css "
   [m & body]
   `(html [:html 
           (if (:js ~m) (head-set-join-js (:js ~m)) head-set) 

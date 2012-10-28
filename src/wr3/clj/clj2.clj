@@ -244,7 +244,7 @@
         conn (make-connection db)
         ce (.getAll (Dict/ce))
         ec (.getAll (Dict/ec))]
-    (with-mongo conn
+    (with-mongo conn ; 注意：该处没有关闭mdb
       ;(mass-insert! tb2 (vec (for [[k v] ec] {:k k :v v})))
       (let [rt (fetch tb1 :where {:k (re-pattern (format "%s" "字典"))})]
         (doseq [e rt] (println (:k e) "=" (:v e))))
@@ -256,7 +256,7 @@
         tb "pinyin"
         conn (make-connection db)
         py (.getAll (Pinyin/instance))]
-    (with-mongo conn
+    (with-mongo conn  ; 注意：该处没有关闭mdb
       ;(mass-insert! tb2 (vec (for [[k v] ec] {:k k :v v})))
       ;(let [rt (fetch tb1 :where {:k (re-pattern (format "%s" "字典"))})]
       ;  (doseq [e rt] (println (:k e) "=" (:v e))))
@@ -270,7 +270,7 @@
                {:name "date" :label "开户日期" :type "input" :value "2011/6/3" :order 300}
                {:name "password" :label "密码" :type "password" :value "pass" :order 400}
                ]]
-  (with-mongo (make-connection "crud")
+  (with-mongo (make-connection "crud")  ; 注意：该处没有关闭mdb
     (let [rt (fetch-by-id "custInfo" (object-id "4dea50683e7ed42e2481f2ee"))]
       (println rt)
       (println (get rt (keyword "custname")))

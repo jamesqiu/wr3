@@ -216,7 +216,7 @@
   "app: 常用应用框架"
   []
   (eui-layout
-    {:id "layout1" :onload "grade_onload()"}
+    {:id "layout1" :onload "grade_onload()" :js "app-grade.js"}
     ;----------------------- north
     (app-top)   
     ;----------------------- west

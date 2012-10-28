@@ -7,7 +7,7 @@
 ;;; :etc 详细描述字符串
 
 (use 'somnium.congomongo)
-(use 'wr3.clj.u)
+(use 'wr3.clj.u 'wr3.clj.nosql)
 
 ; 数据字段字典，表名-字段名-字段字典, 用于veg.clj
 (def dds 
@@ -61,12 +61,13 @@
   "给出code，从mongodb的meta集合的dict表中取出第一个:name，不区分大小写。
   例如：(meta-name \"TB_TR_REGISTER_reCORd\") ; 返回 \"进场登记表\" "
   [code]
-  (with-mongo (make-connection "meta")
-    (let [rs (fetch :dict :where {:code (re-pattern (str "(?i)^" code "$"))})
+  (with-mdb2 "meta"
+    (let [rs (vec (fetch :dict :where {:code (re-pattern (str "(?i)^" code "$"))}))
           rt (map #(dissoc  % :_id) rs)
           nam (:name (first rt))]
       (or nam "/") )))
 
+(meta-name "name")
 ;; test
 ;(meta-name "TB_TR_REGISTER_reCORd")
 ;(dd-map "tb_TR_TRADE_DETAIL_RECORD" "Status")

@@ -14,6 +14,7 @@
   []
   (html
     [:html (head-set-join
+             (head-js "app-cdoc.js")
              (head-js "SyntaxHighlighterCore.js")
              (head-js "SyntaxHighlighterClojure.js")
              (head-css "SyntaxHighlighterCoreDefault.css"))
@@ -49,5 +50,5 @@
         [:pre (let [m (meta (resolve (symbol id0)))] (format "%s\n%s\n  %s\n" id0 (:arglists m) (:doc m))) ][:br]
         [:h2 "------ 源码 ------"]
         [:pre {:class "brush: clojure"} (source-fn2 id0)]
-        [:script {:type "text/javascript"} "SyntaxHighlighter.highlight();"]
-        )))
+        [:script {:type "text/javascript"} "SyntaxHighlighter.highlight();"] )))
+

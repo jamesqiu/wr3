@@ -65,45 +65,39 @@
 (defn pid
   "app: 身份证应用：校验、生成界面。"
   []
-  (html [:html head-set
-         [:body {:onload "pid_onload();"}
-          [:h1 (str home " / 身份证应用")][:br]
-          ;------ 校验
-          [:div
-           	[:form.app
-          		[:input {:type "text" :id "pid" :value "511102820125203" :title "输入待验证的身份证号码"}] "&nbsp;"
-              [:input {:type "button" :id "check_pid" :value " 提交验证 "}]
-              ]
-           	[:pre usage][:br]]
-          ;------ 生成
-          [:div
-           [:table.wr3table
-            [:thead
-             [:tr [:th {:colspan 5} "生成身份证"]]]
-            [:tbody
-             [:tr {:align "center"}
-              [:td "地区码"] [:td "出生年月"] [:td "性别"] [:td "序号"] [:td ""]]
-             [:tr
-              [:td [:input#areacode {:type "text" :value "532525"}]]
-							[:td [:input#datepicker {:type "text" :value "19810630"}]]
-              [:td [:div#gender
-                    [:input {:type "radio" :id "male"   :name "gender" :value "male" :checked "checked" }] "男"
-                    [:input {:type "radio" :id "female" :name "gender" :value "female"}] "女"
-               ]]
-              [:td
-               [:select#sid1 {:size "1"} (options 1)]
-               [:select#sid2 {:size "1" :style "display:none"} (options 2)]]
-              [:td [:button#gen_pid "提交生成"]]
-              ]]]
-					 [:table {:style "border:0px;"}
-            [:tr 
-             [:td {:style "vertical-align: top"} html-chinamap]
-             [:td {:style "vertical-align: top"} [:h2#area1 "省份"] [:div#area2 "区县"]]
-             ]]]
-          ;------ 结果展示
-          [:div.result "结果："]
-          ]] ))
-
+  (html-body
+    {:js "app-tool.js" :onload "pid_onload()"}
+    [:h1 (str home " / 身份证应用")][:br]
+    ;------ 校验
+    [:div
+     [:form.app
+      [:input {:type "text" :id "pid" :value "511102820125203" :title "输入待验证的身份证号码"}] "&nbsp;"
+      [:input {:type "button" :id "check_pid" :value " 提交验证 "}] ]
+     [:pre usage][:br]]
+    ;------ 生成
+    [:div
+     [:table.wr3table
+      [:thead
+       [:tr [:th {:colspan 5} "生成身份证"]]]
+      [:tbody
+       [:tr {:align "center"}
+        [:td "地区码"] [:td "出生年月"] [:td "性别"] [:td "序号"] [:td ""]]
+       [:tr
+        [:td [:input#areacode {:type "text" :value "532525"}]]
+        [:td [:input#datepicker {:type "text" :value "19810630"}]]
+        [:td [:div#gender
+              [:input {:type "radio" :id "male"   :name "gender" :value "male" :checked "checked" }] "男"
+              [:input {:type "radio" :id "female" :name "gender" :value "female"}] "女" ]]
+        [:td
+         [:select#sid1 {:size "1"} (options 1)]
+         [:select#sid2 {:size "1" :style "display:none"} (options 2)]]
+        [:td {:nowrap "true"} [:button#gen_pid "提交生成"]] ]]]
+     [:table {:style "border:0px;"}
+      [:tr 
+       [:td {:style "vertical-align: top"} html-chinamap]
+       [:td {:style "vertical-align: top"} [:h2#area1 "省份"] [:div#area2 "区县"]] ]]]
+    ;------ 结果展示div
+    [:div.result "结果："] ))
 
 (defn photo
   "service: 带底图的身份证显示，传入身份证号，得到身份证头像的 html 片段"
@@ -196,17 +190,15 @@ input0: 初始输入值
 html2: 可选参数，其他需要补充在<body>最后的html内容
 "
   [id info input0 & html2]
-  (html
-    [:html head-set
-     [:body {:onload (format "isapp_onload('%s');" id)}
-      [:h1 (str home " / " info)][:br]
-      [:form.app
-       [:input#in {:value input0}] " "
-       [:input#ok {:type "button" :value " 提交处理 "}] " "][:br]
-      [:div "结果："][:br]
-      [:div#rt  (let [f (ns-resolve 'wr3.clj.app.tool (symbol (str id "2")))] (f input0))]
-      (apply str html2)
-      ]]))
+  (html-body
+    {:onload (format "isapp_onload('%s');" id) :js "app-tool.js"}
+    [:h1 (str home " / " info)][:br]
+    [:form.app
+     [:input#in {:value input0}] " "
+     [:input#ok {:type "button" :value " 提交处理 "}] " "][:br]
+    [:div "结果："][:br]
+    [:div#rt  (let [f (ns-resolve 'wr3.clj.app.tool (symbol (str id "2")))] (f input0))]
+    (apply str html2) ))
 
 ;;;------------------------ 分词，good-name
 
@@ -258,20 +250,16 @@ html2: 可选参数，其他需要补充在<body>最后的html内容
 (defn complete
   "自动完成areacode"
   []
-  (html
-    [:html head-set
-     [:body {:onload "area_complete();"}
-      [:input {:id "complete"}]]]))
+  (html-body {:onload "area_complete()" :js "app-tool.js"}
+             [:input {:id "complete"}]))
 
-;;;------------------------ 测试dialog
+;;;------------------------ 测试dojo dialog
 (defn
   dialog
   "把一个div变成dialog进行显示。"
   []
-  (html
-    [:html head-set
-     [:body {:onload "dialog();"}
-      [:div {:id "dialog" :title "结果"} "对话框"]]]))
+  (html-body {:onload "dialog()" :js "app-tool.js"}
+             [:div {:id "dialog" :title "结果"} "对话框"]))
 
 ;;;------------------------ ce、ec字典及变量翻译
 ;;-------- 把字典装入内存太大，改从mongodb中查询
@@ -294,11 +282,14 @@ html2: 可选参数，其他需要补充在<body>最后的html内容
         tb2 "dict_ec"
         tb (if (= (name typ) "ce") tb1 tb2)
         conn (make-connection db)]
-    (with-mongo conn
-      (let [rt (fetch tb :where {:k (re-pattern (format "%s" s))})]
-        (for [e rt :let [k (:k e) v (:v e)]] (if (= k s)
-                                               (print-str "<b>" k v "</b>")
-                                               (print-str k v)))))))
+    (try 
+      (with-mongo conn
+        (let [rt (vec (fetch tb :where {:k (re-pattern (format "%s" s))}))]
+          (for [e rt :let [k (:k e) v (:v e)]] 
+            (if (= k s)
+              (print-str "<b>" k v "</b>")
+              (print-str k v)))))
+      (finally (close-connection conn)) )))
 
 (defn dict
   "app: 字典查询界面"
@@ -317,8 +308,7 @@ html2: 可选参数，其他需要补充在<body>最后的html内容
         t1 (System/currentTimeMillis)]
     (html
       [:div (join rt "<br/>")]
-      [:h2 (count rt) "个结果, 用时" (- t1 t0) "ms(毫秒)"]
-      )))
+      [:h2 (count rt) "个结果, 用时" (- t1 t0) "ms(毫秒)"] )))
 
 ;;;------------------------ 拼音简拼、全拼
 ;(def py (tool.Pinyin.))

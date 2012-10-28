@@ -24,33 +24,32 @@
     (with-open [dbs (dbserver dbname)]
       (let [tables (.tables dbs)
             db (.database dbs)]
-        (html
-          [:html head-set
-           [:body {:onload "dbm_onload();"}
-            [:div {:style "float: left"}
-             [:img  {:src (product-logo dbname)}][:br]
-             [:h2 "数据源：" [:br] dbname [:br] (format "(%s库)" (meta-name dbname))]
-             [:h2 "当前数据库：" [:br] db]]
-            [:table#t01 {:border 1 :class "wr3table" :style "float: left; margin: 10px"}
-             [:caption
-              [:span#dbname dbname] ; js将读取该dbname
-              [:span " 的表: " (count tables)] " -> "
-              [:a {:href "#" :onclick "$(\"table#t01\").tablesorter();"} "点列头排序"]]
-             [:thead (<tr> '(序号 描述 表名 精确记录数 大约记录数) :th)]
-             [:tbody
-              (map-indexed
-                (fn [i t] [:tr
-                           [:td (inc i)]
-                           [:td.meta (meta-name t)]
-                           [:td.tbname [:a {:href "#"} t]]
-                           [:td.tbrows {:align "right"} [:img {:src "/img/loading.gif"}]]
-                           [:td.tbrows2 {:align "right"} ".."]
-                           ])
-                tables)
-              ]
-             [:tfoot [:tr [:td {:colspan 5 :align "center"} [:i "-- IDP-WebReport --"]]]]]
-            [:div#cols {:style "float: left;"}]
-            ]])))))
+        (html-body 
+          {:onload "dbm_onload()" :js "app-dbm.js"}
+          [:div {:style "float: left"}
+           [:img  {:src (product-logo dbname)}][:br]
+           [:h2 "数据源：" [:br] dbname [:br] (format "(%s库)" (meta-name dbname))]
+           [:h2 "当前数据库：" [:br] db]
+           [:h2 "其他快速连接：" [:br] [:a {:href "/c/dbm/quick" :target "_blank"} "快速链接"]]
+           ]
+          [:table#t01 {:border 1 :class "wr3table" :style "float: left; margin: 10px"}
+           [:caption
+            [:span#dbname dbname] ; js将读取该dbname
+            [:span " 的表: " (count tables)] " -> "
+            [:a {:href "#" :onclick "$(\"table#t01\").tablesorter();"} "点列头排序"]]
+           [:thead (<tr> '(序号 描述 表名 精确记录数 大约记录数) :th)]
+           [:tbody
+            (map-indexed
+              (fn [i t] [:tr
+                         [:td (inc i)]
+                         [:td.meta (meta-name t)]
+                         [:td.tbname [:a {:href "#"} t]]
+                         [:td.tbrows {:align "right"} [:img {:src "/img/loading.gif"}]]
+                         [:td.tbrows2 {:align "right"} ".."]
+                         ])
+              tables) ]
+           [:tfoot [:tr [:td {:colspan 5 :align "center"} [:i "-- IDP-WebReport --"]]]]]
+          [:div#cols {:style "float: left;"}] )))))
 
 (defn rows
   "service: 传入库名/表名，返回记录数"
@@ -133,15 +132,13 @@
 (defn- jqueryui-wrap 
   "使用jquery ui进行格式化"
   [table-html]
-  (html
-    [:html head-set
-     [:body {:onload ""}
-      [:div#example [:ul
-                     [:li [:a {:href "#t1"} [:span "数据展示"] ]]
-                     [:li [:a {:href "/c/dbm/service2"} [:span "列分析"] ]]]
-       [:div#t1 table-html]]
-      [:script "$('#example').tabs();"]]]))
-  
+  (html-body 
+    [:div#example [:ul
+                   [:li [:a {:href "#t1"} [:span "数据展示"] ]]
+                   [:li [:a {:href "/c/dbm/service2"} [:span "列分析"] ]]]
+     [:div#t1 table-html]]
+    [:script "$('#example').tabs();"]))
+
 (defn data
   "service: 传入库名/表名，返回前100条数据"
   [ids request]
@@ -167,14 +164,10 @@
 (defn quick
   "app: 快速进行数据库连接，如连本地库"
   []
-  (html
-    [:html head-set
-     [:body {:onload "quick_onload();"}
+  (html-body {:onload "quick_onload()" :js "app-dbm.js"}
       [:div
-       (for [p '[sqlserver postgresql h2 mysql]] [:img.logo {:src (product-logo-by-id p) :alt (str p)}])]
-      [:hr]
-      [:div#in]
-     ]]))
+       (for [p '[sqlserver postgresql h2 mysql]] [:img.logo {:src (product-logo-by-id p) :alt (str p)}])] [:hr]
+      [:div#in] ))
 
 (def quickin-default ; 用于quickin，缺省数据库连接配置
   {:sqlserver {:driver (:sqlserver drivers)
@@ -255,18 +248,14 @@
       [:script (format "$('#%s').tabs();" id)])))
 
 (defn test1 []
-  (html
-    [:html head-set
-     [:body (jquery-tabs [{:label "Content 1" :link "#t1" :content "cn中文"}
-                          {:label "content 2" :link "/c/dbm/service2"}
-                          {:label "第三个" :link "#t3" :content "...<br/>..."}])]]))
+  (html-body (jquery-tabs [{:label "Content 1" :link "#t1" :content "cn中文"}
+                           {:label "content 2" :link "/c/dbm/service2"}
+                           {:label "第三个" :link "#t3" :content "...<br/>..."}])))
 
 (defn test2
   "测试 jquery tabs的原始写法"
   []
-  (html
-    [:html head-set
-     [:body {:onload "$('#example').tabs();"}
+  (html-body {:onload "$('#example').tabs()"}
       [:div {:id "example"}
        [:ul
         [:li [:a {:href "#t1"} [:span "Content 1"]]]
@@ -274,8 +263,7 @@
         [:li [:a {:href "#t3"} [:span "Content 3"]]]
         ]
        [:div#t1 "cn中文"]
-       [:div#t3 "33333333333333"]
-       ]]]))
+       [:div#t3 "33333333333333"] ]))
 
 (defn service2 []
   (html

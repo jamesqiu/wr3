@@ -105,7 +105,7 @@
   "app: 常用应用框架"
   []
   (eui-layout
-    {:id "layout1" :onload "veg_onload()"}
+    {:id "layout1" :onload "veg_onload()" :js "app-veg.js"}
     ;----------------------- north
     (app-top)
     ;----------------------- west

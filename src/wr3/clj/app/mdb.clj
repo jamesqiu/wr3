@@ -21,7 +21,7 @@
                                  (html [:a.db {:href "#"} dbname])
                                  (with-db dbname (count (collections)))))]
       (html-body
-        {:onload "mdb_onload()"}
+        {:onload "mdb_onload()" :js "app-mdb.js"}
         [:img {:src (format "%s/img/database/mongodb.png" webapp)}]
         [:div {:style "float: right"}
          [:h2 "对meta库的dict表进行管理（增、删、改）"]
@@ -75,24 +75,21 @@
   (with-dict
     (let [tb (fetch tbname)
           style {:style "font-family: Consolas"}]
-      (html
-        [:html head-set
-         [:body {:onload "dict_onload();"}
-          [:div style
-           [:button.create "新增"]" "
-           [:input {:type "text" :size 150 :value "{:code \"\" :name \"\" :type \"db\" :etc \"\"}"}]]
-          [:br]
-          (map-indexed
-            (fn [i r]
-              [:div style
-               [:span (format "(%s) " (inc i))]
-               [:span.id {:style "color:gray"} (-> r :_id str)]"&nbsp;"
-               [:button.delete "删除X"]"&nbsp;"
-               [:button.update "更新U"]
-               [:input {:type "text" :value (dissoc r :_id) :size 150}]
-               ])
-            tb)
-          ]]))))
+      (html-body 
+        {:onload "dict_onload()" :js "app-mdb.js"}
+        [:div style
+         [:button.create "新增"]" "
+         [:input {:type "text" :size 150 :value "{:code \"\" :name \"\" :type \"db\" :etc \"\"}"}]]
+        [:br]
+        (map-indexed
+          (fn [i r]
+            [:div style
+             [:span (format "(%s) " (inc i))]
+             [:span.id {:style "color:gray"} (-> r :_id str)]"&nbsp;"
+             [:button.delete "删除X"]"&nbsp;"
+             [:button.update "更新U"]
+             [:input {:type "text" :value (dissoc r :_id) :size 150}] ])
+          tb) ))))
 
 (defn create
   "service: 传入{..}，创建新条目"

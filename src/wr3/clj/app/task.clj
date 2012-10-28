@@ -45,8 +45,8 @@
                         #(html [:div.person {:id %} (get persons-map %)]) 
                         (:persons t))]]]])
           ]
-      (html-jquery
-        {:onload "task_onload()"}
+      (html-body
+        {:onload "task_onload()" :js "app-task.js"}
         [:h2 (format "%s (人数：%s)" "所有任务" (count persons)) "&nbsp;"
 	        [:button#add-task "加任务" ] "&nbsp;"
 	        [:button#add-person  "加人员" ]

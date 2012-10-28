@@ -1,7 +1,7 @@
 (ns ^{:doc "企业安全生产标准化管理系统 Enterprise Safety Production Standardization。
   “安全生产标准化（work safety standardization）” 
   pn：考评员person，en：企业enterprise，org：考评机构organization，mot：交通部Ministry Of Transport "
-      :todo "" }
+      :todo "增加日志记录" }
      wr3.clj.app.esp)
 
 (use 'wr3.clj.app.espc 'wr3.clj.app.espconf); :reload)
@@ -67,11 +67,19 @@
   [request]
   (html-body (pn-input request)))
     
+(defn- where- 
+  "为pn-list en-list org-list 生成用户限制相关的where条件 "
+  [request]
+  (let [uid (wr3user request)
+        admin (:admin (first (with-uid- :user uid)))]
+    (if (= admin "01") {} {:admin admin}) ))
+
 (defn pn-list
   "service: 考评员列表
   @id name的pattern如'张' "
-  [id skip]
-  (list- id :pn [] [:name :type :sex :edu :cid :admin :_id] {:skip (to-int skip 0)}))
+  [id skip request]
+  (let [where (where- request)]
+    (list- id :pn [] [:name :type :sex :edu :cid :admin :_id] {:skip (to-int skip 0) :where where})))
 
 (defn pn-learn
   "service: 考评员培训、考试查询
@@ -129,8 +137,9 @@
 (defn org-list
   "service: 考评机构列表
   @id name的pattern如'学校' "
-  [id skip]
-  (list- id :org [] [:name :type :grade :cid :admin :_id] {:skip (to-int skip 0)}))
+  [id skip request]
+  (list- id :org [] [:name :type :grade :cid :admin :_id] 
+         {:skip (to-int skip 0) :where (where- request)}))
 
 (defn org-pn-archive
   "service: 考评机构-考评员档案管理"
@@ -280,6 +289,7 @@
         rt (with-esp- (fetch :pn :sort {:fulltime -1} :where {:belong uid :contract1 nil} ))
         pnids (:pnids r)]
     (html-body
+      {:js "app-esp.js"}
       [:h1 (format "为【%s】选择考评员：" (:name r))]
       (when-not (zero? (count pnids)) (eui-tip "之前已经选择过考评员，可更改。"))
       (result-html- rt '[姓名 证书类别 证书编号 专兼职 聘用日期 详情 选择] 
@@ -367,8 +377,9 @@
 (defn en-list
   "service: 企业列表
   @id name的pattern如'安徽' "
-  [id skip]
-  (list- id :en [] [:name :type :grade :cid :admin :_id] {:skip (to-int skip 0)}))
+  [id skip request]
+  (list- id :en [] [:name :type :grade :cid :admin :_id] 
+         {:skip (to-int skip 0) :where (where- request)}))
 
 (defn en-stand
   "service: 列出所有的达标标准"
@@ -557,6 +568,7 @@
   []
   (let []
     (html-body
+      {:js "app-esp.js"}
       [:h1 (dd-cert :pn) "直接颁发"] 
       (eui-tip "提示：直接颁发则签发人姓名和职务必填。修改后请点击 “确定” 按钮；若要放弃修改请直接点击 “关闭” 按钮。")
       (eui-text {:id "pass-direct" :type "checkbox"}) (space 2) "直接颁发" [:br][:br]
@@ -883,7 +895,8 @@
       (result-html- rs
                     ["代码编号" "名称" "详情"]
                     [:code :name :_id]
-                    {:form "mot-admin-doc"}))))
+                    {:form "mot-admin-doc"}) [:br]
+      (eui-button {:href "/c/esp/mot-admin-doc" :target "_blank"} "新增下级主管机关"))))
 
 (defn mot-admin-doc 
   "@id id是用户oid字符串，没有id则表示新增用户操作"
@@ -906,7 +919,7 @@
        [:br]
        (if (nil? id)
          (html 
-           (eui-button {:onclick "$('#fm1').attr('action','/c/esp/mot-admin-crud/add').submit()"} "新加主管机关") (space 5))
+           (eui-button {:onclick "$('#fm1').attr('action','/c/esp/mot-admin-crud/add').submit()"} "添加主管机关") (space 5))
          (html
            (eui-button {:onclick "$('#fm1').attr('action','/c/esp/mot-admin-crud/update').submit()"} "更新主管机关") (space 5) 
            (eui-button {:onclick "$('#fm1').attr('action','/c/esp/mot-admin-crud/del').submit()"} "删除主管机关") (space 5) ))
@@ -940,10 +953,10 @@
 
 (defn mot-user
   "service: 主管机关向下级主管机关委托代办工作
-  @todo "
+  @todo 为下级用户配置管理菜单（工作量大的条目如考评员、企业审批） "
   [request]
   (let [admin (mot-role request)
-        rs (with-esp- (fetch :mot :where {:upper admin}))]
+        rs (with-esp- (fetch :mot :where {:upper admin} :sort {:code 1}))]
     (html
       [:h1 "下级主管机关用户列表"]
       [:label {:for "admins"} "选择主管机关："] 
@@ -990,9 +1003,79 @@
 
 (defn mot-portal-save
   [request]
-  (let [vars (query-vars2 request)
+  (let [uid (wr3user request)
+        vars (query-vars2 request)
         {rt :rt err :error} (input-check-require vars cfg-portal)]
     (html
       (if rt
-        (str "成功提交：\n\n" vars) ; todo: 完成保存
+        (do (insert- :portal (into {:uid uid :date (datetime)} vars))
+          (str "成功提交\n\n“" (:title vars) "”"))
         (str "如下必填字段尚未填写：\n\n" (join err "，"))))))
+
+(defn- portal-items
+  "根据portal type得到portal条目
+  @portal-type dd-portal的key：1/2/3/4 "
+  [portal-type]
+  (let [limit (case portal-type (1 2 3) 4 10)
+        rs (with-esp- (fetch :portal :limit limit :where {:type (str portal-type)}))]
+    [:ul (for [{title :title link :link} rs] 
+           [:li [:a {:href link :target "_blank"} title]]) ] ))
+
+;(println (portal-items 4))
+
+(defn- div-moc-con-
+  []
+  [:div.moc_con
+   [:div.moc_login
+    (for [[url img] {:mot "j_r3_c3.jpg" :en  "j_r3_c4.jpg" :org "j_r3_c5.jpg" :pn  "j_r3_c6.jpg"}]
+      [:div.login_a 
+       [:a {:href (str "/c/esp/index/" (name url))} [:img {:src (str "img/" img) :border "0"}] ] ])
+    [:div.login_b [:a {:href "/c/espc/hot"} [:img {:src "img/j_r8_c9.jpg"}]]]
+    [:div.moc_list 
+     [:div.moc_list_left 
+      [:div.moc_list_left_news
+       [:script {:src "js/config.js"}]
+       [:script {:src "js/fun.js"}]]
+      [:div.moc_list_left_space ""]
+      [:div.moc_list_left_news
+       [:div.news_top
+        [:h3 "信息公告"] ; portal-type: 1
+        [:span [:a {:href "#"} "更多&gt;&gt;"]]]
+       (portal-items 1) ]
+      [:div.moc_list_left_news
+       [:div.news_top
+        [:h3 "图片新闻"] ; portal-type: 2
+        [:span [:a {:href "#"} "更多&gt;&gt;"]]]
+       (portal-items 2) ]
+      [:div.moc_list_left_space "" ]
+      [:div.moc_list_left_news
+       [:div.news_top
+        [:h3 "工作动态"] ; portal-type: 3
+        [:span [:a {:href "#"} "更多&gt;&gt;"]] ]
+       (portal-items 3) ] ]
+     [:div.moc_list_right 
+      [:div.moc_list_right_news
+       [:div.right_top [:h3 "相关资源链接"]]  ; portal-type: 4
+       (portal-items 4) ] ] ]]])
+
+(defn mot-portal-gen
+  "生成esp/index.html文件代码 "
+  []
+  (let [title "交通运输企业安全生产标准化系统（试行）"
+        copyright "版权所有：中华人民共和国交通运输部 信息维护：安全监督司 备案编号：京ICP备05046837号"]
+    (str ; DOCTYPE 这行是必须的，否则footer看不见
+      "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"
+      (html
+        [:html
+         [:head 
+          [:meta {:http-equiv "Content-Type" :content "text/html; charset=utf-8"} ]
+          [:title title]
+          [:link {:href "esp.css" :rel "stylesheet" :type "text/css"}] ]
+         [:body
+          [:div {:id "moc_top"} [:img {:src "img/j_r1_c1.jpg"}]]
+          [:div {:id "moc_main"}
+           (div-moc-con-)
+           [:div.moc_footer copyright] ]]]))))
+
+(wr3.clj.file/file-set-text "f:\\dev3\\webapp\\esp\\index-test.html" (mot-portal-gen) "UTF-8")
+

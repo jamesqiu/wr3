@@ -14,6 +14,8 @@
 
 ;; bjca新版所需2个.js文件
 (def bjca-js2 ["bjca-date.js" "bjca-XTXApp.js"])
+;; frame所需的所有.js文件
+(def frame-js (into ["app-esp.js"] bjca-js2))
 
 ; ie浏览器会调用该内容；非ie浏览器解释不了如下内容，直接执行 bjca-XTXAPP.js 中的OnUsbKeyChange函数，但也是同样的内容。
 (def bjca-onchange
@@ -91,13 +93,13 @@
           ["下级机构统计分析"          "icon-list"    "mot-sub-olap"] ; title icon id 
           ]
          ["系统管理"     "icon-setting"
-          ["装载更新配置"     "icon-reload" "mot-reload" "/c/console/reload/app.espconf"]
           ["首页内容维护"     "icon-reload" "mot-portal"]
+          ["装载更新配置"     "icon-reload" "mot-reload" "/c/console/reload/app.espconf"]
           ]
          ]   
    :frame-main (html [:script "layout_load_center('/c/esp/mot-resp-sum')"]
                      (set-title "主管机关管理系统（试行）"))
-   :js bjca-js2
+   :js frame-js
    :after bjca-onpull
    })
 
@@ -119,7 +121,7 @@
    :frame-main (html [:h2 "考评员用户主界面"]
                      [:script "layout_load_center('/static/esp/about-pn.html')"]
                      (set-title "考评员在线申请系统（试行）"))
-   :js bjca-js2
+   :js frame-js
    :after bjca-onpull
    })
 
@@ -156,7 +158,7 @@
    :frame-main (html [:h2 "考评机构用户主界面"]
                      [:script "layout_load_center('/c/esp/apply-resp/en')"]
                      (set-title "考评机构管理系统（试行）"))
-   :js bjca-js2
+   :js frame-js
    :after bjca-onpull
    })
 
@@ -180,7 +182,7 @@
          ]   
    :frame-main (html [:h2 "交通运输企业用户主界面"]
                      (set-title "企业在线填报管理系统（试行）"))
-   :js bjca-js2
+   :js frame-js
    :after bjca-onpull
    })
 

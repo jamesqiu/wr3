@@ -112,7 +112,7 @@
         sid (second ids)
         doc2 (get-doc fm sid)]
     (html-body 
-      {:onload "crud_form_onload();"}
+      {:onload "crud_form_onload()" :js "app-crud.js"}
       [:h2 [:a {:href (format "%s/c/crud/view/%s" webapp fm)} "列表"]]
       [:form.wr3form {:action (format "%s/c/crud/save" webapp)}
        [:input {:name "form" :type "hidden" :value fm}]
@@ -154,7 +154,7 @@
                           (fn1 label2 name2 type2)))
             ]
         (html-body 
-          {:onload "crud_design_onload()"} 
+          {:onload "crud_design_onload()" :js "app-crud.js"} 
           [:h2 (format "%s (%s)" fm (meta-name fm))][:br]
           [:div [:button#add " 增加字段 "]][:br]
           [:div#add {:style "display:none"} (fn2 {:label "" :name "" :type ""})][:br]
@@ -225,9 +225,7 @@
         head-labels (map :label form)]
     (with-mongo (make-connection "crud")
       (let [rt (fetch fm :limit 1000)]
-        (html
-          [:html head-set
-           [:body {:onload "crud_view_onload();"}
+        (html-body {:onload "crud_view_onload()" :js "app-crud.js"}
             [:table.wr3table {:border 1}
              [:caption (format "\"%s\" 列表" (meta-name fm))]
              [:thead [:tr [:th "序号"] (for [e form] [:th {:title (:name e)} (:label e)]) [:th "操作"] ]]
@@ -239,4 +237,4 @@
                            [:td.view [:a {:href (format "%s/c/crud/form/%s/%s" webapp fm (:_id r))} "查看"]] ])
                 rt) ]
              [:tfoot [:tr [:td {:colspan (+ 2 (count heads))} [:a {:href (format "%s/c/crud/form/%s" webapp fm)} "新增文档"]]]]
-             ]]] )))))
+             ] )))))

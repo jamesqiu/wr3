@@ -130,9 +130,8 @@
         cfg-pn (if (not id) cfg-pn
                  (espc/cfg-set-values- cfg-pn rs))]
     (html-body
-      {:onload (format (format "espfj_onload(%s)" 
-                               (if rs (str "[" (join (split (:type rs) "&") ",") "]")
-                                 "[]")))}
+      {:js "app-espfj.js" 
+       :onload (format "espfj_onload(%s)" (if rs (str "[" (join (split (:type rs) "&") ",") "]") "[]"))}
       [:center {:style "border: 1px solid #369"}
        [:h1 {:style "padding:20px; background-color:#369; color: white; font-size: 22px; margin-top:0px"} 
         "福建省交通运输厅——考评员在线报名系统"]
@@ -217,7 +216,7 @@
         rs (with-mdb2 "espfj" (fetch-one :user :where {:uid uid})) ; 登录用户的信息 
         ]
     (html-body 
-      {:onload ""}
+      {:js "app-espfj.js"}
       [:center {:style "border: 1px solid #366"}
        [:h1 {:style "padding:20px; background-color:#366; color: white; font-size: 22px; margin-top:0px"} 
         "福建省交通运输厅——考评员在线报名系统"]
