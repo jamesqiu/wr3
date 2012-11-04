@@ -4,6 +4,7 @@
  */
 function espfj_onload(type_vals) {
 	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
+	// 把业务类型下拉选择框变成最多可选两项
 	$('#type').combobox({multiple:true, width:250,
 		onChange: function(v1, v0) {
 			if (v1.length>2) {

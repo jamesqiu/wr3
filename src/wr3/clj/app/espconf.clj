@@ -93,8 +93,8 @@
           ["下级机构统计分析"          "icon-list"    "mot-sub-olap"] ; title icon id 
           ]
          ["系统管理"     "icon-setting"
-          ["首页内容维护"     "icon-reload" "mot-portal"]
-          ["装载更新配置"     "icon-reload" "mot-reload" "/c/console/reload/app.espconf"]
+          ["首页内容维护"     "icon-file" "mot-portal"]
+          ["密钥用户管理"     "icon-user" "mot-user-admin"]
           ]
          ]   
    :frame-main (html [:script "layout_load_center('/c/esp/mot-resp-sum')"]
@@ -316,6 +316,7 @@
    :pn-train "考评员培训考试记录"
    :hot "实名举报信息"
    :refine "整改通知"
+   :user "U盘密钥用户"
    })
 ; 证书年限
 (def dd-cert-year
@@ -385,12 +386,23 @@
    3 "工作动态"
    4 "相关资源链接"
    })
-
+; U盘密钥用户表role类型
+(def dd-role
+   {
+    "mot" "主管机关" 
+    "en" "企业" 
+    "org" "考评机构" 
+    "pn" "考评员"
+    })
+; 委托功能列表。 如： [[考评员申请受理 icon-user apply-resp/pn] [..] [..] .. [投诉举报受理 icon-tip mot-hot]]
+(def dd-menu
+  (-> cfg-frame-mot :nav first (subvec 3)))
+; 首页portal项目表单
 (def cfg-portal
   [
-   ["类型" :type {:t dd-portal :require true}]
-   ["标题" :title {:require true}]
-   ["连接" :link {}]
+   ["类型" :ptype {:t dd-portal :require true}]
+   ["标题" :ptitle {:require true :style "width:500px"}]
+   ["连接" :link {:style "width:500px"}]
    ["附件" :file {:t 'file}]
    ])
 
@@ -476,6 +488,7 @@
 (def ^{:doc "减少dd-meta和cfg-apply-pn|org|en中的重复定义"} 
       dd-meta
   (merge
+    (cfg-meta cfg-portal)
     (cfg-meta cfg-apply-pn)
     (cfg-meta cfg-apply-org)
     (cfg-meta cfg-apply-en)
@@ -493,6 +506,7 @@
      :birth "出生日期"
      :cdate "发证时间"
      :cid "证书号"
+     :comment "备注"
      :content "内容"
      :contract0 "聘用日期"
      :contract1 "解聘日期"
@@ -517,6 +531,7 @@
      :pn "考评员"
      :pnids "选择的考评员"
      :province "省份"
+     :pwd "密码"
      :reason "原因"
      :refine-doc "整改报告"
      :resp "受理结果"
@@ -526,6 +541,7 @@
      :respdate-eval "考评日期"
      :respdate-refine "整改报告日期"
      :respdate-review "审核日期"
+     :role "用户类型"
      :score "分数"
      :score0 "自评分数"
      :score1 "考评分数"

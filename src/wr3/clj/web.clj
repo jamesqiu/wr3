@@ -665,6 +665,9 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
       [\"性别\" :sex {:t [\"男\" \"女\"]}] ...]
     字段属性中：:require true/false 表示是否必填
                 :t 表示类型，不写表示text，vector和map表示下拉列表，其他特殊：'textarea 'file 'email
+                :v 缺省值
+                :title 字段说明提示
+                :style 字段style
   @m 含 {:action :title :buttons :others ..} 的其他定制化参数, 
     :action为执行保存的url；
     :title为标题，
@@ -672,14 +675,15 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
     :others 其他自定义属性
   注意：如果有{:t 'file}的字段，记着在后面放置 (fileupload-dialog)  "
   [cfg m]
-  (let [css-label "font-family:微软雅黑;font-size:14px;vertical-align:center;height:35px;border-bottom:1px dotted gray"]
+  (let [css-label "font-family:微软雅黑;font-size:14px;vertical-align:center;height:35px;border-bottom:1px dotted gray"
+        require-hide? (:require-hide? m)]
     (html
       [:form {:id "fm1" :method "POST" :action (:action m)}
        [:table {:style "margin-left: 30px"}
         [:caption {:style "padding: 5px"} [:h1 (m :title)]]
-        (for [[nam id {t :t v :v require :require title :title}] cfg]
+        (for [[nam id {t :t v :v require :require title :title style :style}] cfg]
           (let [sid (name id)
-                attr {:id sid :name sid :value v :title title 
+                attr {:id sid :name sid :value v :title title :style style 
                       :required (if (true? require) "true" nil)}] ; 通用attrib
             [:tr 
              [:td {:style css-label} [:label (str nam "：")]]
@@ -691,10 +695,12 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
                 (= t 'email)     (eui-email    attr)
                 (map? t)         (eui-combo    attr t)
                 (vector? t)      (eui-combo    attr (apply array-map (flatten (for [e t] [e e]))))
-                :else            (eui-text     (into attr {:style "width: 250px"}))) ]
-             [:td [:font {:color (if require "red" "lightgray")} "*"]] ]))
+                :else            (eui-text     (into {:style "width: 250px"} attr))) ]
+             (when-not require-hide? [:td [:font {:color (if require "red" "lightgray")} "*"]]) ]))
         [:tfoot [:tr [:td {:colspan 3 :align "center" :style "padding: 15px"} 
-                      [:p "注：带红色<font color='red'>*</font>的为必填项。"] (:buttons m) ]]]]] )))
+                      (when-not require-hide? [:p "注：带红色<font color='red'>*</font>的为必填项。"])
+                      (:buttons m) ]]]
+        ]] )))
 
 (defn input-check-require
   "检查根据input配置@cfg录入的结果@vars中，是否所有:require true的项都确实录入了。

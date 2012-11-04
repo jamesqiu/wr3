@@ -2,7 +2,7 @@
 <%
 	String url = "/index-gotoreal.html"; 
 	String serverName = request.getServerName();
-	if (serverName.equals("localhost")) {
+	if (serverName.equals("www.numagic.cn") || serverName.equals("numagic.cn")) {
 		url = "/index-numagic.html";
 	} else if (serverName.equals("www.vismed.org") || serverName.equals("vismed.org")) {
 		url = "/index-vismed.html";

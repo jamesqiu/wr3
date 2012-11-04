@@ -4,6 +4,7 @@
       :todo "增加日志记录" }
      wr3.clj.app.esp)
 
+;; 注：use 后的函数可从/c/esp/foo 调用
 (use 'wr3.clj.app.espc 'wr3.clj.app.espconf); :reload)
 (use 'wr3.clj.web 'wr3.clj.tb 'wr3.clj.s 'wr3.clj.n 'wr3.clj.chart 'wr3.clj.u 'wr3.clj.nosql 'wr3.clj.chart)
 (use 'hiccup.core 'somnium.congomongo)
@@ -30,6 +31,7 @@
         :else false)
       ; 其他页面注册用户都能访问
       (cond 
+        (= fname "rmdb") (wr3role? request "root")
         uid true
         ; (.startsWith fname "hot") true ; 实名举报不登录可访问   
         :else false))))
@@ -455,9 +457,12 @@
     (when r (:admin r))))
 
 (defn- mot-subs
-  "获取下一级主管机关列表"
-  [upper]
-  (map (juxt :code :name) (with-esp- (fetch :mot :where {:upper upper} :sort {:code 1}))))
+  "获取下一级主管机关列表
+  @uppser 上级的代码如'02' 
+  @with-upper? 包含上级及所有下级 "
+  [upper & with-upper?]
+  (let [where (if with-upper? {:code (re-pattern (str "^" upper))} {:upper upper})]
+    (map (juxt :code :name) (with-esp- (fetch :mot :where where :sort {:code 1})))))
 
 (defn mot-olap
   "公共service: 主管机关进行pn、org、en的查询搜索和统计分析
@@ -717,7 +722,7 @@
     (html
       [:div#pn_train_list
        [:h2 (format "已录入的考评员培训、考试记录（%s 条）：" count1)]
-       (pager-html count1 skip "esp_pn_train_list('/c/esp/mot-pn-train-list')")
+       (pager-html count1 skip "esp_pager('/c/esp/mot-pn-train-list', $('#pn_train_list'))")
        (result-html- rt2 
                      ["姓名" "培训合格证" "开始日期" "结束日期" "学时" "类型" "考试日期" "考试成绩"] 
                      [:name :train-id :train-start :train-end :train-hour :type :exam-date :exam-score])])))
@@ -949,27 +954,85 @@
     (if (empty? rs)
       "（该下级主管机关尚无审核通过的注册用户。）" 
       (html
-        (result-html- rs [] [:name :uid :_select] {:mot-user true}) ))))
+        [:h2 (format "用户列表（%s 名）：" (count rs))]
+        (result-html- rs [] [:name :uid :_id] 
+                      {:mot-user true
+                       :form "mot-menu-doc"}) ))))
+
+(defn- mot-user-sum
+  "列出各下属主管机关的用户数量"
+  [admin]
+  (let [where (if (= admin "01") {} {:admin (re-pattern (str "^" admin))})
+        rt (with-esp- (fetch :user :where where :limit 1000 :sort {:admin 1}))]
+    (html
+      [:h2 (format "用户列表（%s 名）：" (count rt))]
+      (result-html- rt [] [:admin :name :uid :_id] 
+                    {:admin (into dd-admin (mot-subs admin true)) 
+                     :mot-user true
+                     :form "mot-menu-doc"}))))
 
 (defn mot-user
   "service: 主管机关向下级主管机关委托代办工作
   @todo 为下级用户配置管理菜单（工作量大的条目如考评员、企业审批） "
   [request]
   (let [admin (mot-role request)
-        rs (with-esp- (fetch :mot :where {:upper admin} :sort {:code 1}))]
+        dd (if (= admin "01") dd-admin (mot-subs admin true))]
     (html
       [:h1 "下级主管机关用户列表"]
       [:label {:for "admins"} "选择主管机关："] 
-      (eui-combo {:id "admins" :onchange "ajax_load($('#users'), '/c/esp/mot-user-list/'+$('#admins').val())"} 
-                 (map #(vector (:code %) (:name %)) rs)) [:br]
-      [:label {} "用户列表："][:br][:br]
-      [:div#users (mot-user-list (:code (first rs)) request)])))
+      (eui-combo {:id "admins" :onchange "ajax_load($('#users'), '/c/esp/mot-user-list/'+$('#admins').val())"} dd) [:br]
+      [:div#users (mot-user-sum admin) ]))); (mot-user-list (:code (first rs)) request)])))
   
+(defn mot-user-admin
+  "把注册用户指定admin"
+  [request]
+  (let [admin (mot-role request)
+        where (case admin "01" {} {:admin (re-pattern (str "^" admin))})
+        where (into {:role "mot"} where) ; 只管理主管机关用户
+        rs (with-esp- (fetch :user :where where :sort {:_id -1 :admin 1}))]
+    (html
+      (eui-tip "给注册了U盘密钥的用户调整主管机关（即：部分注册了U盘密钥的用户申请时填写的省市或者主管机关可能有误，需要再次进行调整指定。）")
+      [:h1 "U盘密钥用户——主管机关调整"]
+      (result-html- rs {:pid "证件号"} [:name :pid :admin :_id] 
+                    {:admin (merge dd-role dd-admin)
+                     :form "mot-user-doc"}) )))
+
+(defn mot-user-doc
+  "调整一个用户的主管机关
+  @id 文档 object-id 字符串 "
+  [id request]
+  (let [admin (mot-role request)
+        dd (case admin "01" dd-admin (apply array-map (reduce into (mot-subs admin true))))
+        button (eui-button-submit "fm1" {:ajax (format "/c/esp/doc-save/user/%s" id)})]
+    (doc- :user id 
+          {:after (html 
+                    (input-form [["调整主管机关" :admin {:t dd}]
+                                 ] {:title "调整主管机关" :buttons button :require-hide? true})
+                    (eui-tip "提交提示“完成更新”后，请关闭此页，并刷新列表查看更改结果。")) })))
+
+(defn mot-menu-doc
+  "调整一个主管机关用户的委托功能"
+  [id request]
+  (let [admin (mot-role request)
+;        dd (case admin "01" dd-admin (apply array-map (reduce into (mot-subs admin true))))
+        dd (apply array-map (reduce into (for [[nam icon id] dd-menu] [id nam])))
+        button (eui-button-submit "fm1" {:ajax (format "/c/esp/doc-save/user/%s" id)})]    
+    
+    (doc- :user id 
+          {:before [:script "esp_mot_menu_doc([])"]
+           :after (html 
+                    [:input#menuText {:type "hidden" :value ""}] ; 用于保存业务类型选择最多两种的值                    
+                    (input-form [["委托管理的功能" :menu3 {:t dd}]
+                                 ] {:title "主管机关工作委托" :buttons button :require-hide? true})
+                    (eui-tip "提交提示“完成更新”后，请关闭此页，并刷新列表查看更改结果。")) })))
+
 (defn mot-org-refine
+  "mot下发整改通知给org"
   []
   (refine :org))
   
 (defn mot-en-refine
+  "mot下发整改通知给en"
   []
   (refine :en))
   
@@ -990,16 +1053,23 @@
            [:h2  
             (format "%s （<font color=%s>%s</font>）" title (if (zero? sum ) "lightgray" "red") sum)]]])] ) ))
 
+(defn- mot-portal-list-
+  "列出所有的portal项目"
+  []
+  (let [rs (with-esp- (fetch :portal :limit 100 :sort {:ptype 1 :date -1}))]
+    (result-html- rs [] [:ptype :ptitle :date] {})))
+
 (defn mot-portal
   "service: mot对首页进行维护. todo: 改为ajax提交 "
   [request]
   (html
-    (input-form cfg-portal 
+    (input-form cfg-portal
                 {:title "首页栏目内容维护"
                  :action "/c/esp/mot-portal-save"
                  :buttons (html (eui-button-submit "fm1" {:ajax "/c/esp/mot-portal-save"}) (space 5) 
                                 (eui-button-reset "fm1") ) })
-    (fileupload-dialog) ))
+    (fileupload-dialog) 
+    (mot-portal-list-)))
 
 (defn mot-portal-save
   [request]
@@ -1009,7 +1079,7 @@
     (html
       (if rt
         (do (insert- :portal (into {:uid uid :date (datetime)} vars))
-          (str "成功提交\n\n“" (:title vars) "”"))
+          (str "成功提交\n\n“" (:ptitle vars) "”"))
         (str "如下必填字段尚未填写：\n\n" (join err "，"))))))
 
 (defn- portal-items
@@ -1077,5 +1147,4 @@
            (div-moc-con-)
            [:div.moc_footer copyright] ]]]))))
 
-(wr3.clj.file/file-set-text "f:\\dev3\\webapp\\esp\\index-test.html" (mot-portal-gen) "UTF-8")
-
+;(wr3.clj.file/file-set-text "f:\\dev3\\webapp\\esp\\index-test.html" (mot-portal-gen) "UTF-8")

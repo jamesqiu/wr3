@@ -1,6 +1,15 @@
 (ns wr3.clj.app.console)
 
-(use 'wr3.clj.web)
+(use 'hiccup.core)
+(use 'wr3.clj.web 'wr3.clj.s)
+
+(defn auth
+  "该 CljServlet 调用，用于本应用各函数的权限控制 "
+  [request fname ids & args]
+  (let [root? (wr3role? request "root")]
+    (case fname
+      ("apps" "rsh" "resp" "exec") root?
+      true)))
 
 (defn reload 
   "app: 可动态reload wr3.clj下的所有clj，甚至自身 '/c/console/reload/app.console'
@@ -25,7 +34,7 @@
 
 (defn apps
   "所有常用应用"
-  []
+  [request]
   (let [cfg (array-map :bank "银行经营分析系统演示（前提：db）"
                        :cdoc "在线查看函数文档及源码"
                        :chartf "各种图形（静态图及Flash图）效果演示"
@@ -45,9 +54,42 @@
                        :veg "江桥市场蔬菜报表分析系统（前提：db）" )]
     (html-body
       [:table.wr3table {:align "center"}
-       [:caption "app应用一览表"]
+       [:caption (format "app应用一览表 (用户：%s)" (wr3user request))]
        [:tbody
         [:tr [:th "应 用"] [:th "说 明"]]
         (for [[k v] cfg] 
           [:tr [:td [:a {:href (str "/c/" (name k)) :target "_blank"} k]] [:td v]]) ]])))
+
+(import [wr3.util Exec])
+
+(defn exec
+  "app: 执行rsh提交的结果"
+  [request cmd args]
+  (let [rt (if args (Exec/exec cmd args) (Exec/exec cmd))]
+    (html
+      [:textarea {:style "width:99%; height:99%"} rt])))
+  
+(defn rsh
+  "app: 输入命令；上传文件至file目录 "
+  [request]
+  (let []
+    (html-body
+      [:form {:action "/c/console/exec" :method "POST" :target "_blank"}
+       [:label "cmd: "][:input {:name "cmd" :value "cmd /c dir" :size 50}] [:br]
+       [:label "args: "][:input {:name "args" :value "" :size 50}] [:br]
+       [:input {:type "submit"}] ]
+      [:hr]
+      [:form#fm1 {:name "fm1"}
+       [:label "文件："]
+       (fileupload-field "文件" "tmpfile" "" {})]
+      (fileupload-dialog))))
+  
+(defn resp
+  "app: 在app.espc命名空间上输入命令 "
+  [request]
+  (let []
+    (html-body
+      [:form {:action "/c/espc/rrt" :method "POST" :target "_blank"}
+       [:label "sql: "][:input {:name "sql" :value "(with-esp- (fetch :org :limit 3)) " :size 100}] [:br]
+       [:input {:type "submit"}] ] )))
 

@@ -31,20 +31,20 @@
               ["客户智能搜索" "cust" "icon-find"]
               ["客户经理搜索" "mng" "icon-user"]]
    :nav [
-         ["业务工作"            "icon-pen" ; title id
-          ["综合业务"          "icon-sum"    "indic0_bt"] ; title icon id 
-          ["列表查看"          "icon-list"   "hs300_bt" ]
-          ["统计报表"          "icon-pie"    "report3_bt"]]
+         ["业务工作"          "icon-pen" ; title id
+          ["综合业务"         "icon-sum"    "indic0_bt"] ; title icon id 
+          ["列表查看"         "icon-list"   "hs300_bt" ]
+          ["统计报表"         "icon-pie"    "report3_bt"]]
          
-         ["系统管理及帮助"      "icon-search"
-          ["网站样式"          "icon-search" "site_bt"]
-          ["使用帮助"          "icon-help"   "help_bt"]]
+         ["系统管理及帮助"    "con-search"
+          ["网站样式"         "icon-search" "site_bt"]
+          ["使用帮助"         "icon-help"   "help_bt"]]
          ]   
    :menu [
           ["业务系统数据查询" 
-           ["客户信息"     "11-cust"] 
-           ["客户经理"     "12-mng"]
-           ["存贷业务"     "13-biz"]]
+           ["客户信息"        "11-cust"] 
+           ["客户经理"        "12-mng"]
+           ["存贷业务"        "13-biz"]]
           
           ["分析报表"
            ["活期存款分析"    "21-hq"]     
@@ -356,8 +356,7 @@
                                            (not= cpid "") (format "/c/bank/acct/%s" cpid)
                                            (not= epid "") (format "/c/bank/acct/%s" epid)
                                            :else (format "/c/bank/cust/%s" (str cname ename))))
-                                       } "查看"]]
-                                 ]) } ))))
+                                       } "查看"]] ]) } ))))
 
 (defn- cust-search2
   "根据org、cif查询客户"
@@ -392,7 +391,7 @@
   "app: 根据（1、指定网点、客户号）或者（2、客户pid）查出账户信息
   @id 有id时进行客户模糊搜索，id为中文时按客户名称搜索，id为非中文时按照pid进行搜索，有多个结果时显示第一个客户的帐号
   @org 网点号
-  @cif "
+  @cif 客户信息文件id "
   [id org cif]
   (let [cust-rt (if id (cust-search id) (cust-search2 org cif))]
     (html-body 

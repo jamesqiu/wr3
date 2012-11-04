@@ -13,7 +13,7 @@
   (= (valid-rune uid) rune))
 
 (defn check0
-  "用户名密码不对返回nil，否则返回用户名和角色，被auth.clj的login函数调用"
+  "用户名密码不对返回nil，否则返回用户名和角色，被auth.clj的login函数调用. 没在mdb的esp中注册的用户如admin等会失败"
   [uid pwd]
   (let [r (with-mdb2 "esp" (fetch-one :user :where {:uid uid}))]
     (when (or (valid-user? (:uid r) pwd) (= (:pwd r) (wr3.util.Stringx/md5 pwd)))
@@ -36,35 +36,6 @@
   [request]
   (str (session request "ContainerName")))
 
-(defn- ca-login0
-  "bjca登录页面（原先的样式0）
-  @type :server :local
-  @vars-js @type为:server时传入，@type为:local时无效 "
-  [type vars-js]
-  (let [action ({:local "ca-local-submit" :server "ca-submit"} type)
-        onsubmit ({:local "esp_bjca_onsubmit_local()" :server "esp_bjca_onsubmit_server()"} type)]
-    (html-body
-      {:class "login_body" :js conf/bjca-js2 :onload "esp_bjca_onload()"}
-      (when (= type :server) vars-js) 
-      [:img {:src "/img/idp-webfirst.png" :style "position: absolute; top: 50%; left: 50%; margin-top: -80px; margin-left: -110px;"}]
-      [:form {:method "post" :ID "LoginForm" :name "LoginForm" :class "login_form ui-corner-all"
-              :action (str "/c/espreg/" action) :onsubmit (str "return " onsubmit)}
-       [:center [:div {:style "color:yellow;margin-bottom:9px"} conf/bjca-prompt]]
-       "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br]
-       "选择口令：" [:input {:id "UserPwd" :name "UserPwd" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
-       [:p {:align "center" :style "padding:6px"}
-        [:input {:type "submit" :value " 登 录 " :class "ui-state-default ui-corner-all" :style "font-weight:bold;color:green"}] ]
-       [:center 
-        [:a {:href "/esp" :style "color:white"} "返回主页"] [:br] 
-        [:img {:alt "nasoft" :src "/img/nasoft-rnd.png"}]]
-       [:input {:type "hidden" :ID "UserSignedData" :name "UserSignedData"}]
-       [:input {:type "hidden" :ID "UserCert" :name "UserCert"}]
-       [:input {:type "hidden" :ID "ContainerName" :name "ContainerName"}]
-       [:input {:type "hidden" :ID "strRandom" :name "strRandom"}] 
-       [:input {:type "hidden" :ID "strUserList" :name ""}] ]
-      conf/bjca-onchange
-      [:script "document.title='标准化系统证书登录' "] )))
-
 (defn- ca-login
   "bjca登录页面（新样式）
   @type :server :local
@@ -73,7 +44,7 @@
   (let [action ({:local "ca-local-submit" :server "ca-submit"} type)
         onsubmit ({:local "esp_bjca_onsubmit_local()" :server "esp_bjca_onsubmit_server()"} type)]
     (html-body
-      {:style "margin:0; padding:0" :js conf/bjca-js2 :onload "esp_bjca_onload()"}
+      {:style "margin:0; padding:0" :js (into conf/bjca-js2 ["app-esp.js"]) :onload "esp_bjca_onload()"}
       (when (= type :server) vars-js) 
       [:div#moc_login
        [:div.moc_login_main
@@ -108,22 +79,6 @@
         [:div {:class "login_bottom_txt"} "@CopyRight 2012 技术支持电话：13301357860、13301357875"] ]]
       conf/bjca-onchange
       [:script "document.title='标准化系统证书登录' "] )))
-
-(defn ca-local0
-  "app: bjca不联服务器本地提交ukey，提交到ca-local-submit函数，原样式0"
-  [request]
-  (ca-login0 :local nil))
-
-(defn ca-server0
-  "app: BJCA服务器认证UKey，win下配置文件：%USERPROFILE%\\BJCAROOT\\SVSClient.properties，原样式0 "
-  [request]
-  (let [sed (SecurityEngineDeal/getInstance "SM")
-        strServerCert (.getServerCertificate sed)
-        strRandom (.genRandom sed 24)
-        strSignedData (.signData sed (.getBytes strRandom))
-        sr (session! request "Random" strRandom) 
-        vars-js (bjca-vars strSignedData strRandom strServerCert) ]
-    (ca-login0 :server vars-js)))
 
 (defn ca-local
   "app: bjca不联服务器本地提交ukey，提交到ca-local-submit函数"
@@ -168,7 +123,7 @@
         rt (.verifySignedData sed clientCert (.getBytes ranStr) signedByte) ; 认证结果 true/false
         ;</bjca>
         ]
-    {:uniqueId uniqueId :rt rt} ))
+    {:uniqueId uniqueId :rt rt :retValue retValue} ))
   
 (defn- bjca-parse
   "从bjca取出的uniqueId中得到{:type .. :pid .. :no ..}
@@ -197,7 +152,7 @@
 (def db-reg "espdev") ; 用户注册的RDB数据源名称
 
 (defn- check1
-  "验证方法1：ca服务器验证后外部注册数据库验证"
+  "验证方法1：ca服务器验证后外部sqlserver注册数据库验证"
   [request]
   (let [{uniqueId :uniqueId rt :rt} (bjca-verify request)
         {PaperType :type PaperID :pid} (bjca-parse uniqueId)
@@ -216,7 +171,7 @@
 (defn- check2
   "验证方法2：ca服务器验证后esp数据库验证"
   [request]
-  (let [{uniqueId :uniqueId rt :rt} (bjca-verify request)
+  (let [{uniqueId :uniqueId rt :rt retValue :retValue} (bjca-verify request)
         pid (:pid (bjca-parse uniqueId))
         ; 本地mdb认证已注册用户
         rs (with-mdb2 "esp" (fetch-one :user :where {:pid pid}))
@@ -226,6 +181,7 @@
       [:body
        (cond
          (not rt) (format "证书认证失败（%s）：%s" uniqueId rt)
+         (neg? retValue) (format "证书出现问题：%s" (conf/dd-retValue retValue))
          (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。"
          :else (do (session! request "wr3user" (:uid rs))
                  (session! request "wr3role" (:role rs))
@@ -269,7 +225,7 @@
   [request]
   (let []
     (html-body
-      {:js conf/bjca-js2 :onload "esp_pn_ca_onload()"}
+      {:js (into conf/bjca-js2 ["app-esp.js"]) :onload "esp_pn_ca_onload()"}
       [:h1 "请选取考评员证书U盘并点击确定"]
       [:form {:method "post" :ID "LoginForm" :name "LoginForm" :onsubmit "return esp_bjca_onsubmit_local()"}
        "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br]
@@ -282,10 +238,10 @@
   [request]
   (let [sed (SecurityEngineDeal/getInstance "SM")]
     (html-body
-       {:js conf/bjca-js2 :onload "esp_bjca_onload()"}
+       {:js (into conf/bjca-js2 ["app-esp.js"]) :onload "esp_bjca_onload()"}
        [:h1 "js 离线读取ukey属性"]
        [:form {:method "post" :ID "LoginForm" :name "LoginForm" 
-               :action "/c/espreg/ca-test2-submit" :target "ifrm1" 
+               :action "/c/espreg/ca-test-submit" :target "ifrm1" 
                :onsubmit "return esp_bjca_onsubmit_local()"}
         "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br][:br]
         "选择口令：" [:input {:id "UserPwd" :name "pwd1" :type "password" :size 16 :maxlength 16 :class "ui-corner-all"}] [:br]
@@ -369,7 +325,7 @@
       )))
 
 (defn user-import-submit
-  "service: 导入注册用户到esp系统
+  "service: 导入sqlserver注册用户到esp系统mdb中。
   @id 注册rdb表中的TradeGuid字段内容 "
   [id]
   (let [sql (format "SELECT PaperID,CommonName,usertype FROM userregister where TradeGuid='%s'" id)

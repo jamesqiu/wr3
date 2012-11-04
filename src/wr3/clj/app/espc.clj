@@ -189,7 +189,7 @@
       :contract1 (if v0 (format-date- v0) "<b>目前在职</b>")
       :uid (if (:mot-user m) v0 (wr3user-name v0))
       :admin-uid (wr3user-name v0)
-      :role (if-let [dd (:admin m)] (get dd v) v) ; espfj 角色
+      :role (or (get (:admin m) v) v) ; espfj 角色；注册用户角色；
       (:freport :refine-doc) (html [:a {:href v0 :target "_blank"} "下载"] (space 3)
                                    [:a {:href (str "/c/esp/doc-html?fname=" v0) :target "_blank"} "查看"])
       :info (replace-all v "\r\n" "<br/>")
@@ -214,6 +214,7 @@
       :pnids (join (format-ids- :pn v0 {:link true :form "pn-doc" :uid true}) "、")
       :belong (str v (when-let [n (wr3user-name v)] (format " (%s)" n)))
       :renew (or (dd-renew (to-int v 0)) v)
+      :ptype (or (dd-portal (to-int v 0) v))
       v)))
 
 (defn result-html-
@@ -268,6 +269,8 @@
     (:resp :resp-review) [:b (format-resp- v)]
     :pass-direct (format-pass-direct v)
     :otype (or (dd-form (keyword v)) v)
+    :role (or (dd-role v) v) ; U盘密钥user表的角色
+    :pwd "*"
     v))
 
 (defn doc-
@@ -342,7 +345,7 @@
          (range pages))))
 
 (defn pager-html
-  "显示分页的部分html片段。
+  "显示分页的部分html片段（每页最多100行）。
   @count1 全部的记录条数
   @skip 跳过多少条
   @onchange js的onchange事件 "
@@ -356,22 +359,41 @@
   @id name的pattern如'张' 或者为nil
   @tb :pn :org :en 
   @col-names @col-ids 列显示名称，存储名称
-  @m 含:skip、limit、where等参数"
+  @m 含:skip、:limit、:where等参数"
   [id tb col-names col-ids m]
   (let [nam (tb {:pn "考评员" :org "考评机构" :en "交通运输企业"})
         rt (search-auto- tb id m)
         where (or (:where m) {})
         count1 (if id (tb-count tb {:s id :where where}) (tb-count tb {:where where}))]
     (html
-      [:h1 (format "%s 列表（%s 名）" nam (count rt))]
-      (pager-html count1 (:skip m) (format "esp_pager('/c/esp/%s-list/%s')" (name tb) (if id id "")))
-      (eui-button 
-        {:href (format "/c/esp/list-export/exp-%s列表.csv?content-type=text/csv&charset=GBK&tb=%s&s=%s" 
-                       (dd-form tb) (name tb) (or id "")) :style "margin:10px"} 
-        (format "文件导出（全部%s行）" count1))
-      (result-html- rt col-names col-ids {:form (str "docv/" (name tb))})
+      [:div#table1
+       [:h1 (format "%s 列表（%s 名）" nam (count rt))]
+       (pager-html count1 (:skip m) (format "esp_pager('/c/esp/%s-list/%s')" (name tb) (if id id "")))
+       (eui-button 
+         {:href (format "/c/esp/list-export/exp-%s列表.csv?content-type=text/csv&charset=GBK&tb=%s&s=%s" 
+                        (dd-form tb) (name tb) (or id "")) :style "margin:10px"} 
+         (format "文件导出（全部%s行）" count1))
+       (result-html- rt col-names col-ids {:form (str "docv/" (name tb))})]
       [:br] )))
-                   
+
+(defn result-page-
+  "按分页形式展现列表
+  @tb 表名如 :user :pn 
+  @col-names 列中文名称如 ['名称' '机构']  {:org '机构'} 
+  @col-ids 列id如 [:name :org] 
+  @m 含:skip、:limit、:where :url 等参数. :skip 跳出条数；:limit 每页限制条件；:where 查询条件 :url 点击不同页码跳转的页面；
+    其他条件，可以做result-html-的定制化参数 "
+  [tb col-names col-ids m]
+  (let [where (:where m)
+        limit (or (:limit m) 100)
+        skip (to-int (:skip m) 0)
+        count1 (tb-count tb {:where where})
+        rt (with-esp- (fetch tb :where where :limit limit :skip skip)) ]
+    (html
+      [:div#table1
+       (pager-html count1 (:skip m) (format "esp_pager('%s')" (:url m)))
+       (result-html- rt col-names col-ids (dissoc m :skip :limit :where :url)) ])))
+
 (defn result-csv
   [rt col-names col-ids]
   (let [fcol (fn [r c] (let [v (c r)] 
@@ -745,6 +767,8 @@
         (format "%s-%s-%06d" year admin sid))))
   ([] (cert-id nil)))
 
+(def comment-field ["备注" :comment {:t 'textarea :style "width:400px; height:60px"}])
+  
 (defn cert-issue-pn
   "pn制发证书
   @id xx-apply表中文档的object-id字符串 "
@@ -755,7 +779,9 @@
         cfg [["姓 名" :name {:v (:name r)}]
              ["身份证号" :pid {:v (:pid r)}]
              ["证书号" :cid {:v (cert-id {:admin (:admin r) :type (:type r) :max max})}]
-             ["有效期开始日期" :date {:v (date)}] ]] 
+             ["有效期开始日期" :date {:v (date)}] 
+             comment-field
+             ]] 
     (html-body
       (input-form cfg {:action (str "/c/esp/cert-print-pn/" id)
                        :title (format "【%s】内容" (dd-cert :pn))
@@ -769,9 +795,10 @@
   (let [vars (query-vars2 request)
         cid (:cid vars)
         date (:date vars)
+        cmt (:comment vars)
         [year type admin sid] (split cid "-")]
     (with-mdb2 "esp" (update! :cert {:sid "pn" :admin admin} {:$set {:max (to-int sid)}})) ; 更新max值
-    (update- :pn-apply {:_id (object-id id)} (fn [r] {:cid cid :cdate date})) 
+    (update- :pn-apply {:_id (object-id id)} (fn [r] {:cid cid :comment cmt :cdate date})) 
     (html-body
       [:h1 "已发证书：" [:font {:color "blue"} cid]][:br][:br]
       (eui-button-close) )))
@@ -790,10 +817,12 @@
         type-value (if (= tb :en-apply) (:type2 r) (:type r)) 
         cfg [["证书编号" :cid {:v (cert-id {:admin (:admin r) :max max})}]
              ["有效期开始日期" :date {:v (date)}]
-             ["名称" :name {:v (:name r)}]
+             ["名称" :name {:v (:name r) :style "width:400px"}]
              ["类型类别" :type {:v (get type-dd (to-int type-value))}]
              ["达标/资质等级" "grade" {:v (dd-grade (to-int (:grade r)))}]
-             ["正本/副本选择" :copy {:t {"正本" "—— 打印正本 ——" "副本" "—— 打印副本 ——"}}]] ]
+             ["正本/副本选择" :copy {:t {"正本" "—— 打印正本 ——" "副本" "—— 打印副本 ——"}}]
+             comment-field
+             ] ]
     (html-body 
       (eui-tip "提示：1、请核查内容是否有误；2、打印一正三副；3、请在打印机设置中调整至A3、合适的页边距后保存设置。")
       (input-form cfg {:action (str "/c/esp/cert-print/" oid)
@@ -810,6 +839,7 @@
         en-org (left apply-type "-") ; "en" "org"
         cid (:cid vars)
         date (:date vars)
+        cmt (:comment vars)
         [year admin sid] (split cid "-")
         date-end (date-add date 3 0 0)
         copy (:copy vars)
@@ -819,7 +849,7 @@
         css4 "position:absolute;left:%d;top:%d;font-size:51pt;color:#9fa0a0;width:300px"
         f (fn [css x y] {:style (format css x y)}) ]
     (with-mdb2 "esp" (update! :cert {:sid en-org :admin admin} {:$set {:max (to-int sid)}})) ; 更新max值
-    (update- (keyword apply-type) {:_id (object-id id)} (fn [r] {:cid cid :cdate date})) 
+    (update- (keyword apply-type) {:_id (object-id id)} (fn [r] {:cid cid :comment cmt :cdate date})) 
     (html
       [:body {:style "margin:0px; font-family: 宋体; font-size:21pt"}
        [:div {:style (format "background:url('/img/esp/cert-%s.jpg');border:1px solid red;width:1654px;height:1169px"
@@ -1079,9 +1109,20 @@
       (update- :refine {:_id (object-id id)} m)
       (html-body [:h2 "已上传整改报告。"] (eui-button-close)))))
 
+(defn doc-save
+  "app：更新表字段（字段名及值从request中取）
+  @ids 第一个参数为表名，第二个参数为object-id，其他不管 "
+  [ids request]
+  (let [[tb oid] (take 2 ids)
+        vars (query-vars2 request)]
+    (if (and tb oid)
+      (do (update- (keyword tb) {:_id (object-id oid)} vars) "完成更新")
+      "没指定表名或oid")))
+
 (import wr3.util.Filex)
 (import wr3.util.Word)
 (defn doc-html
+  "测试：把word文档保存成html"
   [fname request]
   (let [fpath1 (.getRealPath request fname)
         fname2 (str (leftback fname ".") ".html")
@@ -1094,15 +1135,29 @@
         [:h1 "文档生成"] ))
     [:a {:href fname2} "点击查看"])))  
 
+(defn rrt
+  "app: 执行console resp提交的结果"
+  [request sql]
+  (let [root? true;(wr3role? request "root")
+        rt (and root? (binding [*ns* (find-ns 'wr3.clj.app.espc)] (load-string sql)))]
+    (html
+      [:textarea {:style "width:99%; height:99%; font-family: Consolas"} (str rt)])))
+
 ;;------------------------------------------------- test
 ;(use 'wr3.clj.datagen)
 ;--- 注：文件大小不能大于64k（65536）字节，否则报错
 ;(with-esp- (fetch :indic3 :where {:type2 11 :i 9 :j 4 :k 3}))
 ;(with-mdb2 "espfj" (update! :pn-apply {:pid "350302196709199018"} {:$set {:type "1&4"}}))
 ;(with-mdb2 "esp" (destroy! :indic2 {:type2 21 :i 8 :j 6}))
-;(update- :pn-train {} (fn [r] {:train-start (date-format (:train-start r) "yyyy-MM-dd")}))
-;(insert- :indic3  {:i 15, :j 2, :k 5, :name "⑤按“四不放过”原则严肃查处事故，严格追究责任领导和相关责任人。处理结果报有关部门备案。", :star 1, :score 10, :type2 12})
+;(update- :portal {} (fn [r] (map-key-rename r [:title :type] [:ptitle :ptype])) :replace)
+;(insert- :user  {:name "交通运输企业测试001", :pid "12345678-0", :role "en", :uid "en-12345678-0", :admin "01" :contact "岳传志"})
+;(insert- :user  {:name "交通运输企业测试002", :pid "12345678-1", :role "en", :uid "en-12345678-1", :admin "01" :contact "岳传志"})
+;(insert- :user  {:name "交通运输企业1026", :pid "88888888-0", :role "en", :uid "en-88888888-0", :admin "01" :contact "岳传志"})
+;(insert- :user  {:name "个人测试1", :pid "110101198409081231", :role "pn", :uid "pn-110101198409081231", :admin "01" :contact "岳传志"})
+;(insert- :user  {:name "个人测试2吊销", :pid "110101198409081223", :role "pn", :uid "pn-110101198409081223", :admin "01" :contact "岳传志"})
+;(insert- :user  {:name "个人测试2过期", :pid "110101198409081237", :role "pn", :uid "pn-110101198409081237", :admin "01" :contact "岳传志"})
 ;(with-esp- (fetch :en-apply :where {:orgid ["4f8aebd175e0ae92833680f4" "4f8aebd175e0ae92833680ff"]}))
 ;(pager-options 201)
 ;(doseq [[k v] m] 
 ;  (insert- :user {:name k :pid v :role "mot" :uid (str "mot-" v) :admin "01"}))
+;(eval (read-string "(with-esp- (fetch :user :limit 3))"))

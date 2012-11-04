@@ -243,7 +243,7 @@
 ;; conj cons 函数对vector和list的行为不一致，很容易引起混乱，改造如下：
 (defn conj+ 
   "conj 和 conj+ 的区别，(conj  [1 2] 3) -> [1 2 3] , (conj '(1 2) 3) -> '(3 1 2)
-  conj+统一增加元素在后，(conj+ [1 2] 3) -> [1 2 3] , (conj '(1 2) 3) -> '(1 2 3)"
+  conj+统一增加元素在后，(conj+ [1 2] 3) -> [1 2 3] , (conj+ '(1 2) 3) -> '(1 2 3)"
   ([coll x] (if (list? coll) (concat coll (list x)) (conj coll x)))
   ([coll x & xs] (if (list? coll) (concat coll (list x) xs) (apply conj coll x xs))))
 
@@ -251,5 +251,15 @@
   "cons 和 cons+ 的区别，(cons  1 '(2 3)) -> '(1 2 3), (cons  1 [2 3]) -> '(1 2 3), 类型由vector变为list；
   cons+统一为和输入一致，(cons+ 1 '(2 3)) -> '(1 2 3), (cons+ 1 [2 3]) ->  [1 2 3]"
   [x coll] (if (vector? coll) (into (vector x) coll) (cons x coll)))
+
+
+(defn map-key-rename
+  "@m map
+  @ ks0 要更改的原key列表，如：['k1' 'k3'] 
+  @ ks1 要更改到的key列表，如：['k11' 'k33'] "
+  [m ks0 ks1]
+  (let [vs0 (map m ks0)
+        m1 (zipmap ks1 vs0)]
+    (into (apply dissoc m ks0) m1) ))
 
 ;(days "2012-7-21")

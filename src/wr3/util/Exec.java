@@ -28,7 +28,7 @@ public class Exec {
 	/**
 	 * 执行需阻塞标准输入的命令，如："cmd /c date", cat, vi
 	 * @param cmd
-	 * @param args
+	 * @param args 标准输入的内容，如: Exec "cmd /c date" 2008-09-17中的最后“2008-09-17”；或cat后面的参数
 	 * @return
 	 */
 	public static String exec(String cmd, String args) {
@@ -68,7 +68,17 @@ public class Exec {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
+        // add by jamesqiu @2012-11-2
+        in = child.getErrorStream(); // 接收标准错误
+        try {
+			while ((c = in.read(bytes)) != -1) {
+			    sb.append(new String (bytes, 0, c, "GBK"));
+			}
+	        in.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+        
 		// Get exit value
 		try {
 			child.waitFor();	// 本执行线程等待

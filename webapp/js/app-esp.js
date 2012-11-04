@@ -331,14 +331,14 @@ function esp_backup(tb, oid) {
 	ajax_post(url)
 }
 
-function esp_pager(url) {
+/**
+ * @param url 产生分页表格的url
+ * @param o 含分页表格的div元素如：$('#table2'); 省略次参数的话 o=$('#table1')
+ */
+function esp_pager(url, o) {
 	var skip = $('#pagers').val()
-	layout_load_center(url+'?skip='+skip)
-}
-
-function esp_pn_train_list(url) {
-	var skip = $('#pagers').val()
-	ajax_load($('#pn_train_list'), (url+'?skip='+skip))
+	var o2 = o || $('#table1')
+	ajax_load(o2, url+'?skip='+skip)
 }
 
 function esp_mot_en_search() {
@@ -492,5 +492,35 @@ function esp_bjca_onsubmit_server() {
 	}
 }
 
+/**
+ * mot-menu-doc 
+ */
+function esp_mot_menu_doc(type_vals) {
+	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
+	// 把menu委托功能下拉选择框变成最多可选两项
+	$('select#menu3').combobox({multiple:true, width:250,
+		onSelect: function(r) {
+			alert('-selected-')
+		}})
+//	$('#menu').combobox({multiple:true, width:250,
+//		onChange: function(v1, v0) {
+//			if (v1.length>2) {
+//				$('#menuText').val($('#menu').combobox('getText'))
+//				alert("注意：最多只能选择两种类型！")
+//				$('#menu').combobox('setValues', v0)
+//			} else {
+//				if (v1.length<2) $('#menuText').val('')				
+//			}
+//		},
+//		onSelect: function(r) {
+//			var typeText = $('#menuText').val()
+//			if (typeText != '') {
+//				$('#menu').combobox('setText', typeText)				
+//			}
+//		}
+//	}).combobox('setValues', type_vals)	
+	$.parser.parse($('select#menu3'))
+	alert('- menu -')
+}
 
 

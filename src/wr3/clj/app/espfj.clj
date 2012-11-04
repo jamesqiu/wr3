@@ -58,7 +58,7 @@
 (def auth-login-url "/c/espfj/login") ; 本ns的登录页面 /login.html
 
 (defn auth
-  "该 CljServlet 调用，用于本应用各函数的权限控制 "
+  "给 CljServlet 调用，用于本应用各函数的权限控制 "
   [request fname ids & args]
   (let [uid (wr3user request) 
         role (wr3role request)
@@ -139,7 +139,7 @@
         (eui-tip "请认真填写除如下可选字段外的所有信息：职称、职称证明文件、联系电话、传真号码、相关专业从业年份证明文件、
                   专业工作业绩附件（可选）、相关证明文件（其他证书）")]
        [:div {:align "center" :style "border:0px solid red"}
-        [:input#typeText {:type "hidden" :value ""}] 
+        [:input#typeText {:type "hidden" :value ""}] ; 用于保存业务类型选择最多两种的值
         (input-form 
           cfg-pn
           {:title "考评员资格申请表"
