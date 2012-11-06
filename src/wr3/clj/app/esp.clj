@@ -1019,7 +1019,7 @@
         button (eui-button-submit "fm1" {:ajax (format "/c/esp/doc-save/user/%s" id)})]    
     
     (doc- :user id 
-          {:before [:script "esp_mot_menu_doc([])"]
+          {:onload "esp_mot_menu_doc([])"
            :after (html 
                     [:input#menuText {:type "hidden" :value ""}] ; 用于保存业务类型选择最多两种的值                    
                     (input-form [["委托管理的功能" :menu3 {:t dd}]

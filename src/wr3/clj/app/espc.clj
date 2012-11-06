@@ -154,7 +154,7 @@
    {:uid true} 表示用uid，而不是oid "
   ([tb ids m]
     (let [uid? (:uid m)
-          ids (if uid? ids (map #(object-id %) ids)) ; 注意：直接 (map object-id ids) 会报错，原因不明
+          ids (if uid? ids (map #(object-id %) ids)) ; 注意：直接 (map object-id ids) 会报错，因为object-id是java调用的宏
           field (if uid? :uid :_id)
           rs (with-esp- (fetch tb :only [:name] :where {field {:$in ids}}))
           tb-name (name tb)]
@@ -283,7 +283,8 @@
     :rs 不使用从esp库的tb表查数据，给定数据。
     :app 非esp的应用如'espfj'
     :orgid-as-select 为true则orgid显示为下拉框
-    :orders [:name :pid ..] 字段显示的顺序 "
+    :orders [:name :pid ..] 字段显示的顺序 
+    :onload onload的js内容 "
   ([tb id m]
     (let [rt (or (:rs m) (with-oid- tb id))
           rt (if-let [orders (:orders m)]
@@ -291,7 +292,7 @@
                                                      (for [[k v] rt :when (not (in? k orders))] [k v]))))
                rt)]
       (html-body
-        {:js "app-esp.js"}
+        {:js "app-esp.js" :onload (:onload m)}
         (when-let [before (:before m)] (if (fn? before) (before rt) before))
         [:table.wr3table {:border 1}
          [:caption (format "%s <u>%s</u>" (dd-form tb) (if-let [n (:name rt)] n ""))]

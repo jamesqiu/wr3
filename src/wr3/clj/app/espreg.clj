@@ -149,7 +149,7 @@
         uniqueId (subs decs idx1 (dec idx2))]
     (bjca-parse uniqueId)))
 
-(def db-reg "espdev") ; 用户注册的RDB数据源名称
+(def db-reg "esp") ; 用户注册的RDB数据源名称
 
 (defn- check1
   "验证方法1：ca服务器验证后外部sqlserver注册数据库验证"

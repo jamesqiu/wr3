@@ -4,7 +4,8 @@
 
 ;;------------------------ 各种常用JDBC Drivers
 (def drivers {
-  :sqlserver    "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+  :sqlserver    "com.microsoft.sqlserver.jdbc.SQLServerDriver" ; sqlserver 2005+
+  :sqlserver2   "net.sourceforge.jtds.jdbc.Driver" ; sqlserver 2000~2005
   :oracle       "oracle.jdbc.driver.OracleDriver"
   :db2          "COM.ibm.db2.jdbc.net.DB2Driver"
   :mysql        "com.mysql.jdbc.Driver"
@@ -17,7 +18,8 @@
 
 ;;------------------------ 各种常用JDBC url pattern
 (def urls {
-  :sqlserver    "jdbc:sqlserver://${ip};databaseName=${db}"
+  :sqlserver    "jdbc:sqlserver://${ip};databaseName=${db}" 
+  :sqlserver2   "jdbc:jtds:sqlserver://${ip};DatabaseName=${db}"
   :db2          "jdbc:db2://${ip}/${db}"
   :mysql        "jdbc:mysql://${ip}/${db}"
   :postgresql   "jdbc:postgresql://${ip}/${db}"
@@ -42,12 +44,12 @@
   :esp {:driver (:sqlserver drivers) ; 临时测试，服务器本地db
         :url (gstring (:sqlserver urls) {:ip "localhost:1433" :db "wabacusdemo3"})
         :username "sa"
-        :password "Nasoft62790202"}
+        :password "passdb"}
 
-  :espdev {:driver (:sqlserver drivers) ; 临时测试，开发机db
-           :url (gstring (:sqlserver urls) {:ip "localhost:1433" :db "wabacusdemo3"})
+  :espdev {:driver (:sqlserver2 drivers) ; 规划院试行db
+           :url (gstring (:sqlserver2 urls) {:ip "localhost:1433" :db "userregister"}) ; db名从wabacusdemo3改为userregister
            :username "sa"
-           :password "passdb"}
+           :password "password"}
 
   :abs {:driver (:sqlserver drivers)
         :url (gstring (:sqlserver urls) {:ip "localhost:1433" :db "abs"})
