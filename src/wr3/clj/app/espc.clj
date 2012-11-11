@@ -255,7 +255,7 @@
     :belong (str v (when-let [n (wr3user-name v)] (format " (%s)" n)))
     :fulltime (if v "专职" "兼职")
     :admin (or (get (or (:admin m) dd-admin) (str v)) v) ; espfj 可在m中指定 {:admin dd-admin-fj}
-    (:uid :admin-uid) (wr3user-name v)
+    (:uid :admin-uid) (if (:mot-user m) v (wr3user-name v))
     :from (or (get (or (:from m) dd-province) v) v) ; espfj 可在m中指定 {:admin dd-province-fj}
     :orgid (if (:orgid-as-select m) 
              (eui-combo {:id "orgid" :name "orgid"} (zipmap v (format-ids- :org v {:uid true})))

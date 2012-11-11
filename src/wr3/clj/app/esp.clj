@@ -993,9 +993,10 @@
     (html
       (eui-tip "给注册了U盘密钥的用户调整主管机关（即：部分注册了U盘密钥的用户申请时填写的省市或者主管机关可能有误，需要再次进行调整指定。）")
       [:h1 "U盘密钥用户——主管机关调整"]
-      (result-html- rs {:pid "证件号"} [:name :pid :admin :_id] 
+      (result-html- rs {:pid "证件号"} [:name :pid :admin :uid :_id] 
                     {:admin (merge dd-role dd-admin)
-                     :form "mot-user-doc"}) )))
+                     :form "mot-user-doc"
+                     :mot-user true}) )))
 
 (defn mot-user-doc
   "调整一个用户的主管机关
@@ -1008,21 +1009,20 @@
           {:after (html 
                     (input-form [["调整主管机关" :admin {:t dd}]
                                  ] {:title "调整主管机关" :buttons button :require-hide? true})
-                    (eui-tip "提交提示“完成更新”后，请关闭此页，并刷新列表查看更改结果。")) })))
+                    (eui-tip "提交提示“完成更新”后，请关闭此页，并刷新列表查看更改结果。")) 
+           :mot-user true})))
 
 (defn mot-menu-doc
   "调整一个主管机关用户的委托功能"
   [id request]
   (let [admin (mot-role request)
-;        dd (case admin "01" dd-admin (apply array-map (reduce into (mot-subs admin true))))
-        dd (apply array-map (reduce into (for [[nam icon id] dd-menu] [id nam])))
-        button (eui-button-submit "fm1" {:ajax (format "/c/esp/doc-save/user/%s" id)})]    
-    
+        dd (gen-array-map (map (juxt last first) dd-menu))
+        button (eui-button-submit "fm1" {:ajax (format "/c/esp/doc-save/user/%s" id)})]        
     (doc- :user id 
           {:onload "esp_mot_menu_doc([])"
            :after (html 
-                    [:input#menuText {:type "hidden" :value ""}] ; 用于保存业务类型选择最多两种的值                    
-                    (input-form [["委托管理的功能" :menu3 {:t dd}]
+                    [:input#menuText {:type "hidden" :value ""}] ; 用于保存menu选择的值                    
+                    (input-form [["委托管理的功能" :menu {:t dd}]
                                  ] {:title "主管机关工作委托" :buttons button :require-hide? true})
                     (eui-tip "提交提示“完成更新”后，请关闭此页，并刷新列表查看更改结果。")) })))
 

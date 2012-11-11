@@ -498,29 +498,7 @@ function esp_bjca_onsubmit_server() {
 function esp_mot_menu_doc(type_vals) {
 	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
 	// 把menu委托功能下拉选择框变成最多可选两项
-	$('select#menu3').combobox({multiple:true, width:250,
-		onSelect: function(r) {
-			alert('-selected-')
-		}})
-//	$('#menu').combobox({multiple:true, width:250,
-//		onChange: function(v1, v0) {
-//			if (v1.length>2) {
-//				$('#menuText').val($('#menu').combobox('getText'))
-//				alert("注意：最多只能选择两种类型！")
-//				$('#menu').combobox('setValues', v0)
-//			} else {
-//				if (v1.length<2) $('#menuText').val('')				
-//			}
-//		},
-//		onSelect: function(r) {
-//			var typeText = $('#menuText').val()
-//			if (typeText != '') {
-//				$('#menu').combobox('setText', typeText)				
-//			}
-//		}
-//	}).combobox('setValues', type_vals)	
-	$.parser.parse($('select#menu3'))
-	alert('- menu -')
+	$('#menu').combobox({multiple:true, width:250 }).combobox('setValues', type_vals)
 }
 
 

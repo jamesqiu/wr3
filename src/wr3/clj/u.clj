@@ -262,4 +262,10 @@
         m1 (zipmap ks1 vs0)]
     (into (apply dissoc m ks0) m1) ))
 
+(defn gen-array-map
+  "从2列多行的二维数组生成array-map
+  @coll 如：[[1 10] [3 30] [4 40] [2 20]] 或 '([1 10] [3 30] [4 40] [2 20]) "
+  [coll]
+  (apply array-map (reduce into coll)))
+
 ;(days "2012-7-21")

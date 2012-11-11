@@ -44,16 +44,16 @@
    :nav [
          ["待办事宜" "icon-arrow" ; title icon
           ["待办事宜概况一览" "icon-sum" "mot-resp-sum"]
-          ["考评员申请受理" "icon-user"     "apply-resp/pn"] ; title icon id 
-          ["考评员换证申请受理" "icon-user" "cert-renew-resp/pn"]  
-          ["考评机构申请受理" "icon-earth"    "apply-resp/org"]  
-          ["考评机构变更备案受理" "icon-earth" "backup-resp/org"] 
-          ["考评机构换证申请受理" "icon-earth"    "cert-renew-resp/org"] 
-          ["企业初次申请受理" "icon-star"    "apply-resp/en"]  
-          ["企业考评结论审核" "icon-star"    "mot-en-review"]  
-          ["企业变更备案申请受理" "icon-star"    "backup-resp/en"]  
-          ["企业换证申请受理" "icon-star"    "cert-renew-resp/en"]  
-          ["投诉举报受理" "icon-tip"    "mot-hot"]  
+          ["考评员申请受理"       "icon-user"  "apply-resp/pn"        "m01"] ; title icon id 
+          ["考评员换证申请受理"   "icon-user"  "cert-renew-resp/pn"   ]  
+          ["考评机构申请受理"     "icon-earth" "apply-resp/org"       "m03"]  
+          ["考评机构变更备案受理" "icon-earth" "backup-resp/org"      ] 
+          ["考评机构换证申请受理" "icon-earth" "cert-renew-resp/org"  ] 
+          ["企业初次申请受理"     "icon-star"  "apply-resp/en"        "m06"]  
+          ["企业考评结论审核"     "icon-star"  "mot-en-review"        ]  
+          ["企业变更备案申请受理" "icon-star"  "backup-resp/en"]  
+          ["企业换证申请受理"     "icon-star"  "cert-renew-resp/en"]  
+          ["投诉举报受理"         "icon-tip"   "mot-hot"              "m0a"]  
           ]
          ["考评员管理" "icon-user" ; title id
           ["考评员列表" "icon-list"    "pn-list"] ; title icon id 
@@ -394,9 +394,10 @@
     "org" "考评机构" 
     "pn" "考评员"
     })
-; 委托功能列表。 如： [[考评员申请受理 icon-user apply-resp/pn] [..] [..] .. [投诉举报受理 icon-tip mot-hot]]
+; 委托功能列表。 如： [[考评员申请受理 icon-user apply-resp/pn m01] [..] [..] .. [投诉举报受理 icon-tip mot-hot m0a]]
 (def dd-menu
-  (-> cfg-frame-mot :nav first (subvec 3)))
+  (filter #(= 4 (count %)) (-> cfg-frame-mot :nav first (subvec 3))))
+;(println (into (array-map) (for [[label icon link id] dd-menu] [id label])))
 ; 首页portal项目表单
 (def cfg-portal
   [
