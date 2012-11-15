@@ -106,9 +106,17 @@
       (apply list (.split s sep)))))
 
 (defn join
-  "把sequence列表用sep连接成一个字符串"
-  [sequ sep]
-  (apply str (interpose sep sequ)))
+  "把sequence列表用sep连接成一个字符串.
+  @m 客户化参数的hash-map，含 :pre :post :quo 例如：
+    (join [10 20 30] ',' {:quo '\"' :pre '<' :post '>'}) "
+  ([sequ sep] (apply str (interpose sep sequ)))
+  ([sequ sep m] 
+    (let [quo (or (:quo m) "")
+          pre (or (:pre m) "")
+          post (or (:post m) "")]
+      (str pre (join (map #(str quo % quo) sequ) sep) post))))
+
+;(println (join [10 20 30] "," {:pre "[" :post "]" :quo "\""})) ; join使用例子
 
 (defn unique
   "sequence 集合去重复元素"

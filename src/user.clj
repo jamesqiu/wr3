@@ -25,4 +25,5 @@
   )
 
 (use 'wr3.clj.s 'wr3.clj.n 'wr3.clj.u 'wr3.clj.file); 'wr3.clj.tb)
+(println "(use 'wr3.clj.s 'wr3.clj.n 'wr3.clj.u 'wr3.clj.file)")
 (println "ok! (cljh) (class-methods) for more...")

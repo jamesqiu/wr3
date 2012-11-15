@@ -31,7 +31,7 @@
         :else false)
       ; 其他页面注册用户都能访问
       (cond 
-        (= fname "rmdb") (wr3role? request "root")
+        (= fname "clean") (wr3role? request "root")
         uid true
         ; (.startsWith fname "hot") true ; 实名举报不登录可访问   
         :else false))))
@@ -528,12 +528,15 @@
         dd (case dim :admin dd-admin :grade dd-grade :type dd-type :edu str)
         m (for [r rt] (let [v0 (dim r)
                             v (case dim (:admin :edu) v0 (:grade :type) (to-int v0))] 
-                        [(dd v) (:count r)])) ]
+                        [(dd v) (:count r)])) 
+        ]
     (html
       [:h3 (format "【%s】-【%s数量】分析图表：" dim-nam nam)]
-      (barf (apply array-map (flatten m)) {:x (str dim-nam) :y (str nam "数量")})
-      (pief (apply array-map (flatten m)) {})
-      (result-html- rt [dim-nam "数量小计"] [dim :count] {}))))
+      (if (empty? m) [:h2 "没有数据。"]
+        (html
+          (barf (apply array-map (flatten m)) {:x (str dim-nam) :y (str nam "数量")})
+          (pief (apply array-map (flatten m)) {})
+          (result-html- rt [dim-nam "数量小计"] [dim :count] {}))))))
 
 ;;-- mot-(pn en org)-apply[-resp]
 (defn- mot-apply-
@@ -740,7 +743,8 @@
       [:h2 "培训时间，培训学时（不少于24个学时），培训类别，培训合格证号"]
       [:div "注：由省级交通运输主管机关、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作。"]
       [:br]
-      (barf yyyymm {:title "各月份培训的考评员数量" :x "月份" :y "考评员人数"}) 
+      (if (empty? rt2) [:h2 "没有数据。"]
+        (barf yyyymm {:title "各月份培训的考评员数量" :x "月份" :y "考评员人数"})) 
       [:h2 "尚无培训、考试记录的考评员："]
       (eui-tip "请点击查看考评员详情并录入培训、考试资料。") ; todo: 增加excel导入功能
       (result-html- (data- :pn-apply) [] [:name :type :mobile :_id] {:form "mot-pn-train-doc"})[:br]
@@ -797,7 +801,8 @@
       [:h2 "考试时间，考试成绩，是否合格，考试类别，"]
       [:div "注：交通运输部负责组织编写培训教材和考试大纲。"
        "省级交通运输主管机关、长江和珠江航务管理局按管辖范围负责组织实施培训、考试工作"] [:br]
-      (linef scores {:title "各分数值的考评员数量" :x "分数" :y "考评员人数"} 1000) )))
+      (if (empty? rt2) [:h2 "没有数据。"]
+        (linef scores {:title "各分数值的考评员数量" :x "分数" :y "考评员人数"} 1000) ))))
   
 (defn mot-org-eval
   "service: mot查看org的考评情况汇总"
@@ -1017,9 +1022,12 @@
   [id request]
   (let [admin (mot-role request)
         dd (gen-array-map (map (juxt last first) dd-menu))
-        button (eui-button-submit "fm1" {:ajax (format "/c/esp/doc-save/user/%s" id)})]        
+        button (eui-button-submit "fm1" {:ajax (format "/c/esp/doc-save/user/%s" id)})
+        rs (with-oid- :user id)
+        menu-seleced (join (split (:menu rs) "&") "," {:pre "[" :post "]" :quo "\""})]        
     (doc- :user id 
-          {:onload "esp_mot_menu_doc([])"
+          {:onload (format "esp_mot_menu_doc(%s)" menu-seleced)
+           :rs rs
            :after (html 
                     [:input#menuText {:type "hidden" :value ""}] ; 用于保存menu选择的值                    
                     (input-form [["委托管理的功能" :menu {:t dd}]
@@ -1047,7 +1055,8 @@
     (html
       (eui-tip "待办事宜中个项目的数量提示：")
       [:ul 
-       (for [i (range (count items)) :let [item (nth items i) title (first item) url (last item) sum (nth sums i)]]
+       (for [i (range (count items)) 
+             :let [item (nth items i) title (first item) url (nth item 2) sum (nth sums i)]]
          [:li {:style ""} 
           [:a {:href "#" :onclick (format "layout_load_center('/c/esp/%s')" url)}
            [:h2  
@@ -1062,14 +1071,18 @@
 (defn mot-portal
   "service: mot对首页进行维护. todo: 改为ajax提交 "
   [request]
-  (html
-    (input-form cfg-portal
-                {:title "首页栏目内容维护"
-                 :action "/c/esp/mot-portal-save"
-                 :buttons (html (eui-button-submit "fm1" {:ajax "/c/esp/mot-portal-save"}) (space 5) 
-                                (eui-button-reset "fm1") ) })
-    (fileupload-dialog) 
-    (mot-portal-list-)))
+  (let [uid (wr3user request)
+        admin (:admin (first (with-uid- :user uid)))]
+    (if (not= admin "01") 
+      (html (eui-tip "首页内容目前由交通运输部安监处用户进行维护。"))
+      (html
+        (input-form cfg-portal
+                    {:title "首页栏目内容维护"
+                     :action "/c/esp/mot-portal-save"
+                     :buttons (html (eui-button-submit "fm1" {:ajax "/c/esp/mot-portal-save"}) (space 5) 
+                                    (eui-button-reset "fm1") ) })
+        (fileupload-dialog) 
+        (mot-portal-list-)))))
 
 (defn mot-portal-save
   [request]
@@ -1083,17 +1096,18 @@
         (str "如下必填字段尚未填写：\n\n" (join err "，"))))))
 
 (defn- portal-items
-  "根据portal type得到portal条目
+  "根据portal type从mdb库得到portal条目
   @portal-type dd-portal的key：1/2/3/4 "
   [portal-type]
   (let [limit (case portal-type (1 2 3) 4 10)
-        rs (with-esp- (fetch :portal :limit limit :where {:type (str portal-type)}))]
-    [:ul (for [{title :title link :link} rs] 
+        rs (with-esp- (fetch :portal :limit limit :where {:ptype (str portal-type)}))]
+    [:ul (for [{title :ptitle link :link} rs] 
            [:li [:a {:href link :target "_blank"} title]]) ] ))
 
 ;(println (portal-items 4))
 
 (defn- div-moc-con-
+  "生成portal页面"
   []
   [:div.moc_con
    [:div.moc_login

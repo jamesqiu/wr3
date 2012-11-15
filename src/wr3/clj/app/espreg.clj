@@ -149,7 +149,7 @@
         uniqueId (subs decs idx1 (dec idx2))]
     (bjca-parse uniqueId)))
 
-(def db-reg "esp") ; 用户注册的RDB数据源名称
+(def db-reg "espdev") ; 用户注册的RDB数据源名称 esp 本机；espdev 运行
 
 (defn- check1
   "验证方法1：ca服务器验证后外部sqlserver注册数据库验证"
@@ -172,7 +172,7 @@
   "验证方法2：ca服务器验证后esp数据库验证"
   [request]
   (let [{uniqueId :uniqueId rt :rt retValue :retValue} (bjca-verify request)
-        pid (:pid (bjca-parse uniqueId))
+        [pid no] ((juxt :pid :no) (bjca-parse uniqueId))
         ; 本地mdb认证已注册用户
         rs (with-mdb2 "esp" (fetch-one :user :where {:pid pid}))
         wr3url (session request "wr3url") ]
@@ -183,10 +183,13 @@
          (not rt) (format "证书认证失败（%s）：%s" uniqueId rt)
          (neg? retValue) (format "证书出现问题：%s" (conf/dd-retValue retValue))
          (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。"
-         :else (do (session! request "wr3user" (:uid rs))
+         :else (do 
+                 (session! request "wr3user" (:uid rs))
                  (session! request "wr3role" (:role rs))
-                (html (format "%s（%s）认证成功！" (:name rs) pid)
-                      [:script (format "window.location.href='%s' " wr3url)])) ) ])))
+                 ; 写登录日志
+                 (with-mdb2 "esp" (insert! :log {:uid (:uid rs) :role (:role rs) :pid pid :no no :url wr3url :date (datetime)}))
+                 (html (format "%s（%s）认证成功！" (:name rs) pid)
+                       [:script (format "window.location.href='%s' " wr3url)])) ) ])))
        
 (defn- check3
   "验证方法3：不使用ca服务器直接读取ukey中的pid信息，esp数据库验证"

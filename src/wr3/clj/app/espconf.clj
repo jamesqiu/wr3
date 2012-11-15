@@ -8,7 +8,7 @@
 
 ; bjca证书验证返回值代表的含义
 (def dd-retValue {-1 "登录证书的根不被信任"
-                  -2 "登录证书超过有效期"
+                  -2 "登录证书超过有效期（<a href='http://help.bjca.org.cn/support/client/jtb/index.htm' target='_blank'>更新</a>）"
                   -3 "登录证书为作废证书" 
                   -4 "登录证书被临时冻结" })
 
@@ -28,8 +28,11 @@
 
 ; 登录页面的提示
 (def bjca-prompt 
-  (str "提示：请将本系统证书U盘插入计算机"
-       "（<a href='http://gotoreal.com:8080/userregister/firstpage.html' target='_blank'>点击申请</a>）。"))
+  (format (str "提示：请将本系统证书U盘插入计算机"
+               "（<a href=\"%s\" target=\"_blank\">点击申请</a> 并 "
+               "<a href=\"%s\" target=\"_blank\">下载驱动</a>）。")
+          "http://219.141.223.141:8080/userregister/firstpage.html"
+          "/esp/UKeySetupV2.0.1.exe" ))
 
 ;; 交通运输主管部门界面配置
 (def cfg-frame-mot
@@ -44,16 +47,16 @@
    :nav [
          ["待办事宜" "icon-arrow" ; title icon
           ["待办事宜概况一览" "icon-sum" "mot-resp-sum"]
-          ["考评员申请受理"       "icon-user"  "apply-resp/pn"        "m01"] ; title icon id 
+          ["考评员申请受理"       "icon-user"  "apply-resp/pn"        nil "m01"] ; title icon id url menu-id 
           ["考评员换证申请受理"   "icon-user"  "cert-renew-resp/pn"   ]  
-          ["考评机构申请受理"     "icon-earth" "apply-resp/org"       "m03"]  
+          ["考评机构申请受理"     "icon-earth" "apply-resp/org"       nil "m03"]  
           ["考评机构变更备案受理" "icon-earth" "backup-resp/org"      ] 
           ["考评机构换证申请受理" "icon-earth" "cert-renew-resp/org"  ] 
-          ["企业初次申请受理"     "icon-star"  "apply-resp/en"        "m06"]  
+          ["企业初次申请受理"     "icon-star"  "apply-resp/en"        nil "m06"]  
           ["企业考评结论审核"     "icon-star"  "mot-en-review"        ]  
           ["企业变更备案申请受理" "icon-star"  "backup-resp/en"]  
           ["企业换证申请受理"     "icon-star"  "cert-renew-resp/en"]  
-          ["投诉举报受理"         "icon-tip"   "mot-hot"              "m0a"]  
+          ["投诉举报受理"         "icon-tip"   "mot-hot"              nil "m0a"]  
           ]
          ["考评员管理" "icon-user" ; title id
           ["考评员列表" "icon-list"    "pn-list"] ; title icon id 
@@ -396,8 +399,8 @@
     })
 ; 委托功能列表。 如： [[考评员申请受理 icon-user apply-resp/pn m01] [..] [..] .. [投诉举报受理 icon-tip mot-hot m0a]]
 (def dd-menu
-  (filter #(= 4 (count %)) (-> cfg-frame-mot :nav first (subvec 3))))
-;(println (into (array-map) (for [[label icon link id] dd-menu] [id label])))
+  (filter #(= 5 (count %)) (-> cfg-frame-mot :nav first (subvec 3))))
+;(println (into (array-map) (for [[label icon link url mid] dd-menu] [mid label])))
 ; 首页portal项目表单
 (def cfg-portal
   [
