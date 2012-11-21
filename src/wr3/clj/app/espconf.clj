@@ -86,7 +86,7 @@
           ]
          ["下级机构管理"           "icon-list" ; title id
           ["机构维护"          "icon-list"    "mot-admin"] ; title icon id 
-          ["用户列表"          "icon-list"    "mot-user"] ; title icon id 
+          ["工作委托"          "icon-list"    "mot-fn"] ; title icon id 
           ["下级机构统计分析"          "icon-list"    "mot-sub-olap"] ; title icon id 
           ]
          ["查询及统计分析"           "icon-pie" ; title id
@@ -97,6 +97,7 @@
           ]
          ["系统管理"     "icon-setting"
           ["首页内容维护"     "icon-file" "mot-portal"]
+          ["登录日志查询"     "icon-file" "mot-log"]
           ["密钥用户管理"     "icon-user" "mot-user-admin"]
           ]
          ]   
@@ -199,8 +200,6 @@
    ])
 
 ;;------------------- 
-; 申请类别 1d 道路运输、2s 水路运输、3g 港口码头、4c 城市客运、5j 交通运输工程建设
-(def dd-type-map {"d" 1 "s" 2 "g" 3 "c" 4 "j" 5}) 
 ; 业务大类
 (def dd-type 
   {
@@ -400,6 +399,9 @@
 ; 委托功能列表。 如： [[考评员申请受理 icon-user apply-resp/pn m01] [..] [..] .. [投诉举报受理 icon-tip mot-hot m0a]]
 (def dd-menu
   (filter #(= 5 (count %)) (-> cfg-frame-mot :nav first (subvec 3))))
+; 委托功能array-map。如： {m01 考评员申请受理, m03 考评机构申请受理, m06 企业初次申请受理, m0a 投诉举报受理}
+(def dd-menu2
+  (wr3.clj.u/gen-array-map (map (juxt last first) dd-menu)))
 ;(println (into (array-map) (for [[label icon link url mid] dd-menu] [mid label])))
 ; 首页portal项目表单
 (def cfg-portal
@@ -522,6 +524,9 @@
      :enid "企业ID"
      :exam-date "考试日期"
      :exam-score "考试分数"
+     :fngrade "委托如下等级"
+     :fnmenu "委托如下功能"
+     :fntype "委托如下业务"
      :fulltime "专兼职"
      :grade "等级"
      :info "举报人信息"
@@ -560,6 +565,7 @@
      :type "业务类型"
      :type2 "业务类别"
      :uid "用户ID"
+     :usable "可用/停用"
      :workdate "参加工作日期"
      :yyyy "年份"
      ;-- espfj

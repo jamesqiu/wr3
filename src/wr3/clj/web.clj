@@ -391,7 +391,10 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   m: {:id 'id1' :value '02'} id是必须的, :value 缺省选中的value
   options: 如'{01 java 02 ruby 03 python}"
   [m options]
-  (tags :select m nil (for [[k v] options] [:option (merge {:value k} (when (= k (:value m)) {:selected "true"})) v])))
+  (html
+    (tags :select m nil (for [[k v] options] [:option (merge {:value k} (when (= k (:value m)) {:selected "true"})) v]))
+    (when (and (:js m) (:id m)) 
+      [:script (format "$('#%s').combobox(%s)" (:id m) (if (:multiple m) "{multiple:true}" ""))])))
 ;  (tags :select {:id id} nil (map #(vector :option {:value (key %)} (val %)) options)))
 
 (defn eui-text
@@ -718,5 +721,11 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
 (defn set-title 
   "用js更改浏览器的title"
   [s] [:script (format "document.title='%s'" s)])
+
+(defn real-path
+  "从应用服务器的uri得到真实文件全路径
+  @fname 如 '/file/a.html' "
+  [request furi]
+  (.getRealPath request furi))
 
 ;;;---------------------------- jquery mobile

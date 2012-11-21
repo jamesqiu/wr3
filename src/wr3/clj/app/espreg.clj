@@ -174,7 +174,7 @@
   (let [{uniqueId :uniqueId rt :rt retValue :retValue} (bjca-verify request)
         [pid no] ((juxt :pid :no) (bjca-parse uniqueId))
         ; 本地mdb认证已注册用户
-        rs (with-mdb2 "esp" (fetch-one :user :where {:pid pid}))
+        rs (with-mdb2 "esp" (fetch-one :user :where {:pid pid :usable {:$ne "0"}}))
         wr3url (session request "wr3url") ]
     (html
       [:head meta-utf8]
@@ -182,7 +182,7 @@
        (cond
          (not rt) (format "证书认证失败（%s）：%s" uniqueId rt)
          (neg? retValue) (format "证书出现问题：%s" (conf/dd-retValue retValue))
-         (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书。"
+         (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书；或证书尚未由主管机关管理员完成审核。"
          :else (do 
                  (session! request "wr3user" (:uid rs))
                  (session! request "wr3role" (:role rs))
@@ -190,7 +190,9 @@
                  (with-mdb2 "esp" (insert! :log {:uid (:uid rs) :role (:role rs) :pid pid :no no :url wr3url :date (datetime)}))
                  (html (format "%s（%s）认证成功！" (:name rs) pid)
                        [:script (format "window.location.href='%s' " wr3url)])) ) ])))
-       
+
+;(println (not (with-mdb2 "esp" (fetch-one :user :where {:pid "X0009980-0" :usable {:$ne "0"}}))))
+
 (defn- check3
   "验证方法3：不使用ca服务器直接读取ukey中的pid信息，esp数据库验证"
   [request]
@@ -309,6 +311,8 @@
                                   :tradeguid [:a {:href (str "/c/espreg/user-import/" v) :target "_blank"} "审批该用户"]
                                   v) ]) }))))
 
+;(println (select-all "esp" "select top 3 * from userregister order by TradeGuid desc"))
+  
 (defn user-import
   "app: 查看某一个申请过UKey的用户
   @id 注册rdb表中的TradeGuid字段内容 "

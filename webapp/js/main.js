@@ -92,7 +92,7 @@ function eui_search1(v, n) {
  * 
  * @param jq_element
  * @param url
- * @param func
+ * @param func 可选
  * @see ajax_post
  */
 function ajax_load(jq_element, url, func) {
@@ -107,8 +107,8 @@ function ajax_load(jq_element, url, func) {
 
 /**
  * 公共函数：用于 app/veg 等
- * 
  * @param url
+ * @param func ajax返回成功后调用的函数，可选
  */
 function layout_load_center(url, func) {
 	var div1 = $('div [region="center"]')

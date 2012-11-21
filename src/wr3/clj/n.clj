@@ -143,5 +143,5 @@
 
 (defn fib
   "fib数列f(n)=f(n-1)+f(n-2)的第1～n项, 如(fib 8)=(1 2 3 5 8 13 21 34)"
-  ([a b] (lazy-cat [a] (fib b (+ a b))))
+  ([a b] (lazy-cat [a] (fib b (+ a b)))) ; 如果Clojure1.3+用 (+ a b)会溢出，需要用 (+' a b)
   ([n] (take n (fib 1 1))))

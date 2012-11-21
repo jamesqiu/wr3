@@ -3,6 +3,7 @@ package test;
 import static java.lang.System.out;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -440,6 +441,7 @@ public class Test1 {
 		temp();
 		System.out.println(indexOfAny("hello world", new char[]{'z','m','n'}));
 		System.out.println("------- end --------c");
+		
 	}
 
 }

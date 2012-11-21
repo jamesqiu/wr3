@@ -164,6 +164,10 @@
         (map :name rs))) )
   ([tb ids] (format-ids- tb ids nil)))
 
+(defn- format-usable-
+  [s]
+  (if (= s "0") "<font color=red>停用</font>" "可用"))
+  
 (defn- format-result-field-
   "把列表显示中某个字段的值进行格式化，如 :type字段的'1'->'道路运输'
   @row 一行数据如 {:type '1' ..}
@@ -187,7 +191,7 @@
       :fulltime (if v0 "专职" "<font color=gray>兼职</font>")
       :contract0 (format-date- v)
       :contract1 (if v0 (format-date- v0) "<b>目前在职</b>")
-      :uid (if (:mot-user m) v0 (wr3user-name v0))
+      :uid (if (:show-uid? m) v0 (wr3user-name v0))
       :admin-uid (wr3user-name v0)
       :role (or (get (:admin m) v) v) ; espfj 角色；注册用户角色；
       (:freport :refine-doc) (html [:a {:href v0 :target "_blank"} "下载"] (space 3)
@@ -215,6 +219,7 @@
       :belong (str v (when-let [n (wr3user-name v)] (format " (%s)" n)))
       :renew (or (dd-renew (to-int v 0)) v)
       :ptype (or (dd-portal (to-int v 0) v))
+      :usable (format-usable- v)
       v)))
 
 (defn result-html-
@@ -255,7 +260,7 @@
     :belong (str v (when-let [n (wr3user-name v)] (format " (%s)" n)))
     :fulltime (if v "专职" "兼职")
     :admin (or (get (or (:admin m) dd-admin) (str v)) v) ; espfj 可在m中指定 {:admin dd-admin-fj}
-    (:uid :admin-uid) (if (:mot-user m) v (wr3user-name v))
+    (:uid :admin-uid) (if (:show-uid? m) v (wr3user-name v))
     :from (or (get (or (:from m) dd-province) v) v) ; espfj 可在m中指定 {:admin dd-province-fj}
     :orgid (if (:orgid-as-select m) 
              (eui-combo {:id "orgid" :name "orgid"} (zipmap v (format-ids- :org v {:uid true})))
@@ -271,6 +276,10 @@
     :otype (or (dd-form (keyword v)) v)
     :role (or (dd-role v) v) ; U盘密钥user表的角色
     :pwd "*"
+    :fnmenu (join (map dd-menu2 (split v "&")) ", ")
+    :fntype (format-type v)
+    :fngrade (join (map (comp dd-grade to-int) (split v "&")) ", ")
+    :usable (format-usable- v)
     v))
 
 (defn doc-

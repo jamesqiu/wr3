@@ -52,6 +52,13 @@
                    "not-found"))
     (index-all)))
 
+(defn- user-admin
+  "获取用户在:user表中的:admin代码，如'01' '14' ；没找到该用户或者没有:admin则返回nil。"
+  [request]
+  (let [uid (wr3user request)
+        r (with-mdb2 "esp" (fetch-one :user :where {:uid uid}))]
+    (when r (:admin r))))
+
 ;;;--------------------------------------------------------------------------------------------------- pn  考评员
 (def pn---------- nil)
 
@@ -72,8 +79,7 @@
 (defn- where- 
   "为pn-list en-list org-list 生成用户限制相关的where条件 "
   [request]
-  (let [uid (wr3user request)
-        admin (:admin (first (with-uid- :user uid)))]
+  (let [admin (user-admin request)]
     (if (= admin "01") {} {:admin admin}) ))
 
 (defn pn-list
@@ -449,13 +455,6 @@
 ;;;--------------------------------------------------------------------------------------------------- mot 主管机关
 (def mot---------- nil)
 
-(defn- mot-role
-  "获取mot角色用户的admin代号，如'01' '14' ；没找到该用户或者不是mot角色则返回nil。"
-  [request]
-  (let [uid (wr3user request)
-        r (with-mdb2 "esp" (fetch-one :user :where {:uid uid}))]
-    (when r (:admin r))))
-
 (defn- mot-subs
   "获取下一级主管机关列表
   @uppser 上级的代码如'02' 
@@ -470,7 +469,7 @@
   [id request]
   (let [tb (keyword id) ; :pn :org :en
         nam (dd-form tb) ; 考评员 考评机构 交通运输企业
-        admin (mot-role request)
+        admin (user-admin request)
         dims (case tb :pn [:type :admin :edu] (:org :en) [:type :admin :grade])
         option0 {"0" "-- 所有 --"}]
     (html
@@ -894,7 +893,7 @@
   "service: 管理本主管机关直接下级的主管机关
   @todo "
   [request]
-  (let [admin (mot-role request)
+  (let [admin (user-admin request)
         mot (with-mdb2 "esp" (fetch-one :mot :where {:code admin}))
         rs (with-esp- (fetch :mot :where {:upper admin} :sort {:code 1}))]
     (html
@@ -912,7 +911,7 @@
   "@id id是用户oid字符串，没有id则表示新增用户操作"
   [id request]
   (let [rs (when id (with-mdb2 "esp" (fetch-by-id :mot (object-id id)))) ; 本机构 
-        upper (mot-role request)
+        upper (user-admin request)
         mot (with-mdb2 "esp" (fetch-one :mot :where {:code upper}))] ; 上级机构
     (html-body
       [:h1 (fmt "主管机关管理（%s）" (or (:name rs) "增加新主管机关"))]
@@ -952,87 +951,116 @@
         "未知动作" ))))
 
 (defn mot-user-list
-  "得到mot指定admin的用户
+  "app: mot得到选定某主管机关下的所有用户. todo: 只列出没有停用的
   @id :admin代码如'01' "
   [id request]
-  (let [rs (when id (with-esp- (fetch :user :where {:admin id})))]
+  (let [rs (when id (with-esp- (fetch :user :where {:admin id :pid {:$exists true}} :limit 1000)))]
     (if (empty? rs)
       "（该下级主管机关尚无审核通过的注册用户。）" 
       (html
         [:h2 (format "用户列表（%s 名）：" (count rs))]
-        (result-html- rs [] [:name :uid :_id] 
-                      {:mot-user true
-                       :form "mot-menu-doc"}) ))))
+        (result-html- rs [] [:admin :name :uid :_id] 
+                      {:show-uid? true
+                       :form "mot-fn-doc"}) ))))
 
-(defn- mot-user-sum
-  "列出各下属主管机关的用户数量"
-  [admin]
-  (let [where (if (= admin "01") {} {:admin (re-pattern (str "^" admin))})
-        rt (with-esp- (fetch :user :where where :limit 1000 :sort {:admin 1}))]
-    (html
-      [:h2 (format "用户列表（%s 名）：" (count rt))]
-      (result-html- rt [] [:admin :name :uid :_id] 
-                    {:admin (into dd-admin (mot-subs admin true)) 
-                     :mot-user true
-                     :form "mot-menu-doc"}))))
-
-(defn mot-user
-  "service: 主管机关向下级主管机关委托代办工作
+(defn mot-fn
+  "service: mot向下级主管机关用户委托代办工作。
   @todo 为下级用户配置管理菜单（工作量大的条目如考评员、企业审批） "
   [request]
-  (let [admin (mot-role request)
-        dd (if (= admin "01") dd-admin (mot-subs admin true))]
+  (let [admin (user-admin request)
+        dd (if (= admin "01") dd-admin (mot-subs admin true))
+        js "ajax_load($('#users'), '/c/esp/mot-user-list/'+$('#admins').val())"]
     (html
+      (eui-tip "请选择某个主管机关用户后，进行工作内容委托。")
       [:h1 "下级主管机关用户列表"]
       [:label {:for "admins"} "选择主管机关："] 
-      (eui-combo {:id "admins" :onchange "ajax_load($('#users'), '/c/esp/mot-user-list/'+$('#admins').val())"} dd) [:br]
-      [:div#users (mot-user-sum admin) ]))); (mot-user-list (:code (first rs)) request)])))
+      (eui-combo {:id "admins" :onchange js} dd) [:br]
+      [:div#users]
+      [:script js])))
   
-(defn mot-user-admin
-  "把注册用户指定admin"
-  [request]
-  (let [admin (mot-role request)
+(defn mot-fn-doc
+  "调整一个主管机关用户的委托功能。 "
+  [id request]
+  (let [admin (user-admin request)
+        dd dd-menu2
+        button (eui-button-submit "fm1" {:ajax (format "/c/esp/doc-save/user/%s" id)})
+        rs (with-oid- :user id)
+        fn-join (fn [r f] (join (split (f r) "&") "," {:pre "[" :post "]" :quo "\""}))
+        [menu-selected type-selected grade-selected] (map #(fn-join rs %) [:fnmenu :fntype :fngrade])
+        ]        
+    (doc- :user id 
+          {:onload (format "esp_mot_menu_doc(%s, %s, %s)" menu-selected type-selected grade-selected)
+           :rs rs
+           :after (html 
+                    [:input#fnMenuText {:type "hidden" :value ""}] ; 用于保存fnmenu选择的值                    
+                    [:input#fnTypeText {:type "hidden" :value ""}] ; 用于保存fntype选择的值                    
+                    [:input#fnGradeText {:type "hidden" :value ""}] ; 用于保存fngrade选择的值                    
+                    (input-form [["委托管理的功能" :fnmenu {:t dd}]
+                                 ["委托管理的业务" :fntype {:t dd-type}]
+                                 ["委托管理的级别" :fngrade {:t dd-grade}]
+                                 ] {:title "主管机关工作委托" :buttons button :require-hide? true})
+                    (eui-tip "提交提示“完成更新”后，请关闭此页，并刷新列表查看更改结果。")) })))
+
+(defn user-list
+  "app: 根据mot用户的权限从:user表中得到不同的ukey用户列表
+  @admin 主管机关代码，'01' 可以看到所有；其他只能看到自己属下及pn/org/en用户
+  @id user-type 用户类型 'mot' | 'pn' | 'en' | 'org' "
+  [request id]
+  (let [admin (user-admin request)
+        role id
         where (case admin "01" {} {:admin (re-pattern (str "^" admin))})
-        where (into {:role "mot"} where) ; 只管理主管机关用户
-        rs (with-esp- (fetch :user :where where :sort {:_id -1 :admin 1}))]
+        where (into {:role role :pid {:$exists true}} where)
+        rs (with-esp- (fetch :user :where where :sort {:admin 1 :_id -1 }))]
     (html
-      (eui-tip "给注册了U盘密钥的用户调整主管机关（即：部分注册了U盘密钥的用户申请时填写的省市或者主管机关可能有误，需要再次进行调整指定。）")
-      [:h1 "U盘密钥用户——主管机关调整"]
-      (result-html- rs {:pid "证件号"} [:name :pid :admin :uid :_id] 
+      [:h1 (format "U盘密钥用户——%s用户调整" (dd-role role))]
+      (result-html- rs {:pid "证件号"} [:name :pid :admin :uid :usable :_id] 
                     {:admin (merge dd-role dd-admin)
                      :form "mot-user-doc"
-                     :mot-user true}) )))
+                     :show-uid? true}))))
+  
+(defn mot-user-admin
+  "mot对注册用户进行管理：指定admin、启用、停用等. "
+  [request]
+  (let []
+    (html
+      (eui-tip "管理注册了U盘密钥的用户：审批；停用/启用；调整主管机关（即：部分注册了U盘密钥的用户申请时填写的省市或者主管机关可能有误，需要再次进行调整指定。）") [:br]
+      [:h2 [:a {:href "/c/esp/mot-user-check" :target "_blank"} "待审批的用户"]] [:br]
+      [:label "选择U盘密钥用户类型："] 
+      (eui-combo {:id "utype" :style "width:150px" 
+                  :onchange "ajax_load($('#ulist'), '/c/esp/user-list/'+$('#utype').val())"} 
+                 dd-role) (space 10)
+      [:div#ulist (user-list request "mot")])))
 
 (defn mot-user-doc
-  "调整一个用户的主管机关
+  "调整一个用户的主管机关，启用/停用该用户
   @id 文档 object-id 字符串 "
   [id request]
-  (let [admin (mot-role request)
+  (let [admin (user-admin request)
         dd (case admin "01" dd-admin (apply array-map (reduce into (mot-subs admin true))))
-        button (eui-button-submit "fm1" {:ajax (format "/c/esp/doc-save/user/%s" id)})]
+        button (html (eui-button-submit "fm1" {:ajax (format "/c/esp/doc-save/user/%s" id)}) (space 5)
+                     (eui-button-reset "fm1"))]
     (doc- :user id 
           {:after (html 
                     (input-form [["调整主管机关" :admin {:t dd}]
-                                 ] {:title "调整主管机关" :buttons button :require-hide? true})
+                                 ["可用/停用" :usable {:t {1 "&nbsp; 可用 &nbsp;" 0 "&nbsp; 停用 &nbsp;"}}]
+                                 ] {:title "设置管理该用户" :buttons button :require-hide? true})
                     (eui-tip "提交提示“完成更新”后，请关闭此页，并刷新列表查看更改结果。")) 
-           :mot-user true})))
+           :show-uid? true})))
 
-(defn mot-menu-doc
-  "调整一个主管机关用户的委托功能"
-  [id request]
-  (let [admin (mot-role request)
-        dd (gen-array-map (map (juxt last first) dd-menu))
-        button (eui-button-submit "fm1" {:ajax (format "/c/esp/doc-save/user/%s" id)})
-        rs (with-oid- :user id)
-        menu-seleced (join (split (:menu rs) "&") "," {:pre "[" :post "]" :quo "\""})]        
-    (doc- :user id 
-          {:onload (format "esp_mot_menu_doc(%s)" menu-seleced)
-           :rs rs
-           :after (html 
-                    [:input#menuText {:type "hidden" :value ""}] ; 用于保存menu选择的值                    
-                    (input-form [["委托管理的功能" :menu {:t dd}]
-                                 ] {:title "主管机关工作委托" :buttons button :require-hide? true})
-                    (eui-tip "提交提示“完成更新”后，请关闭此页，并刷新列表查看更改结果。")) })))
+(defn mot-user-check
+  "列出已经注册但未审批进入:user表的所用用户.
+  todo: 显示优化 "
+  [request]
+  (let [admin (user-admin request)]
+    (if (not= admin "01") 
+      (html-body (eui-tip "U盘证书审批目前由交通运输部管理员进行审批。")
+                 (eui-button-close))
+      (html-body
+        (let [sql (str "select commonname,usertype,province,city,PaperID "
+                       "  from userregister order by TradeGuid desc ")
+              rs (wr3.clj.db/select-all "espdev" sql)]
+          (result-html rs {})
+          ) ) )))
 
 (defn mot-org-refine
   "mot下发整改通知给org"
@@ -1069,10 +1097,9 @@
     (result-html- rs [] [:ptype :ptitle :date] {})))
 
 (defn mot-portal
-  "service: mot对首页进行维护. todo: 改为ajax提交 "
+  "service: mot对首页进行维护的管理界面. "
   [request]
-  (let [uid (wr3user request)
-        admin (:admin (first (with-uid- :user uid)))]
+  (let [admin (user-admin request)]
     (if (not= admin "01") 
       (html (eui-tip "首页内容目前由交通运输部安监处用户进行维护。"))
       (html
@@ -1082,9 +1109,13 @@
                      :buttons (html (eui-button-submit "fm1" {:ajax "/c/esp/mot-portal-save"}) (space 5) 
                                     (eui-button-reset "fm1") ) })
         (fileupload-dialog) 
+        [:hr]
+        (eui-button {:style "margin:10px" :iconCls "icon-reload"} "刷 新")
+        (eui-button {} "根据新栏目内容重新生成主页" ) ; todo 增加事件
         (mot-portal-list-)))))
 
 (defn mot-portal-save
+  "service: 保存portal的一条item"
   [request]
   (let [uid (wr3user request)
         vars (query-vars2 request)
@@ -1142,8 +1173,8 @@
        [:div.right_top [:h3 "相关资源链接"]]  ; portal-type: 4
        (portal-items 4) ] ] ]]])
 
-(defn mot-portal-gen
-  "生成esp/index.html文件代码 "
+(defn- portal-gen
+  "生成esp/index.html文件代码html "
   []
   (let [title "交通运输企业安全生产标准化系统（试行）"
         copyright "版权所有：中华人民共和国交通运输部 信息维护：安全监督司 备案编号：京ICP备05046837号"]
@@ -1161,4 +1192,29 @@
            (div-moc-con-)
            [:div.moc_footer copyright] ]]]))))
 
-;(wr3.clj.file/file-set-text "f:\\dev3\\webapp\\esp\\index-test.html" (mot-portal-gen) "UTF-8")
+(require '[wr3.clj.file :as file])
+
+(defn mot-portal-update
+  "service: 备份并替换/esp/index.html文件"
+  [request]
+  (let [ffrom (real-path request "/esp/index.html")
+        fto (real-path request (format "/esp/index-%s.html" (System/currentTimeMillis)))
+        s (portal-gen)]
+    (file/file-rename ffrom fto)
+    (file/file-set-text ffrom s "UTF-8")
+    "已生成主页。"))
+
+(defn mot-log
+  "app: 管理员查看系统日志 "
+  [request]
+  (let [admin (user-admin request)]
+    (if (not= admin "01") 
+      (html (eui-tip "系统日志目前由交通运输部安监处用户进行管理。"))
+      (let [rs (with-esp- (fetch :log :limit 100 :sort {:date -1}))]
+        (html
+          [:h1 "最近系统登录日志："]
+          (result-html- rs {:pid "证件号" :no "U盘号"} [:uid :role :pid :no :date] 
+                        {:admin dd-role}))))))
+
+
+;(wr3.clj.file/file-set-text "f:\\dev3\\webapp\\esp\\index-test.html" (portal-gen) "UTF-8")

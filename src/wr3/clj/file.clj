@@ -52,9 +52,16 @@
 
 (defn file-set-text
   "将String的内容写入文本文件"
-  ([fname s] (Filex/write fname s))
+  ([fname s] (Filex/write fname s)) ; 采用系统编码
   ([fname s enc] (try (Filex/setFileText fname s enc) (catch IOException e (.printStackTrace e)))))
     
+(defn file-rename
+  "将文件ffrom更名为fto
+  @from 原始文件的全路径名
+  @fto 新名字文件的全路径名"
+  [ffrom fto]
+  (try (.renameTo (File. ffrom) (File. fto)) (catch Exception e (println e))))
+
 ;;--- usage:
 ;(def n (atom 0))
 ;(defn- f1 [line] (swap! n inc))

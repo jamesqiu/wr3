@@ -41,15 +41,15 @@
 (use 'wr3.clj.s)
 (def dbnames 
   {
-  :esp {:driver (:sqlserver drivers) ; 临时测试，服务器本地db
-        :url (gstring (:sqlserver urls) {:ip "localhost:1433" :db "wabacusdemo3"})
-        :username "sa"
-        :password "passdb"}
-
-  :espdev {:driver (:sqlserver2 drivers) ; 规划院试行db
+  :esp {:driver (:sqlserver2 drivers) ; 规划院试行db
            :url (gstring (:sqlserver2 urls) {:ip "localhost:1433" :db "userregister"}) ; db名从wabacusdemo3改为userregister
            :username "sa"
            :password "password"}
+
+  :espdev {:driver (:sqlserver drivers) ; 服务器本地db
+        :url (gstring (:sqlserver urls) {:ip "localhost:1433" :db "wabacusdemo3"})
+        :username "sa"
+        :password "passdb"}
 
   :abs {:driver (:sqlserver drivers)
         :url (gstring (:sqlserver urls) {:ip "localhost:1433" :db "abs"})

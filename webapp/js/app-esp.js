@@ -495,10 +495,12 @@ function esp_bjca_onsubmit_server() {
 /**
  * mot-menu-doc 
  */
-function esp_mot_menu_doc(type_vals) {
+function esp_mot_menu_doc(menus, types, grades) {
 	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
 	// 把menu委托功能下拉选择框变成多选，并设置原选项（如果已选过）
-	$('#menu').combobox({multiple:true, width:250 }).combobox('setValues', type_vals)
+	$('#fnmenu').combobox({multiple:true, width:250 }).combobox('setValues', menus)
+	$('#fntype').combobox({multiple:true, width:250 }).combobox('setValues', types)
+	$('#fngrade').combobox({multiple:true, width:250 }).combobox('setValues', grades)
 }
 
 
