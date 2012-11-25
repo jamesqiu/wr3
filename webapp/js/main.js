@@ -92,7 +92,7 @@ function eui_search1(v, n) {
  * 
  * @param jq_element
  * @param url
- * @param func 可选
+ * @param func 可选，且函数可带或者不带data参数
  * @see ajax_post
  */
 function ajax_load(jq_element, url, func) {
@@ -267,7 +267,7 @@ function ajax_post(url, func) {
 	$.post(url, function(data) {
 		alert('提示：' + data)
 		if (func)
-			func()
+			func(data)
 	})
 }
 
@@ -282,7 +282,7 @@ function ajax_form(fm, url, func) {
 	$.post(url, fm.serializeArray(), function(data) {
 		alert('提示：' + data)
 		if (func)
-			func()
+			func(data)
 	})
 }
 

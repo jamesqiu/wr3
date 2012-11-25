@@ -274,15 +274,16 @@
     (:resp :resp-review) [:b (format-resp- v)]
     :pass-direct (format-pass-direct v)
     :otype (or (dd-form (keyword v)) v)
-    :role (or (dd-role v) v) ; U盘密钥user表的角色
+    :role (or (dd-role v) v) ; 证书U盘user表的角色
     :pwd "*"
     :fnmenu (join (map dd-menu2 (split v "&")) ", ")
     :fntype (format-type v)
     :fngrade (join (map (comp dd-grade to-int) (split v "&")) ", ")
     :usable (format-usable- v)
+    :ptype (dd-portal (to-int v))
     v))
 
-(defn doc-
+(defn doc2-
   "显示指定表中指定object-id的记录内容。
   @tb 表名如 :pn :en :org 
   @id object-id字符串如 '4f8ad8ef75e0ae9283368075' 
@@ -294,28 +295,33 @@
     :orgid-as-select 为true则orgid显示为下拉框
     :orders [:name :pid ..] 字段显示的顺序 
     :onload onload的js内容 "
-  ([tb id m]
-    (let [rt (or (:rs m) (with-oid- tb id))
-          rt (if-let [orders (:orders m)]
-               (apply array-map (reduce into (concat (for [k orders :let [v (rt k)] :when v] [k v])
-                                                     (for [[k v] rt :when (not (in? k orders))] [k v]))))
-               rt)]
-      (html-body
-        {:js "app-esp.js" :onload (:onload m)}
-        (when-let [before (:before m)] (if (fn? before) (before rt) before))
-        [:table.wr3table {:border 1}
-         [:caption (format "%s <u>%s</u>" (dd-form tb) (if-let [n (:name rt)] n ""))]
-         [:tbody
-          (for [[k v] (dissoc rt :_id)]
-            [:tr 
-             [:th {:nowrap "true" :style "text-align: left"} (or (dd-meta k) k) "："] 
-             [:td (format-doc-field- tb k v m)] ])]
-         [:tfoot 
-          [:tr {:align "center" :height "50px"} 
-           [:td {:colspan 2 } (eui-button-close)]]]] 
-        (when-let [after (:after m)] (if (fn? after) (after rt) after)))))
+  [tb id m]
+  (let [rt (or (:rs m) (with-oid- tb id))
+        rt (if-let [orders (:orders m)]
+             (apply array-map (reduce into (concat (for [k orders :let [v (rt k)] :when v] [k v])
+                                                   (for [[k v] rt :when (not (in? k orders))] [k v]))))
+             rt)]
+    (html
+      (when-let [before (:before m)] (if (fn? before) (before rt) before))
+      [:table.wr3table {:border 1}
+       [:caption (format "%s <u>%s</u>" (dd-form tb) (if-let [n (:name rt)] n ""))]
+       [:tbody
+        (for [[k v] (dissoc rt :_id)]
+          [:tr 
+           [:th {:nowrap "true" :style "text-align: left"} (or (dd-meta k) k) "："] 
+           [:td (format-doc-field- tb k v m)] ])]
+       [:tfoot 
+        [:tr {:align "center" :height "50px"} 
+         [:td {:colspan 2 } (eui-button-close)]]]] 
+      (when-let [after (:after m)] (if (fn? after) (after rt) after)))))
+
+(defn doc-
+  "@see doc2- 用html-body包裹doc2-，使之可以作为独立页面。 "
+  ([tb id m] (html-body 
+               {:js "app-esp.js" :onload (:onload m)}
+               (doc2- tb id m)))
   ([tb id] (doc- tb id {})))
-  
+
 (defn docv
   "service: 公用函数 docview，根据 form 和 object-id 来显示文档
   /c/esp/docv/form/id
@@ -477,7 +483,7 @@
   [request type]
   (let [uid (wr3user request)
         ntype (name type)
-        cfg0 ({:pn cfg-apply-pn :en cfg-apply-en :org cfg-apply-org} type)
+        cfg0 ({:pn cfg-apply-pn :en cfg-apply-en :org cfg-apply-org :mot cfg-apply-mot} type)
         nam (dd-cert type)
         r (first (with-uid- type uid))
         cfg (if r (cfg-set-values- cfg0 r) cfg0)]
@@ -1193,7 +1199,7 @@
 ;--- 注：文件大小不能大于64k（65536）字节，否则报错
 ;(with-esp- (fetch :indic3 :where {:type2 11 :i 9 :j 4 :k 3}))
 ;(with-mdb2 "espfj" (update! :pn-apply {:pid "350302196709199018"} {:$set {:type "1&4"}}))
-;(with-mdb2 "esp" (destroy! :indic2 {:type2 21 :i 8 :j 6}))
+;(with-mdb2 "esp" (destroy! :pn-apply {:name nil}))
 ;(update- :portal {} (fn [r] (map-key-rename r [:title :type] [:ptitle :ptype])) :replace)
 ;(insert- :user  {:name "交通运输企业测试001", :pid "12345678-0", :role "en", :uid "en-12345678-0", :admin "01" :contact "岳传志"})
 ;(insert- :user  {:name "交通运输企业测试002", :pid "12345678-1", :role "en", :uid "en-12345678-1", :admin "01" :contact "岳传志"})

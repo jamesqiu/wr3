@@ -58,9 +58,14 @@
 (defn query
   "sql查询dbconfig中指定dbname的数据库，返回wr3.Table类型"
   [dbname sql]
-  (with-open
-    [dbs (dbserver dbname)]
-     (.query dbs sql)))
+  (with-open [dbs (dbserver dbname)]
+    (.query dbs sql)))
+
+(defn update
+  "sql更新dbconfig中指定dbname的数据库，返回影响的记录条数"
+  [dbname sql]
+  (with-open [dbs (dbserver dbname)]
+    (.update dbs sql)))
 
 (import wr3.db.ResultsetFilter)
 (use 'wr3.clj.tb)
@@ -88,7 +93,6 @@
 
 ;;;-------------------------- 封装clojure.contrib.sql
 (use 'clojure.contrib.sql)
-
 
 (defn is-product?
   "判断数据库类型.
@@ -242,8 +246,7 @@
                :postgresql (PostgreSQLDialect.) }]
     (with-open [dbs (dbserver dbname)]
       (let [met (.meta dbs)]
-        (.ddl met tbname ((keyword dbtype) types)))
-        )))
+        (.ddl met tbname ((keyword dbtype) types))) )))
 
 ;;------------------------------------ test query sql
 ;(println "test query:\n" (select-col "postgre" "select * from cust limit 10"))
@@ -281,7 +284,5 @@
 ;(println (ddl "abs" "custpn" :sqlserver))
 ;(test-product)
 ;(println (product-logo-by-id "other2"))
-
 ;(dbserver "quick-db")
-
-(from-dbname "gold")
+;(from-dbname "gold")

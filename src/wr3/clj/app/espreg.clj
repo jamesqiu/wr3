@@ -58,10 +58,10 @@
          [:div.login_left_log
           [:div.login_log_h3 [:img {:src "/esp/img/jtb_r4_c.jpg"}]]
           [:div.login_log_user
-           [:div.user_info {:style "border:1px dashed #ccf"}
+           [:div.user_info {:style "border:1px dashed #ddf"}
             [:form {:method "post" :ID "LoginForm" :name "LoginForm" 
                     :action (str "/c/espreg/" action) :onsubmit (str "return " onsubmit)}
-             conf/bjca-prompt [:br][:br][:br]
+             conf/bjca-prompt [:br][:br]
              [:ul [:span "证书："] [:select {:id "UserList" :name "UserList" :style "width:215px" :class "ui-corner-all"} ""]]
              [:ul [:span "口令："] [:input {:id "UserPwd" :name "UserPwd" :type "password" :size 16 :maxlength 16}]] 
              [:input {:type "hidden" :ID "UserSignedData" :name "UserSignedData"}]
@@ -69,16 +69,31 @@
              [:input {:type "hidden" :ID "ContainerName" :name "ContainerName"}]
              [:input {:type "hidden" :ID "strRandom" :name "strRandom"}] 
              [:input {:type "hidden" :ID "strUserList" :name ""}] ; 保存 中文名称等
-             [:center [:a {:href "/esp" :style "color:#069"} "返回主页"]] ]]
+             ]]
            [:div.user_sub
             [:ul [:img {:src "/esp/img/login_enter.png" :onclick "$('#LoginForm').submit()"}]]
-            [:ul [:img {:src "/esp/img/login_reset.png" :onclick "$('#LoginForm').reset()"}]] ] ]]
+            [:ul [:img {:src "/esp/img/login_reset.png" :onclick "$('#LoginForm').reset()"}]]] 
+           [:div.user_link 
+            [:hr]
+            [:a {:href "/esp" :style "color:#069"} "返回主页"] [:br]
+            [:a {:href "/c/espn" :target "_blank"} "<span id=\"ptype\"></span>报名申请（无需证书U盘）"] [:br]
+            [:a {:href "http://219.141.223.141:8080/userregister/firstpage.html" :target "_blank"} "证书U盘申请"] (space 7)
+            [:a {:href "/esp/UKeySetupV2.0.1.exe"} "证书U盘驱动下载"]]
+           [:script "$.get('/c/auth/url', function(d) { ajax_load($('#ptype'), '/c/espreg/ptype?t='+d) })"]
+           ]]
          ; 2.3 中右
          [:div.login_right_pic [:img {:src "/esp/img/jtb_r4_c5.jpg"}]] ]
         ; 3 下：技术支持
         [:div {:class "login_bottom_txt"} "@CopyRight 2012 技术支持电话：13301357860、13301357875"] ]]
       conf/bjca-onchange
       [:script "document.title='标准化系统证书登录' "] )))
+
+(defn ptype
+  "根据url如'/c/esp/index/pn'得到客户类型如“考评员” "
+  [t]
+  (let [t (or t "/c/esp/index/pn")
+        t2 (right t "/index/")]
+    (conf/dd-role t2)))
 
 (defn ca-local
   "app: bjca不联服务器本地提交ukey，提交到ca-local-submit函数"
@@ -341,6 +356,15 @@
         m {:name nam :pid pid :role role :uid (str role "-" pid) :date-import (datetime)}]
     (do (with-mdb2 "esp" (insert! :user m))
       (format "已经将 %s 导入并生效" nam))))
+
+(defn rdb-alter
+  "临时更改 userregister 表，增加字段 registerdate, checkflag "
+  []
+  (with-open [dbs (dbserver db-reg)]
+    (let [sql "ALTER TABLE userregister ADD registerdate datetime NULL, checkflag varchar(50) NULL"
+          sql2 "ALTER TABLE userregister DROP COLUMN registerdate, checkflag"]
+      (.update dbs sql))))
+;(rdb-alter)
 
 ; 00359131-X 00002106-3
 ;(import wr3.bank.OrgID)

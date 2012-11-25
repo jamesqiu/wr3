@@ -27,12 +27,7 @@
    <script language=javascript> function OnUsbKeyChange() { esp_bjca_onpull() } </script> ")
 
 ; 登录页面的提示
-(def bjca-prompt 
-  (format (str "提示：请将本系统证书U盘插入计算机"
-               "（<a href=\"%s\" target=\"_blank\">点击申请</a> 并 "
-               "<a href=\"%s\" target=\"_blank\">下载驱动</a>）。")
-          "http://219.141.223.141:8080/userregister/firstpage.html"
-          "/esp/UKeySetupV2.0.1.exe" ))
+(def bjca-prompt "提示：请将本系统证书U盘插入计算机。" )
 
 ;; 交通运输主管部门界面配置
 (def cfg-frame-mot
@@ -318,7 +313,8 @@
    :pn-train "考评员培训考试记录"
    :hot "实名举报信息"
    :refine "整改通知"
-   :user "U盘密钥用户"
+   :user "证书U盘用户"
+   :portal "首页内容"
    })
 ; 证书年限
 (def dd-cert-year
@@ -388,7 +384,7 @@
    3 "工作动态"
    4 "相关资源链接"
    })
-; U盘密钥用户表role类型
+; 证书U盘用户表role类型
 (def dd-role
    {
     "mot" "主管机关" 
@@ -418,7 +414,7 @@
   [
    ["姓名" :name {:require true}]
    ["身份证号" :pid {:t 'pid :require true :title "15位或18位身份证"}]
-   ["常住地" :from {:t dd-province :v "福建" :require true}]
+   ["常住地" :from {:t dd-province :require true}]
    ["照片" :photo {:t 'file :title "照片文件请勿超过10M大小" :require true}]
    ["工作单位" :org {:require true}]
    ["职称" :title]
@@ -440,7 +436,7 @@
    ["相关证明文件（身份证）" :proof {:t 'file :title "二代身份证正反面（pdf, doc或者jpg格式）" :require true}]
    ["相关证明文件（学历证书）" :proof2 {:t 'file :title "学历证书（pdf, doc或者jpg格式）" :require true}]
    ["相关证明文件（其他证书）" :proof3 {:t 'file :title "其他各类培训合格证明的照片、编号页、发证机关印章页（pdf, doc或者jpg格式）"}]
-   ["主管机关" :admin {:t (dissoc dd-admin "01") :title "请自选主管机关"}]
+   ["主管机关" :admin {:t (dissoc dd-admin "01") :title "请自选主管机关" :require true}]
    ["换证原因<b>（仅换证申请）</b>" :renew {:t dd-renew}]
    ["继续教育证明<b>（仅换证申请）</b>" :edu2 {:t 'file}]
    ["工作业绩证明<b>（仅换证申请）</b>" :orgproof {:t 'file :title "由所在考评机构出具的工作业绩证明。"}]
@@ -449,6 +445,7 @@
 (def cfg-apply-org 
   [
    ["单位名称" :name {:require true :v "" :title "一般为：学校/交通相关学会/协会/研究所"}]
+   ["组织机构代码" :pid {:require true :v ""}]
    ["法人代表" :legalp {:require true}]
    ["资质等级" :grade {:t dd-grade :v 1 :require true}]
    ["专业范围" :type {:t dd-type :v 1 :require true :title "todo: 改为可以多选，或者每个专业申请一次"}]
@@ -460,7 +457,7 @@
    ["邮编" :pcode {:t 'pcode}]
    ["单位电话" :tel {:require true}]
    ["传真号码" :fax {:require true}]
-   ["联系人" :contact {:require true}]
+   ["联系人姓名" :contact {:require true}]
    ["联系人手机" :mobile {:require true}]
    ["联系人邮箱" :email {:require true}]
    ["单位基本情况相关材料" :met {:t 'file :require true}]
@@ -470,7 +467,8 @@
 ; 企业申请表
 (def cfg-apply-en ; en-input-form 
   [
-   ["企业名称" :name {:require true :v "xxx"}]
+   ["企业名称" :name {:require true :v ""}]
+   ["组织机构代码" :pid {:require true :v ""}]
    ["申请等级" :grade {:require true :t dd-grade :v 1}]
    ["法人代表" :legalp {:require true }]
    ["生产经营类型" :type {:t dd-type :require true :v 1}]
@@ -479,13 +477,28 @@
    ["企业办公地址" :address {:require true :title "选择GIS坐标"}]
    ["企业电话" :tel {:require true }]
    ["企业传真" :tax {:require true }]
-   ["联系人" :contact]
-   ["联系电话" :contact-tel]
+   ["联系人姓名" :contact {:require true}]
+   ["联系人手机" :mobile {:require true}]
+   ["联系人邮箱" :email {:require true}]
    ["安全生产组织架构" :safe {:t 'file :require true }]
    ["企业法人资格证件" :qual {:t 'file :require true }] 
    ["经营许可证" :license {:t 'file :require true }]
    ["企业安全生产工作报告" :report {:t 'file :require true :title "Word文档"}]
    ["换证原因<b>（仅换证申请）</b>" :renew {:t dd-renew}]
+   ])
+; 主管机关申请表
+(def cfg-apply-mot ; en-input-form 
+  [
+   ["单位名称" :name {:require true :v ""}]
+   ["组织机构代码" :pid {:require true :v ""}]
+   ["法人代表" :legalp {:require true }]
+   ["上级主管机关" :admin {:t dd-admin :require true :title "一级不用选（部）；二级选34个机构；三级选二级、三级机构；每个类型对应自己的主管机关"}]
+   ["单位办公地址" :address {:require true :title "选择GIS坐标"}]
+   ["单位电话" :tel {:require true }]
+   ["单位传真" :tax {:require true }]
+   ["联系人姓名" :contact {:require true}]
+   ["联系人手机" :mobile {:require true}]
+   ["联系人邮箱" :email {:require true}]
    ])
 ;---------------- end
 
@@ -518,6 +531,7 @@
      :contract1 "解聘日期"
      :ctype "证书类型"
      :date "日期"
+     :date-import "审批通过时间"
      :death "死亡人数"
      :direct-name "签发人姓名" ; 用于pn证书直接颁发
      :direct-title "签发人职务" ; 用于pn证书直接颁发
@@ -537,6 +551,7 @@
      :orgid1 "指定的考评机构" ; mot指定
      :otype "举报对象类型"
      :pass-direct "直接颁发"
+     :pid "证件号"
      :pn "考评员"
      :pnids "选择的考评员"
      :province "省份"

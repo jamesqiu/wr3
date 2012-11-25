@@ -1012,7 +1012,7 @@
         where (into {:role role :pid {:$exists true}} where)
         rs (with-esp- (fetch :user :where where :sort {:admin 1 :_id -1 }))]
     (html
-      [:h1 (format "U盘密钥用户——%s用户调整" (dd-role role))]
+      [:h1 (format "证书U盘用户——%s用户调整" (dd-role role))]
       (result-html- rs {:pid "证件号"} [:name :pid :admin :uid :usable :_id] 
                     {:admin (merge dd-role dd-admin)
                      :form "mot-user-doc"
@@ -1023,9 +1023,9 @@
   [request]
   (let []
     (html
-      (eui-tip "管理注册了U盘密钥的用户：审批；停用/启用；调整主管机关（即：部分注册了U盘密钥的用户申请时填写的省市或者主管机关可能有误，需要再次进行调整指定。）") [:br]
+      (eui-tip "管理注册了证书U盘的用户：审批；停用/启用；调整主管机关（即：部分注册了证书U盘的用户申请时填写的省市或者主管机关可能有误，需要再次进行调整指定。）") [:br]
       [:h2 [:a {:href "/c/esp/mot-user-check" :target "_blank"} "待审批的用户"]] [:br]
-      [:label "选择U盘密钥用户类型："] 
+      [:label "选择证书U盘用户类型："] 
       (eui-combo {:id "utype" :style "width:150px" 
                   :onchange "ajax_load($('#ulist'), '/c/esp/user-list/'+$('#utype').val())"} 
                  dd-role) (space 10)
@@ -1048,19 +1048,49 @@
            :show-uid? true})))
 
 (defn mot-user-check
-  "列出已经注册但未审批进入:user表的所用用户.
-  todo: 显示优化 "
+  "app: 列出已经注册但未审批进入:user表的所用用户. "
   [request]
   (let [admin (user-admin request)]
     (if (not= admin "01") 
-      (html-body (eui-tip "U盘证书审批目前由交通运输部管理员进行审批。")
+      (html-body (eui-tip "证书U盘用户目前由交通运输部管理员进行审批。")
                  (eui-button-close))
       (html-body
-        (let [sql (str "select commonname,usertype,province,city,PaperID "
+        (let [sql (str "select commonname,usertype,province,city,PaperID,registerdate,checkflag,TradeGuid as _id"
                        "  from userregister order by TradeGuid desc ")
               rs (wr3.clj.db/select-all "espdev" sql)]
-          (result-html rs {})
-          ) ) )))
+          (result-html- rs '[名称 类型 省 城市 证件号 注册日期 审批标志 详情] 
+                        [:commonname :usertype :province :city :paperid :registerdate :checkflag :_id] 
+                        {:form "mot-user-check-doc"}) )))))
+
+(defn mot-user-check-doc
+  "app: 审批某一个申请过UKey的用户
+  @id 注册rdb表中的TradeGuid字段内容 "
+  [id]
+  (let [sql (format "SELECT PaperID,CommonName,usertype FROM userregister where TradeGuid='%s' " id)
+        r (wr3.clj.db/select-row wr3.clj.app.espreg/db-reg sql)
+        uid (str (:usertype r) "-" (:paperid r))
+        r1 (first (with-uid- :user uid))]
+    (html-body 
+      [:h2 "注册用户：" (:commonname r)]
+      [:h4 "注册类型：" (dd-role (:usertype r)) (space 5) "证件号："  (:paperid r)] [:br]
+      (if r1
+        (html [:h2 "已存在或已导入相同证件号的用户："] 
+              (doc2- :user nil {:rs r1 :show-uid? true}))
+        (html [:h2 "系统尚未发现相同证件号的用户："] [:br]
+          (eui-button {:onclick (format "ajax_post('/c/esp/mot-user-check-save/%s')" id)} "导入该用户"))) )))
+
+(defn mot-user-check-save
+  "service: 更新sqlserver的userregiester表某个注册用户的checkflag字段，并导入该用户到esp系统mdb中。
+  @id 注册rdb表中的TradeGuid字段内容 "
+  [id]
+  (let [sql (format "SELECT PaperID,CommonName,usertype FROM userregister where TradeGuid='%s'" id)
+        sql2 (format "UPDATE userregister set checkflag='pass' where TradeGuid='%s' " id)
+        r (wr3.clj.db/select-row wr3.clj.app.espreg/db-reg sql)
+        {nam :commonname pid :paperid role :usertype} r
+        m {:name nam :pid pid :role role :uid (str role "-" pid) :date-import (datetime)}]
+    (do (insert- :user m)
+      (wr3.clj.db/update wr3.clj.app.espreg/db-reg sql2)
+      (format "已经将 %s 导入并生效 " nam))))
 
 (defn mot-org-refine
   "mot下发整改通知给org"
@@ -1090,16 +1120,30 @@
            [:h2  
             (format "%s （<font color=%s>%s</font>）" title (if (zero? sum ) "lightgray" "red") sum)]]])] ) ))
 
-(defn- mot-portal-list-
-  "列出所有的portal项目"
+(defn mot-portal-list
+  "service: 列出所有的portal项目"
   []
-  (let [rs (with-esp- (fetch :portal :limit 100 :sort {:ptype 1 :date -1}))]
-    (result-html- rs [] [:ptype :ptitle :date] {})))
+  (let [rs (with-esp- (fetch :portal :limit 100 :where {:pdel {:$ne "1"}} :sort {:ptype 1 :date -1}))]
+    (result-html- rs [] [:ptype :ptitle :date :pno :_id] {:form "mot-portal-doc"})))
+
+(defn mot-portal-doc
+  [id]
+  (doc- 
+    :portal id
+    {:after (let [js1 (format "ajax_post('/c/esp/doc-save/portal/%s?pno='+$('#pno').val())" id)
+                  js2 (format "ajax_post('/c/esp/doc-save/portal/%s?pdel=1', function(){ window.close() })" id) ]
+              (html 
+                [:h1 "内容管理"]
+                (eui-tip "排序标号如 1.0 、 1.01 、 1.1 、 2.0 等可排序的标号，同类型按标号排序显示。")
+                [:label "排序标号："] [:input#pno {}] [:br]
+                (eui-button {:onclick js1 :style "margin:30px"} "设置排序标号")
+                (eui-button {:onclick js2} "删除本条内容"))) }))
 
 (defn mot-portal
   "service: mot对首页进行维护的管理界面. "
   [request]
-  (let [admin (user-admin request)]
+  (let [admin (user-admin request)
+        js-update "ajax_post('/c/esp/mot-portal-update')"]
     (if (not= admin "01") 
       (html (eui-tip "首页内容目前由交通运输部安监处用户进行维护。"))
       (html
@@ -1110,9 +1154,10 @@
                                     (eui-button-reset "fm1") ) })
         (fileupload-dialog) 
         [:hr]
-        (eui-button {:style "margin:10px" :iconCls "icon-reload"} "刷 新")
-        (eui-button {} "根据新栏目内容重新生成主页" ) ; todo 增加事件
-        (mot-portal-list-)))))
+        (eui-button {:style "margin:10px" :iconCls "icon-reload" 
+                     :onclick "ajax_load($('#plist'), '/c/esp/mot-portal-list')"} "刷 新")
+        (eui-button {:onclick js-update} "根据新栏目内容重新生成主页" ) 
+        [:div#plist (mot-portal-list)]))))
 
 (defn mot-portal-save
   "service: 保存portal的一条item"
@@ -1131,9 +1176,11 @@
   @portal-type dd-portal的key：1/2/3/4 "
   [portal-type]
   (let [limit (case portal-type (1 2 3) 4 10)
-        rs (with-esp- (fetch :portal :limit limit :where {:ptype (str portal-type)}))]
+        rs (with-esp- (fetch :portal :limit limit :where {:ptype (str portal-type) :pdel {:$ne "1"}} 
+                             :sort {:pno 1}))]
     [:ul (for [{title :ptitle link :link} rs] 
-           [:li [:a {:href link :target "_blank"} title]]) ] ))
+           [:li (if (nullity? link) title
+                  [:a {:href link :target "_blank"} title])]) ] ))
 
 ;(println (portal-items 4))
 

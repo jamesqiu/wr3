@@ -636,9 +636,11 @@ form.app input[type=text] {
 .login_left_log { width:320px; height:380px; float:left; background:#C1EBFF; padding:10px 0;}
 .login_log_h3 { width:320px; height:35px; }
 .login_log_user { width:320px; height:345px; background:url(/esp/images/jtb_r5_c4.jpg) no-repeat;}
-.user_info { width:270px; height:160px; padding:20px 20px 0 20px; margin:0 auto; font-size:14px; font-weight:bold; color:#069;}
-.user_info ul { width:260px; height:50px; margin:0px; padding:0px;}
-.user_sub { width:300px; height:34px; margin:0 auto; padding-top:30px;}
+.user_info { width:290px; padding:10px 10px 0 10px; margin:0 auto; font-size:14px; font-weight:bold; color:#069;}
+.user_info ul { width:260px; height:45px; margin:0px; padding:0px;}
+.user_sub { width:300px;}
 .user_sub ul { width:79px; height:34px; float:left; display:block;}
+.user_link { float:left; margin:15px; line-height:30px}
+.user_link a { padding-left:20px;}
 .login_right_pic { width:123px; height:380px; padding:10px 0; float:right; }
 .login_bottom_txt { width:405px; height:32px; text-align:center; margin-left:112px; font-size:12px; color:#069; line-height:25px;}

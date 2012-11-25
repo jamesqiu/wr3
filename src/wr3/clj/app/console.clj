@@ -75,8 +75,8 @@
   (let []
     (html-body
       [:form {:action "/c/console/exec" :method "POST" :target "_blank"}
-       [:label "cmd: "][:input {:name "cmd" :value "cmd /c dir" :size 50}] [:br]
-       [:label "args: "][:input {:name "args" :value "" :size 50}] [:br]
+       [:label "cmd: "][:input {:name "cmd" :value "cmd /c dir" :size 100}] [:br]
+       [:label "args: "][:input {:name "args" :value "" :size 100}] [:br]
        [:input {:type "submit"}] ]
       [:hr]
       [:form#fm1 {:name "fm1"}

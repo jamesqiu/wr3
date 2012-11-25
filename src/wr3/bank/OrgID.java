@@ -61,6 +61,11 @@ public class OrgID {
 		return s8+"-"+c9(s8);
 	}
 	
+	/**
+	 * 是否严格的组织机构代码，必须不带空格，如果有x必须大写
+	 * @param id
+	 * @return
+	 */
 	public static boolean isid(String id) {
 		String[] s8c9 = Stringx.split(id, "-");
 		return 	(s8c9.length==2) &&

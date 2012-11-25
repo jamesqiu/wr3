@@ -2,7 +2,7 @@
      wr3.clj.app.espfj)
 
 (use 'wr3.clj.s 'wr3.clj.n 'wr3.clj.u 'wr3.clj.web 'wr3.clj.tb)
-(use 'somnium.congomongo 'wr3.clj.nosql 'somnium.congomongo 'hiccup.core 'clojure.contrib.json)
+(use 'somnium.congomongo 'wr3.clj.nosql 'hiccup.core 'clojure.contrib.json)
 
 (require '[wr3.clj.app.espc :as espc]) 
 (require '[wr3.clj.app.espconf :as conf]) 
@@ -95,6 +95,7 @@
   "app: 直接填写或者用身份证（密码：后4位）登录修改原来提交的内容"
   []
   (html-body
+    {:js "app-espfj.js"}
     [:center {:style "border: 1px solid #369"}
      body-head
      [:div {:style "min-height: 500px"}
@@ -157,7 +158,7 @@
   [request]
   (let [vars (query-vars2 request)
         m (into {} (for [[k v] vars :when (not (nullity? v))] [k v]))]
-    (with-mdb "espfj" 
+    (with-mdb2 "espfj" 
       (insert! :pn-apply (into m {:date (datetime)}))) 
     (format "已提交 %s 的申请表。" (vars :name) )))
 
