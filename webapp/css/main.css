@@ -626,21 +626,21 @@ form.app input[type=text] {
 
 /*------------- 用于esp ca登录页面 ---------------*/
 #moc_login { 
-	width:100%; height:455px; position:absolute; top:50%; margin-top:-227px; 
+	width:100%; height:455px; position:absolute; top:50%; margin-top:-227px; text-align:center; 
 	background:url(/esp/images/jtb_r3_c1.jpg) repeat-x 0 0;
 }
-.moc_login_main { width:960px; height:455px; margin:0 auto; }
+.moc_login_main { width:960px; height:455px; margin:0 auto; text-align:left;}
 .login_left_h2 { width:848px; height:28px; }
 .login_left_con { width:960px; height:400px; }
 .login_left_pic { width:517px; height:380px; padding:10px 0; float:left;}
 .login_left_log { width:320px; height:380px; float:left; background:#C1EBFF; padding:10px 0;}
 .login_log_h3 { width:320px; height:35px; }
 .login_log_user { width:320px; height:345px; background:url(/esp/images/jtb_r5_c4.jpg) no-repeat;}
-.user_info { width:290px; padding:10px 10px 0 10px; margin:0 auto; font-size:14px; font-weight:bold; color:#069;}
+.user_info { width:290px; padding:10px 10px 0px 10px; margin:0px; font-size:14px; font-weight:bold; color:#069}
 .user_info ul { width:260px; height:45px; margin:0px; padding:0px;}
-.user_sub { width:300px;}
+.user_sub { width:300px; margin-top: -20px}
 .user_sub ul { width:79px; height:34px; float:left; display:block;}
-.user_link { float:left; margin:15px; line-height:30px}
-.user_link a { padding-left:20px;}
+.user_link { float:left; margin:15px; line-height:40px}
+.user_link a { margin-left:20px; padding:3px; border-bottom:1px dashed green;}
 .login_right_pic { width:123px; height:380px; padding:10px 0; float:right; }
 .login_bottom_txt { width:405px; height:32px; text-align:center; margin-left:112px; font-size:12px; color:#069; line-height:25px;}

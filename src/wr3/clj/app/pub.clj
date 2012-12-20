@@ -11,6 +11,12 @@
 ;;;   js函数fileupload(name,sid)弹出对话框（传入input hidden字段中文名及对应id或name），
 ;;;   保存在 /file 下文件名为 uid-[timestamp].xx ，把该文件名传给自定义name的input hidden字段
 
+(def head
+  [:head
+   [:meta {:charset "utf-8"}]
+   [:meta {:name "viewport" :content "width=device-width, initial-scale=1.0"}]
+   [:style {:type "text/css"} " body {font-family:微软雅黑,helvetica} "]])
+
 (defn fileupload
   "service: 文件上传弹出dialog的内容，提交按钮由js函数 fileupload_bt() 定义。
   @action 执行文件保存的service url，如'?action=/c/esp/filesave' "

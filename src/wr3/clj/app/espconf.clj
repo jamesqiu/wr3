@@ -6,6 +6,9 @@
 ;; 登录模式： :ca-local ca本地认证 :ca-server ca服务器认证 :user-pass 用户名密码认证 
 (def login-mode (second [:ca-local :ca-server :user-pass]))
 
+; 证书申请应用的url. @deprecated 该url以后不用了，从esprep/ca的主页面上移除
+(def userregister-url "http://219.141.223.141:8080/userregister/firstpage.html")
+
 ; bjca证书验证返回值代表的含义
 (def dd-retValue {-1 "登录证书的根不被信任"
                   -2 "登录证书超过有效期（<a href='http://help.bjca.org.cn/support/client/jtb/index.htm' target='_blank'>更新</a>）"
@@ -27,7 +30,7 @@
    <script language=javascript> function OnUsbKeyChange() { esp_bjca_onpull() } </script> ")
 
 ; 登录页面的提示
-(def bjca-prompt "提示：请将本系统证书U盘插入计算机。" )
+(def bjca-prompt "提示：请插入本系统专用登录认证U盘。" )
 
 ;; 交通运输主管部门界面配置
 (def cfg-frame-mot
@@ -41,7 +44,8 @@
               ["企业搜索" "range_en" "icon-star"] ]
    :nav [
          ["待办事宜" "icon-arrow" ; title icon
-          ["待办事宜概况一览" "icon-sum" "mot-resp-sum"]
+          ["待办事宜概况一览"     "icon-sum"   "mot-resp-sum"]
+          ["报名申请初审"         "icon-edit"  "reg-resp"]
           ["考评员申请受理"       "icon-user"  "apply-resp/pn"        nil "m01"] ; title icon id url menu-id 
           ["考评员换证申请受理"   "icon-user"  "cert-renew-resp/pn"   ]  
           ["考评机构申请受理"     "icon-earth" "apply-resp/org"       nil "m03"]  
@@ -94,6 +98,7 @@
           ["首页内容维护"     "icon-file" "mot-portal"]
           ["登录日志查询"     "icon-file" "mot-log"]
           ["密钥用户管理"     "icon-user" "mot-user-admin"]
+          ["当前用户信息"     "icon-info" "whoami/mot"]
           ]
          ]   
    :frame-main (html [:script "layout_load_center('/c/esp/mot-resp-sum')"]
@@ -116,6 +121,11 @@
           ["签约考评机构" "icon-list"  "pn-org"]
           ["使用帮助" "icon-help" "pn-help" "/static/esp/about-pn.html"]
           ]
+         ["其他" "icon-setting" ; title id          
+          ["考评机构基本信息查询"     "icon-info" "who/org"]
+          ["企业基本信息查询"     "icon-info" "who/en"]
+          ["当前用户信息"     "icon-info" "whoami/pn"]
+          ]      
          ] 
    :frame-main (html [:h2 "考评员用户主界面"]
                      [:script "layout_load_center('/static/esp/about-pn.html')"]
@@ -153,9 +163,14 @@
           ["考评企业档案管理" "icon-list" "org-en-archive"] 
           ["考评情况汇总表" "icon-list" "org-en-eval"] 
           ]
+         ["其他" "icon-setting" ; title id          
+          ["考评员信息查询"     "icon-info" "who/pn"]
+          ["企业基本信息查询"     "icon-info" "who/en"]
+          ["当前用户信息"     "icon-info" "whoami/org"]
+          ]      
          ]   
    :frame-main (html [:h2 "考评机构用户主界面"]
-                     [:script "layout_load_center('/c/esp/apply-resp/en')"]
+                     [:script "layout_load_center('/c/esp/org-main')"] ; '/c/esp/apply-resp/en'
                      (set-title "考评机构管理系统（试行）"))
    :js frame-js
    :after bjca-onpull
@@ -178,6 +193,10 @@
           ["换证申请" "icon-list"    "cert-renew/en"] 
           ["整改报告" "icon-list" "refine-resp"] ; title icon id 
           ]
+         ["其他" "icon-setting" ; title id
+          ["考评员基本信息查询"     "icon-info" "who/pn"]
+          ["当前用户信息"     "icon-info" "whoami/en"]
+          ]      
          ]   
    :frame-main (html [:h2 "交通运输企业用户主界面"]
                      (set-title "企业在线填报管理系统（试行）"))
@@ -308,12 +327,13 @@
    :pn-apply "考评员申请"
    :org-apply "考评机构申请"
    :en-apply "交通运输企业申请"
+   :mot-apply "主管机关申请" ; 报名信息初次申请
    :org-backup "考评机构变更申请"
    :en-backup "企业变更申请"
    :pn-train "考评员培训考试记录"
    :hot "实名举报信息"
    :refine "整改通知"
-   :user "证书U盘用户"
+   :user "登录认证U盘用户"
    :portal "首页内容"
    })
 ; 证书年限
@@ -379,19 +399,19 @@
 ; 门户模块
 (def dd-portal
   {
-   1 "信息公告"
-   2 "图片新闻"
-   3 "工作动态"
-   4 "相关资源链接"
+   "1" "政策法规"
+   "2" "图片新闻"
+   "3" "工作动态"
+   "4" "公告公示"
    })
-; 证书U盘用户表role类型
+; 登录认证U盘用户表role类型
 (def dd-role
-   {
-    "mot" "主管机关" 
-    "en" "企业" 
-    "org" "考评机构" 
+  (array-map
+    "mot" "主管机关" ; 密钥用户管理缺省先看mot的
     "pn" "考评员"
-    })
+    "org" "考评机构" 
+    "en" "企业" 
+    ))
 ; 委托功能列表。 如： [[考评员申请受理 icon-user apply-resp/pn m01] [..] [..] .. [投诉举报受理 icon-tip mot-hot m0a]]
 (def dd-menu
   (filter #(= 5 (count %)) (-> cfg-frame-mot :nav first (subvec 3))))
@@ -399,26 +419,39 @@
 (def dd-menu2
   (wr3.clj.u/gen-array-map (map (juxt last first) dd-menu)))
 ;(println (into (array-map) (for [[label icon link url mid] dd-menu] [mid label])))
+
+;; bjca注册的province、city字典
+(def dd-bjca-province
+  {"001"	"北京" "002"	"安徽" "003"	"重庆" "004"	"福建" "005"	"甘肃" "006"	"广东" "008"	"广西"
+   "007"	"贵州" "009"	"海南" "010"	"河北" "011"	"黑龙江" "012"	"河南" "013"	"香港" "014"	"湖北"
+   "015"	"湖南" "016"	"江苏" "017"	"江西" "018"	"吉林" "019"	"辽宁" "020"	"澳门" "021"	"内蒙古"
+   "022"	"青海" "023"	"山东" "024"	"上海" "025"	"山西" "026"	"陕西" "027"	"四川" "028"	"台湾"
+   "029"	"天津" "030"	"新疆" "031"	"西藏" "032"	"云南" "033"	"浙江" "034"	"宁夏" "035"	"兵团"
+   "036"	"长航局" "037"	"珠航局" })
+
 ; 首页portal项目表单
 (def cfg-portal
   [
    ["类型" :ptype {:t dd-portal :require true}]
    ["标题" :ptitle {:require true :style "width:500px"}]
    ["连接" :link {:style "width:500px"}]
+   ["正文" :content {:t 'textarea :style "width:500px;height:100px"}]
    ["附件" :file {:t 'file}]
+   ["排序号" :pno {:title "缺省可不填，填1、2、3等，0表示置顶。"}]
    ])
 
 ;; 考评员资格证书、考评机构资质证书、企业达标证书申请表格
 ; 考评员申请表
 (def cfg-apply-pn ; [name id {:t :title ..}] :t类型,不写时为text 
   [
+   ["主管机关" :admin {:t (dissoc dd-admin "01") :title "请自选主管机关" :require true}]
    ["姓名" :name {:require true}]
    ["身份证号" :pid {:t 'pid :require true :title "15位或18位身份证"}]
    ["常住地" :from {:t dd-province :require true}]
    ["照片" :photo {:t 'file :title "照片文件请勿超过10M大小" :require true}]
-   ["工作单位" :org {:require true}]
+   ["工作单位" :org {:require true :style "width:300px"}]
    ["职称" :title]
-   ["通讯地址" :address {:require true}]
+   ["通讯地址" :address {:require true :style "width:300px"}]
    ["邮编" :pcode {:t 'pcode :require true}]
    ["联系电话" :tel]
    ["传真号码" :fax]
@@ -433,10 +466,10 @@
    ["主要工作简历" :resume {:t 'textarea :require true}]
    ["专业工作业绩" :perf {:t 'textarea :require true :title "不得少于10个字"}]
    ["专业工作业绩附件" :perf2 {:t 'file}]
-   ["相关证明文件（身份证）" :proof {:t 'file :title "二代身份证正反面（pdf, doc或者jpg格式）" :require true}]
-   ["相关证明文件（学历证书）" :proof2 {:t 'file :title "学历证书（pdf, doc或者jpg格式）" :require true}]
-   ["相关证明文件（其他证书）" :proof3 {:t 'file :title "其他各类培训合格证明的照片、编号页、发证机关印章页（pdf, doc或者jpg格式）"}]
-   ["主管机关" :admin {:t (dissoc dd-admin "01") :title "请自选主管机关" :require true}]
+   ["身份证明文件" :proof {:t 'file :title "二代身份证、护照等的正面（pdf, doc或者jpg格式）" :require true}]
+   ["身份证明文件（背面）" :proofb {:t 'file :title "二代身份证、护照等的反面（pdf, doc或者jpg格式）" :require true}]
+   ["学历证明文件" :proof2 {:t 'file :title "学历证书（pdf, doc或者jpg格式）" :require true}]
+   ["培训合格证明文件" :proof3 {:t 'file :title "其他各类培训合格证明的照片、编号页、发证机关印章页（pdf, doc或者jpg格式）"}]
    ["换证原因<b>（仅换证申请）</b>" :renew {:t dd-renew}]
    ["继续教育证明<b>（仅换证申请）</b>" :edu2 {:t 'file}]
    ["工作业绩证明<b>（仅换证申请）</b>" :orgproof {:t 'file :title "由所在考评机构出具的工作业绩证明。"}]
@@ -444,61 +477,61 @@
 ; 考评机构申请表  
 (def cfg-apply-org 
   [
-   ["单位名称" :name {:require true :v "" :title "一般为：学校/交通相关学会/协会/研究所"}]
+   ["主管机关" :admin {:t dd-admin :require true :title "提示：若须申请一级考评机构资质证书，请选择“交通运输部”"}]
+   ["单位名称" :name {:require true :v "" :style "width:300px" :title "一般为：学校/交通相关学会/协会/研究所"}]
    ["组织机构代码" :pid {:require true :v ""}]
    ["法人代表" :legalp {:require true}]
-   ["资质等级" :grade {:t dd-grade :v 1 :require true}]
-   ["专业范围" :type {:t dd-type :v 1 :require true :title "todo: 改为可以多选，或者每个专业申请一次"}]
-   ["专职考评员人数" :pnumber {:v 7 :require true :title "一级≥7名；二级≥5名；三级≥3名。"}]
-   ["高级技术职称考评员人数" :pnumber2 {:v 3 :require true :title "一级≥3名；二级≥2名；三级≥1名。"}]
-   ["开始从事相应业务年份" :start {:v 2005 :require true}]
-   ["主管机关" :admin {:t dd-admin :require true}]
-   ["办公地址" :address]
-   ["邮编" :pcode {:t 'pcode}]
-   ["单位电话" :tel {:require true}]
-   ["传真号码" :fax {:require true}]
    ["联系人姓名" :contact {:require true}]
    ["联系人手机" :mobile {:require true}]
    ["联系人邮箱" :email {:require true}]
+   ["资质等级" :grade {:t dd-grade :v 1 :require true :title "报名申请时，填一个拟申请等级即可；\n报名申请通过后，可试情况申请多个等级的证书"}]
+   ["专业范围" :type {:t dd-type :v 1 :require true :title "最多只可选择两种专业范围"}]
+   ["专职考评员人数" :pnumber {:v 7 :require true :title "一级≥7名；二级≥5名；三级≥3名。"}]
+   ["高级技术职称考评员人数" :pnumber2 {:v 3 :require true :title "一级≥3名；二级≥2名；三级≥1名。"}]
+   ["开始从事相应业务年份" :start {:v 2005 :require true}]
+   ["通讯地址" :address {:style "width:300px"}]
+   ["邮编" :pcode {:t 'pcode}]
+   ["联系电话" :tel {:require true}]
+   ["传真号码" :fax {:require true}]
    ["单位基本情况相关材料" :met {:t 'file :require true}]
-   ["专职考评员相关材料" :pns {:t 'file :require true :title "文件10M以内大小"}]
+   ["专职考评员聘用<br/>证明与职称证明" :pns {:t 'file :require true :title "文件10M以内大小"}]
    ["换证原因<b>（仅换证申请）</b>" :renew {:t dd-renew}]
    ])
 ; 企业申请表
 (def cfg-apply-en ; en-input-form 
   [
-   ["企业名称" :name {:require true :v ""}]
+   ["主管机关" :admin {:t dd-admin :require true :title "提示：若须申请一级企业达标等级证书，请选择“交通运输部”"}]
+   ["企业名称" :name {:require true :v "" :style "width:300px"}]
    ["组织机构代码" :pid {:require true :v ""}]
-   ["申请等级" :grade {:require true :t dd-grade :v 1}]
    ["法人代表" :legalp {:require true }]
-   ["生产经营类型" :type {:t dd-type :require true :v 1}]
-   ["生产经营类别" :type2 {:t dd-type2 :require true :v 11}]
-   ["主管机关" :admin {:t dd-admin :require true :title "一级不用选（部）；二级选34个机构；三级选二级、三级机构；每个类型对应自己的主管机关"}]
-   ["企业办公地址" :address {:require true :title "选择GIS坐标"}]
-   ["企业电话" :tel {:require true }]
-   ["企业传真" :tax {:require true }]
    ["联系人姓名" :contact {:require true}]
    ["联系人手机" :mobile {:require true}]
    ["联系人邮箱" :email {:require true}]
+   ["申请等级" :grade {:require true :t dd-grade :v 1 :title "报名申请时，填一个拟申请等级即可；\n报名申请通过后，可试情况申请多个等级的证书"}]
+   ["生产经营类型" :type {:t dd-type :require true :v 1}]
+   ["生产经营类别" :type2 {:t dd-type2 :require true :v 11}]
+   ["通讯地址" :address {:require true :style "width:300px" :title "请填写清楚通讯地址"}]
+   ["联系电话" :tel {:require true }]
+   ["传真" :tax {:require true }]
    ["安全生产组织架构" :safe {:t 'file :require true }]
    ["企业法人资格证件" :qual {:t 'file :require true }] 
    ["经营许可证" :license {:t 'file :require true }]
-   ["企业安全生产工作报告" :report {:t 'file :require true :title "Word文档"}]
+   ["标准化达标自评报告" :report {:t 'file :require true :title "即：企业安全生产工作报告"}] 
    ["换证原因<b>（仅换证申请）</b>" :renew {:t dd-renew}]
    ])
 ; 主管机关申请表
 (def cfg-apply-mot ; en-input-form 
   [
-   ["单位名称" :name {:require true :v ""}]
+   ["上级主管机关" :admin {:t dd-admin :require true :title "省级交通厅、交委请选择“交通运输部”"}]
+   ["单位名称" :name {:require true :v "" :style "width:300px"}]
    ["组织机构代码" :pid {:require true :v ""}]
    ["法人代表" :legalp {:require true }]
-   ["上级主管机关" :admin {:t dd-admin :require true :title "一级不用选（部）；二级选34个机构；三级选二级、三级机构；每个类型对应自己的主管机关"}]
-   ["单位办公地址" :address {:require true :title "选择GIS坐标"}]
-   ["单位电话" :tel {:require true }]
-   ["单位传真" :tax {:require true }]
    ["联系人姓名" :contact {:require true}]
    ["联系人手机" :mobile {:require true}]
    ["联系人邮箱" :email {:require true}]
+   ["通讯地址" :address {:require true :style "width:300px" :title "选择GIS坐标"}]
+   ["联系电话" :tel {:require true }]
+   ["单位传真" :tax {:require true }]
    ])
 ;---------------- end
 
@@ -520,6 +553,7 @@
      :advice "处理意见"
      :advice-eval "考评意见"
      :advice-refine "整改意见"
+     :advice-reg "初审意见"
      :advice-review "审核意见"
      :belong "所属考评机构"
      :birth "出生日期"
@@ -533,6 +567,7 @@
      :date "日期"
      :date-import "审批通过时间"
      :death "死亡人数"
+     :del "删除标志"
      :direct-name "签发人姓名" ; 用于pn证书直接颁发
      :direct-title "签发人职务" ; 用于pn证书直接颁发
      :enid "企业ID"
@@ -556,10 +591,12 @@
      :pnids "选择的考评员"
      :province "省份"
      :pwd "密码"
+     :readonly "操作权限"
      :reason "原因"
      :refine-doc "整改报告"
      :resp "受理结果"
      :resp-eval "考评结果"
+     :resp-reg "初审结果"
      :resp-review "审核结果"
      :respdate "受理日期"
      :respdate-eval "考评日期"
@@ -572,7 +609,7 @@
      :sex "性别"
      :stand "达标评估"
      :stop "终止业务"
-     :tel "电话"
+     :tel "联系电话"
      :train-end "培训结束日期"
      :train-hour "培训学时"
      :train-id "培训合格证号"

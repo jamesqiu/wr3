@@ -400,7 +400,7 @@ function esp_bjca_onpull() {
 		var index = strUserList.indexOf(containerName) 
 // alert('strUserList='+strUserList+';\ncontainer-name='+containerName+';index='+index)
 		if (data!="" && (-1 == index)) { // 所有正插入的证书中没有已登录证书
-			alert('提示：您已经拔出登录所用证书U盘，当前用户将注销！')
+			alert('提示：您已经拔出登录认证U盘，当前用户将注销！')
 			app_exit('/esp')			
 		}
 	})

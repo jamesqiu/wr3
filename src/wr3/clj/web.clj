@@ -359,6 +359,11 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   [form-id]
   (eui-button {:onclick (format "$('#%s')[0].reset()" form-id) :iconCls "icon-undo"} "重置"))
 
+(defn eui-button-reload
+  "刷新/重新装载当前页面"
+  []
+  (eui-button {:onclick "window.location.reload()" :iconCls "icon-reload"} "刷新"))
+
 (defn eui-accord
   "Accordion界面框架，内容用eui-accord-"
   [m & items]
@@ -388,11 +393,12 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   
 (defn eui-combo
   "得到一个下拉选择列表，需要在js中初始化: $('#id1').combobox()，多选可以 $('#id1').combox({multiple:true}) ，参数：
-  m: {:id 'id1' :value '02'} id是必须的, :value 缺省选中的value
+  m: {:id 'id1' :value '02'} id是必须的, :value 缺省选中的value，该值和options中的key都转为字符串后比较。
   options: 如'{01 java 02 ruby 03 python}"
   [m options]
   (html
-    (tags :select m nil (for [[k v] options] [:option (merge {:value k} (when (= k (:value m)) {:selected "true"})) v]))
+    (tags :select m nil (for [[k v] options] 
+                          [:option (merge {:value k} (when (= (str k) (str (:value m))) {:selected "true"})) v]))
     (when (and (:js m) (:id m)) 
       [:script (format "$('#%s').combobox(%s)" (:id m) (if (:multiple m) "{multiple:true}" ""))])))
 ;  (tags :select {:id id} nil (map #(vector :option {:value (key %)} (val %)) options)))
@@ -689,7 +695,7 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
                 attr {:id sid :name sid :value v :title title :style style 
                       :required (if (true? require) "true" nil)}] ; 通用attrib
             [:tr 
-             [:td {:style css-label} [:label (str nam "：")]]
+             [:td {:style css-label} [:label {:title title} (str nam "：")]]
              [:td {:style "border-bottom:1px dotted gray"}
               (cond 
                 (= t 'textarea)  (eui-textarea attr v)
@@ -728,4 +734,90 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   [request furi]
   (.getRealPath request furi))
 
-;;;---------------------------- jquery mobile
+(defn url-encode 
+  "把带中文的url转成可安全传输的url"
+  [url]
+  (java.net.URLEncoder/encode url "UTF-8"))
+  
+(defn url-decode 
+  "把带中文的安全url转成可读的url"
+  [url]
+  (java.net.URLDecoder/decode url "UTF-8"))
+  
+;;;---------------------------- bootstrap
+;<head>
+;	<meta charset="utf-8">
+;	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+;	<title>Numagic——新奥奇特科技北京有限公司</title>
+;	<link rel="shortcut icon" href="favicon.ico">
+;	<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" media="all" />
+;	<link rel="stylesheet" type="text/css" href="css/bootstrap-responsive.min.css" media="all" />
+;	<script type="text/javascript" src="js/jquery-1.7.1.min.js"></script> 
+;	<script type="text/javascript" src="js/bootstrap.min.js"></script>
+;	<!--[if lt IE 9]><script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+;	<style type="text/css">
+;		body * { font-family:微软雅黑,r;}
+;		.c-border { border:1px solid red}
+;	</style>
+;	<script type="text/javascript">
+;		
+;	</script>
+;</head>
+
+(defn bs-head
+  "bootstrap页面的头
+  @m 客户化定制参数。:title 标题；:css /css/目录下的.css文件名； :js /js/目录下的.js文件名 "
+  [m]
+  (html
+    [:head
+     [:meta {:charset "utf-8"}]
+     [:meta {:name "viewport" :content "width=device-width, initial-scale=1.0"}]
+     (when-let [title (:title m)]
+       [:title (or (:title m) "系统")])
+     [:link {:rel "stylesheet" :type "text/css" :href "/css/bootstrap.min.css" :media "all"}]
+     [:link {:rel "stylesheet" :type "text/css" :href "/css/bootstrap-responsive.min.css" :media "all"}]
+     (when-let [css (:css m)]
+       [:link {:rel "stylesheet" :type "text/css" :href (str "/css/" css) :media "all"}])
+     [:style {:type "text/css"} " body {font-family:微软雅黑,helvetica} "]
+     [:script {:type "text/javascript" :src "/js/jquery-1.7.1.min.js"} ""]
+     [:script {:type "text/javascript" :src "/js/bootstrap.min.js"} ""]
+     (when-let [js (:js m)]
+       [:script {:type "text/javascript" :src (str "/js/" js)} ""]) ]))
+
+(defmacro html-bs
+  "常用的html body模板，使用bootstrap，参数：
+  @m：属性，例如 {:onload 'a()'}, :js属性表示1个或多个<head>中的.js文件如：{:js 'a.js'} {:js ['a.js' 'b.js']}
+  @body：内容
+  usage：(html-bs {:onload 'my_function()'} :js ['app1.js' 'app2.js']) "
+  [m & body]
+  `(html 
+     "<!DOCTYPE html>"
+     [:html 
+      (bs-head (if (map? ~m) ~m nil))
+      [:body (if (map? ~m) (dissoc ~m :title :css :js) ~m) ~@body]]))
+
+(defn bs-button
+  "bootstrap的按钮。
+  @m 配置参数 :cls 可以是字符串primary/info/success/warning/danger/inverse/link 其他常用的 :onclick :href "
+  [label m]
+  (let [{cls :cls} m
+        cls2 (if cls (str "btn btn-" cls) "btn") ]
+    [:button (assoc m :class cls2) label]))
+  
+; usage: (bs-form ["姓名" [:input {} ""]] ["证件号" [:input {} ""]] ["进行搜索" [:input {} ""]])
+(defn bs-form
+  "bootstrap的左右form"
+  [legend & fs]
+  [:form.form-horizontal
+   [:legend legend]
+   (for [[label field] fs]
+     [:div {:class "control-group"}
+      [:label {:class "control-label"} label]
+      [:div {:class "controls"} field]]) ])
+
+(defn bs-quote
+  "一段引用文字。
+  @m blockquote 的定制属性，如 {:class \"pull-right\"} 表示右对齐 "
+  [m body] 
+  (html [:blockquote (into {} m) [:p body]]))
+

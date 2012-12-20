@@ -2,7 +2,7 @@
 ;;;; todo: 进行条件查询
 (ns wr3.clj.app.mdb)
 
-(use 'wr3.clj.s 'wr3.clj.n 'wr3.clj.web 'wr3.clj.chart 'wr3.clj.db)
+(use 'wr3.clj.s 'wr3.clj.n 'wr3.clj.web 'wr3.clj.chart)
 (use 'wr3.clj.nosql)
 (use 'hiccup.core)
 (use 'somnium.congomongo)

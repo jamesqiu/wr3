@@ -32,7 +32,7 @@
           strServerSignedData strServerRan strServerCert))
 
 (defn container-name
-  "service: 获取bjca登录时写入session的证书U盘唯一号 "
+  "service: 获取bjca登录时写入session的登录认证U盘唯一号 "
   [request]
   (str (session request "ContainerName")))
 
@@ -40,8 +40,10 @@
   "bjca登录页面（新样式）
   @type :server :local
   @vars-js @type为:server时传入，@type为:local时无效 "
-  [type vars-js]
-  (let [action ({:local "ca-local-submit" :server "ca-submit"} type)
+  [request type vars-js]
+  (let [wr3url (session request "wr3url")
+        apply-type (check (right wr3url "/index/") "pn") ; 根据之前session中的wr3url判断是何种申请
+        action ({:local "ca-local-submit" :server "ca-submit"} type)
         onsubmit ({:local "esp_bjca_onsubmit_local()" :server "esp_bjca_onsubmit_server()"} type)]
     (html-body
       {:style "margin:0; padding:0" :js (into conf/bjca-js2 ["app-esp.js"]) :onload "esp_bjca_onload()"}
@@ -76,10 +78,11 @@
            [:div.user_link 
             [:hr]
             [:a {:href "/esp" :style "color:#069"} "返回主页"] [:br]
-            [:a {:href "/c/espn" :target "_blank"} "<span id=\"ptype\"></span>报名申请（无需证书U盘）"] [:br]
-            [:a {:href "http://219.141.223.141:8080/userregister/firstpage.html" :target "_blank"} "证书U盘申请"] (space 7)
-            [:a {:href "/esp/UKeySetupV2.0.1.exe"} "证书U盘驱动下载"]]
-           [:script "$.get('/c/auth/url', function(d) { ajax_load($('#ptype'), '/c/espreg/ptype?t='+d) })"]
+            [:a {:href "/c/espn" :target "_blank" :title "登录本系统需要登录认证U盘，请点击此处进行报名申请。"} 
+             (str (conf/dd-role apply-type) "报名申请")] [:br]
+;            [:a {:href conf/userregister-url :target "_blank" 
+;                 :title "已完成报名申请并通过审批，请点击此处进行登录认证U盘申请。"} "登录认证U盘申请"] (space 3)
+            [:a {:href "/esp/UKeySetupV2.0.1.exe" :title "已完成登录认证U盘申请，请点击此处下载驱动并进行安装。"} "登录认证U盘驱动下载"]]
            ]]
          ; 2.3 中右
          [:div.login_right_pic [:img {:src "/esp/img/jtb_r4_c5.jpg"}]] ]
@@ -88,17 +91,10 @@
       conf/bjca-onchange
       [:script "document.title='标准化系统证书登录' "] )))
 
-(defn ptype
-  "根据url如'/c/esp/index/pn'得到客户类型如“考评员” "
-  [t]
-  (let [t (or t "/c/esp/index/pn")
-        t2 (right t "/index/")]
-    (conf/dd-role t2)))
-
 (defn ca-local
   "app: bjca不联服务器本地提交ukey，提交到ca-local-submit函数"
   [request]
-  (ca-login :local nil))
+  (ca-login request :local nil))
   
 (defn ca-server
   "app: BJCA服务器认证UKey，win下配置文件：%USERPROFILE%\\BJCAROOT\\SVSClient.properties "
@@ -109,7 +105,7 @@
         strSignedData (.signData sed (.getBytes strRandom))
         sr (session! request "Random" strRandom) 
         vars-js (bjca-vars strSignedData strRandom strServerCert) ]
-    (ca-login :server vars-js)))
+    (ca-login request :server vars-js)))
 
 (defn ca
   "app: 可通过本地或者服务器认证bjca ukey"
@@ -246,7 +242,7 @@
   (let []
     (html-body
       {:js (into conf/bjca-js2 ["app-esp.js"]) :onload "esp_pn_ca_onload()"}
-      [:h1 "请选取考评员证书U盘并点击确定"]
+      [:h1 "请选取考评员登录认证U盘并点击确定"]
       [:form {:method "post" :ID "LoginForm" :name "LoginForm" :onsubmit "return esp_bjca_onsubmit_local()"}
        "选择证书：" [:select {:id "UserList" :name "UserList" :style "width:220px" :class "ui-corner-all"} ""] [:br]
        ] 

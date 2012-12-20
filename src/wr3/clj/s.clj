@@ -228,4 +228,9 @@
 (def a-z (map char (range 97 123)))
 (def A-Z (map char (range 65 91)))
 
+(defn email?
+  "如果是email地址，返回true，否则返回false。不能带中文，否则返回false @2012-12-14"
+  [s]
+  (let [p #"(?i)[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"]
+    (not= nil (re-matches p s))))
 

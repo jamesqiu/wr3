@@ -2,9 +2,14 @@
 (ns wr3.clj.n)
 
 (defn to-int 
-  "转换为整数, 可以给一个缺省值"
+  "转换为整数（不超过2147483647约21亿）, 可以给一个缺省值"
   ([s] (if (number? s) (int s) (Integer/parseInt s)))
   ([s n0] (try (to-int s) (catch Exception e n0))))
+
+(defn to-long 
+  "转换为长整数（不超过9223372036854775807约922亿亿）, 可以给一个缺省值"
+  ([s] (if (number? s) (long s) (Long/parseLong s)))
+  ([s n0] (try (to-long s) (catch Exception e n0))))
 
 (defn to-double
   "转换为整数, 可以给一个缺省值"

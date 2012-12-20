@@ -6,6 +6,7 @@
  */
 function mdb_onload() {
 
+	$.ajaxSetup({cache:false}) // 这行代码也是专门留给IE这个垃圾的
 	$("a.db").click(function() {
 		$('a.db').css('color', '')
 		$(this).css('color', 'red')

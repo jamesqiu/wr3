@@ -83,13 +83,4 @@
        [:label "文件："]
        (fileupload-field "文件" "tmpfile" "" {})]
       (fileupload-dialog))))
-  
-(defn resp
-  "app: 在app.espc命名空间上输入命令 "
-  [request]
-  (let []
-    (html-body
-      [:form {:action "/c/espc/rrt" :method "POST" :target "_blank"}
-       [:label "sql: "][:input {:name "sql" :value "(with-esp- (fetch :org :limit 3)) " :size 100}] [:br]
-       [:input {:type "submit"}] ] )))
 
