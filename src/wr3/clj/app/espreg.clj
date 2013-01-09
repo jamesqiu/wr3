@@ -87,7 +87,7 @@
          ; 2.3 中右
          [:div.login_right_pic [:img {:src "/esp/img/jtb_r4_c5.jpg"}]] ]
         ; 3 下：技术支持
-        [:div {:class "login_bottom_txt"} "@CopyRight 2012 技术支持电话：13301357860、13301357875"] ]]
+        [:div {:class "login_bottom_txt"} "系统使用支持：13301357860 和 13301357875 &nbsp; &nbsp; 登录认证U盘支持：400-700-1900"] ]]
       conf/bjca-onchange
       [:script "document.title='标准化系统证书登录' "] )))
 
@@ -196,9 +196,11 @@
          (not rs) "您所用的可能非【交通运输企业安全生产标准化系统】专用证书；或证书尚未由主管机关管理员完成审核。"
          :else (do 
                  (session! request "wr3user" (:uid rs))
+                 (session! request "wr3no" no) ; pn用户为""， mot/en/org用户为"1".."9"
                  (session! request "wr3role" (:role rs))
                  ; 写登录日志
-                 (with-mdb2 "esp" (insert! :log {:uid (:uid rs) :role (:role rs) :pid pid :no no :url wr3url :date (datetime)}))
+                 (with-mdb2 "esp" (insert! :log {:uid (:uid rs) :role (:role rs) :pid pid :no no :date (datetime) :date1 (date)
+                                                 :type "login" :url wr3url}))
                  (html (format "%s（%s）认证成功！" (:name rs) pid)
                        [:script (format "window.location.href='%s' " wr3url)])) ) ])))
 

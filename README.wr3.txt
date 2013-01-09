@@ -120,6 +120,7 @@ A: 主要为了区分第一、二版的WebReport，另一个原因是因为中�
   SVSClient.jar            BJCA服务器端处理（esp.clj用）				
   webfirst-core.jar        启动webfirst，无jsp支持
     -webfirst-core.jsp.jar 启动webfirst，有jsp支持
+  im4java.jar              调用ImageMagick或GraphicsMagick的命令行接口
 
 4.------ 其他
   控制Hibernate使用jdk logging时的log级别:

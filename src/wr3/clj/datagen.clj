@@ -83,7 +83,7 @@
   []
   (OrgID/toid (format "%08d" (rand-int 100000000))))
 
-;(dotimes [i 6] (println (rand-pid)))
+;(dotimes [i 10] (println (rand-orgid)))
 ;(count peoples)
 
 

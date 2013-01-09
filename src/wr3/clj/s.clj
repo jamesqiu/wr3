@@ -234,3 +234,7 @@
   (let [p #"(?i)[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"]
     (not= nil (re-matches p s))))
 
+; @date 2013-1-3
+(defn base64enc [s] (wr3.util.Stringx/base64enc s))
+(defn base64dec [s] (wr3.util.Stringx/base64dec s))
+(defn md5 [s] (wr3.util.Stringx/md5 s))

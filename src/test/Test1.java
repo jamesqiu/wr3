@@ -2,12 +2,8 @@ package test;
 
 import static java.lang.System.out;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.security.Key;
@@ -31,9 +27,11 @@ import java.util.prefs.Preferences;
 
 import javax.persistence.Basic;
 
+import org.im4java.core.ConvertCmd;
+import org.im4java.core.IM4JavaException;
+import org.im4java.core.IMOperation;
+
 import wr3.bank.Areacode;
-import wr3.text.LineFilter;
-import wr3.text.TextFile;
 import wr3.util.Numberx;
 import wr3.util.Stringx;
 import domain.Person;
@@ -390,6 +388,16 @@ public class Test1 {
 		}
 		return -1;
 	}
+	
+	static void img4j() throws IOException, InterruptedException, IM4JavaException {
+		ConvertCmd cmd = new ConvertCmd(true);
+		IMOperation op = new IMOperation();	
+		op.addImage();
+		op.resize(100, 40);
+		op.addImage();
+		cmd.setSearchPath("e:\\GraphicsMagick");
+		cmd.run(op, "f:\\logo.jpg", "f:\\logo4.jpg");
+	}
 
 	// ---------------------- main() ----------------------
 	public static void main(String[] args) throws Exception {
@@ -442,6 +450,7 @@ public class Test1 {
 		System.out.println(indexOfAny("hello world", new char[]{'z','m','n'}));
 		System.out.println("------- end --------c");
 		
+//		img4j();
 	}
 
 }

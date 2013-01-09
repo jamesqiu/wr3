@@ -47,7 +47,7 @@
            :password "password"}
 
   :espdev {:driver (:sqlserver drivers) ; 服务器本地db
-        :url (gstring (:sqlserver urls) {:ip "localhost:1433" :db "wabacusdemo3"})
+        :url (gstring (:sqlserver urls) {:ip "localhost:1433" :db "wabacusdemo3"}) 
         :username "sa"
         :password "passdb"}
 

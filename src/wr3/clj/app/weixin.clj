@@ -1,18 +1,21 @@
 (ns ^{:doc "对微信公众号qiu_jj的响应"} wr3.clj.app.weixin)
 
 (use 'wr3.clj.web)
-(require 'wr3.clj.datagen 'wr3.clj.s 'wr3.clj.n 'wr3.clj.u)
+(use 'clojure.contrib.json 'wr3.clj.s 'wr3.clj.u 'wr3.clj.n)
+
+(require 'wr3.clj.datagen)
 (require '[wr3.clj.nosql :as mdb])
 (require '[somnium.congomongo :as mongo])
 
 (def help (str "请敲入我认识的指令：\n"
-               " say  看箴言学英文。\n"
-               " pid  和随机机器人打招呼。\n"
-               " oid  组织机构代码。\n"
-               " 诗   吟唐宋古诗一首 \n"
-               " 图   查看风景美图 \n"
-               " 美女 查看美女图片 \n"
-               " 去某某地 看“去”字后面地方比如：去天安门 \n"
+               "say —— 看箴言学英文。\n"
+               "pid —— 和随机机器人打招呼。\n"
+               "oid —— 组织机构代码。\n"
+               "诗 —— 吟唐宋古诗一首 \n"
+               "图 —— 查看风景美图 \n"
+               "美女 —— 查看美女图片 \n"
+               "去某某地 —— 看“去”字后面地方比如：去天安门 \n"
+               "译中英文 —— 翻译中英文单词句子如：译举头望明月 1merry y没事偷着乐"
                ))
 
 (def webapp-dir "d:/data/dev3/webapp/")
@@ -22,7 +25,7 @@
 (defn- pid-string-
   [pid]
   (let [[area birth sex] (wr3.bank.IDUtil/infos pid)
-        age (- 2013 (wr3.clj.n/to-int (wr3.clj.s/left birth "-")))
+        age (- 2013 (to-int (left birth "-")))
         call (case sex 
                "男" (cond (< age 10) "小帅哥" (< age 30) "小弟" (< age 40) "大哥" (< age 60) "老大哥" (< age 80) "大叔" :else "老伯")
                "女" (cond (< age 10) "小美女" (< age 30) "小妹" (< age 40) "大姐" (< age 60) "老大姐" (< age 80) "阿姨" :else "阿婆"))
@@ -34,13 +37,13 @@
   "针对发给qiu_jj微博的text类型文字进行回应"
   [s]
   (cond
-    (wr3.clj.s/in? s ["hi" "hello" "你好" "您好" "早上好" "嗨" "喂"]) "您好！ /::) "
+    (in? s ["hi" "hello" "你好" "您好" "早上好" "嗨" "喂"]) "您好！ /::) "
     (= s "pid") (pid-string- (wr3.clj.datagen/rand-pid))
     (= s "oid") (wr3.clj.datagen/rand-orgid)
     (= s "say") (wr3.util.Exec/exec fortune)
-    (wr3.clj.s/in? s ["poem" "shi" "诗" "詩"]) (wr3.util.Exec/exec (str fortune " 75% tang300b 25% song100b"))
+    (in? s ["poem" "shi" "诗" "詩"]) (wr3.util.Exec/exec (str fortune " 75% tang300b 25% song100b"))
     (.endsWith s "=") (wr3.util.Exec/exec (format "%sperl -e \"print(%s)\" " 
-                                                  cygwin-dir (wr3.clj.s/subs+ s 0 -2))) ; 不公开
+                                                  cygwin-dir (subs+ s 0 -2))) ; 不公开
     :else (format "/::-| 不认识：%s \n%s" s help)))
 
 ; 回应的text的模板
@@ -71,14 +74,14 @@
                         " <FuncFlag>0</FuncFlag>"
                         " </xml>"))
 
-(defn xml-text
+(defn- xml-text
   "根据模板生成text类型的回应消息xml
   @m 请求消息的hash-map
   @text 回应的内容"
   [m text]
   (format template-text (:FromUserName m) (:ToUserName m) (int (/ (System/currentTimeMillis) 1000)) text))
 
-(defn xml-news
+(defn- xml-news
   "根据模板生成text类型的回应消息xml
   @m 请求消息的hash-map
   @title 回应标题; @text 回应内容; @pic-url 回应封面图url; @url 全文url "
@@ -110,17 +113,40 @@
         fname (fname-map pic)
         pic-url (format "http://gotoreal.com/wx/s/%s" pic)
         url (format "http://gotoreal.com/wx/%s" fname)]
-    (xml-news m {:title (wr3.clj.s/left fname ".jpg") :text (format "请欣赏图片[%s]\n点击可打开查看大图。" fname)
+    (xml-news m {:title (left fname ".jpg") :text (format "请欣赏图片[%s]\n点击可打开查看大图。" fname)
                  :pic-url pic-url :url url}) ))
 
 (defn- reply-map-
   [m s]
   (let [loc (subs s 1)
         loc2 (java.net.URLEncoder/encode loc "UTF-8") ; 中文编码
-        pic-url (format "http://api.map.baidu.com/staticimage?center=%s&width=300&height=300&zoom=16&markers=%s" loc2 loc2)
-        url (format "http://api.map.baidu.com/staticimage?center=%s&width=600&height=600&zoom=18&markers=%s" loc loc)]
+        pic-url (format "http://ditu.google.cn/maps/api/staticmap?center=%s&size=300x300&zoom=13&markers=%s&sensor=false" loc2 loc2)
+        url (format "http://ditu.google.cn/maps/api/staticmap?center=%s&size=600x600&zoom=15&markers=%s&sensor=false" loc loc)]
     (xml-news m {:title (str "前往：" loc) :text "请点击打开地图。" 
                  :pic-url pic-url :url url} )) )
+
+; 使用youdao的中文翻译api
+(def trans-service (str "http://fanyi.youdao.com/openapi.do?keyfrom=gotoreal&key=2018479743"
+                        "&type=data&doctype=json&version=1.1&q="))
+
+(require '[clojure.contrib.json :as json])
+
+(defn- translate-
+  "翻译中英文单词、句子"
+  [s]
+  (let [q (url-encode (subs s 1))
+        rt (json/read-json (slurp (str trans-service q)))
+        {query :query trans :translation basic :basic web :web} rt ]
+    (str
+      query "\n" (join trans "；") "\n\n"
+      (when basic (str "基本释义：\n" 
+                       (or (:phonetic basic) "【无音标】") "\n"
+                       (join (:explains basic) "；") "\n\n"))
+      
+      (when web (str "网络释义：\n"
+                     (join (for [{k :key v :value} web] (str k "：" (join v "；"))) "\n"))) )))
+
+;(println (translate- "译玛雅人坑爹"))
 
 (defn- reply-girl-
   [m s]
@@ -134,7 +160,7 @@
 (defn- log-
   "@m 如 {:from from :url url} "
   [m]
-  (mdb/with-mdb2 "weixin" (mongo/insert! :log (into m {:date (wr3.clj.u/datetime)}))))
+  (mdb/with-mdb2 "weixin" (mongo/insert! :log (into m {:date (datetime)}))))
 
 (defn- reply-text
   "回应text类型。返回文本或者图文消息"
@@ -142,18 +168,20 @@
   (let [s (.toLowerCase (.trim (:Content m)))]
     (log- {:type "text" :from (:FromUserName m) :in s})
     (cond
-      (wr3.clj.s/in? s ["图" "圖" "pic"]) (reply-pic- m)
+      (in? s ["图" "圖" "pic"]) (reply-pic- m)
       (.startsWith s "去") (reply-map- m s)
-      (wr3.clj.s/in? s ["美女" "女" "b1" "b2" "b3"]) (reply-girl- m s)
+      (in? (first s) [\1 \y \Y \译]) (xml-text m (translate- s))
+      (in? s ["美女" "女" "b1" "b2" "b3"]) (reply-girl- m s)
       :else (xml-text m (reply- s)))))
 
 (defn- reply-location
   "回应location类型，显示该地点的baidu地图url"
   [m]
   (let [[x y label] [(:Location_X m) (:Location_Y m) (:Label m)]
-        text0 (format "地点：%s\n 坐标：%s,%s\n\n" label x y)
-        url (format "http://api.map.baidu.com/staticimage?center=%s,%s&width=450&height=450&zoom=17&markers=%s,%s"
-                    y x y x)]
+        text0 (format "地点：%s\n 坐标：%s,%s\n" label x y)
+        url (format (str "<a href=\"http://ditu.google.cn/maps/api/staticmap?"
+                         "center=%s,%s&size=450x450&zoom=16&markers=%s,%s&sensor=false\">查看</a>") x y x y)]
+    (println (format "location from:%s  to:%s" (:FromUserName m) (:ToUserName m)))
     (log- {:type "location" :from (:FromUserName m) :in url})
     (xml-text m  (str text0 url))))
 
@@ -166,6 +194,30 @@
     (format template-text from to (int (/ (System/currentTimeMillis) 1000))
             text)))
   
+;------------- 处理公众号 qiu_jj 的请求
+(defn- handle-qiujj
+  [m]
+  (let [msg-type (:MsgType m)]
+    (case msg-type
+      "text" (reply-text m)
+      "location" (reply-location m)
+      "image" (reply-image m)
+      (reply-text (assoc m :Content (str "未知类型" msg-type))) )))
+
+;------------- 处理公众号 ems_pub 的请求. todo: 文件上传可用fu.clj的功能函数
+(defn- handle-ems
+  [m]
+  (xml-text m (format "发给公众平台号ems_pub(%s)的信息" (:ToUserName m))))
+
+;------------- 处理没有撰写服务程序的公众号的请求
+(defn- handle-unknown
+  [m]
+  (xml-text m (format "发给公众平台号%s的信息，尚未安排处理程序。" (:ToUserName m))))
+
+(def id-map ; 微信公众平台内部号对应处理函数
+  {"gh_bc4960f69978" handle-qiujj
+   "gh_59b8f18417ae" handle-ems})
+
 (defn index
   "对get返回echostr；对post返回xml"
   [signature timestamp nonce echostr request]
@@ -182,13 +234,34 @@
             xml (String. buffer "utf-8")
             dom (clojure.xml/parse (java.io.ByteArrayInputStream. (.getBytes xml "utf-8")))       
             m (into {} (for [{tag :tag content :content} (:content dom)] [tag (first content)]))
-            msg-type (:MsgType m) ]
-        (case msg-type
-          "text" (reply-text m)
-          "location" (reply-location m)
-          "image" (reply-image m)
-          (reply-text (assoc m :Content (str "未知类型" msg-type))) 
-          )))))
+            msg-type (:MsgType m) 
+            f-handle (or (id-map (:ToUserName m)) handle-unknown)]
+        (f-handle m) ))))
 
-;(wr3.clj.web/url-encode "center%3D昆明湖%26width%3D400%26height%3D300%26zoom%3D16%26markers%3D昆明湖")
-;  (wr3.clj.web/url-decode "%E6%B8%85%E5%8D%8E")
+;(url-encode "center%3D昆明湖%26width%3D400%26height%3D300%26zoom%3D16%26markers%3D昆明湖")
+;  (url-decode "%E6%B8%85%E5%8D%8E")
+
+;--- 读今日录入的所有微信语音信息（原来可以，后来好像被屏蔽了，且mp_sid每次都不一样）
+(import [java.net URL URLConnection])
+(defn media-of-today
+  []
+  (let [url (URL. "http://mp.weixin.qq.com/cgi-bin/getmessage?t=wxm-message&lang=zh_CN&count=50&timeline=1&day=0")
+        cookie (str "hasWarningUser=1; mp_uin=1876066812; ts_uid=3204872866; mp_user=qiu_jj; mp_sid="
+                    "SlJhSlZ5MnlVSVVmdjJPNV9QMG45WnBLQ3hoN3RSVWJHM1NBQVU1dEFfSTQxdDgxZjZtbzRMNUZobU1LYkVUUEhLb2dDdElicXBkc1JqcjVxTnNzdng2TVNSdTB1bVA4NGNuR0Q0UDNyMXRobFNsTFlyNFgycDk1Rk1qVmpsK1c"
+                    )
+        conn (doto (.openConnection url) (.setRequestProperty "Cookie" cookie) (.connect)) 
+        buf (java.io.BufferedReader. (java.io.InputStreamReader. (.getInputStream conn)))
+        lines (line-seq buf)
+        s (apply str lines)
+;        _ (println (wr3.util.Charsetx/gbk2utf s))
+        s1 (right s "json-msgList")
+        s2 (between s1 "[" "]")
+        json (read-json (str "[" s2 "]"))
+;        _ (print-seq json)
+        fmt "http://mp.weixin.qq.com/cgi-bin/getvoicedata?uin=*******&skey=******&msgid=%s&fileid=0"
+        ]
+    (print-seq (for [{id :id typ :type} json :when (= typ "3")] (format fmt id)))))
+
+;println (media-of-today)
+  
+  

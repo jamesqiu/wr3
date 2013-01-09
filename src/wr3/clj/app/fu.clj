@@ -13,7 +13,7 @@
 (defn rand6-
   "六位随机验证码"
   []
-  (let [f (fn [] (rand-int 10))]
+  (let [f (fn [] (rand-nth [0 1 2 3 5 6 7 8 9]))]
     (apply str (for [i (range 6)] (f)))))
 
 (defn rand6

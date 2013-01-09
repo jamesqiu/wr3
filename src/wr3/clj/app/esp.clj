@@ -1,7 +1,4 @@
-(ns ^{:doc "企业安全生产标准化管理系统 Enterprise Safety Production Standardization。
-  “安全生产标准化（work safety standardization）” 
-  pn：考评员person，en：企业enterprise，org：考评机构organization，mot：交通部Ministry Of Transport "
-      :todo "增加日志记录" }
+(ns ^{:doc "企业安全生产标准化管理系统 Enterprise Safety Production Standardization。" }
      wr3.clj.app.esp)
 
 ;; 注：use 后的函数可从/c/esp/foo 调用
@@ -32,6 +29,8 @@
       ; 其他页面注册用户都能访问
       (cond 
         (= fname "pview") true ; pview在主页，不用登录就可以访问
+        (= fname "mot-user-check-save") true ; ajax调用
+        (in? fname ["verify" "verify-input" "verify-search"]) true ; 公众查验en/pn/org
         (= fname "clean") (wr3role? request "root")
         uid true
         ; (.startsWith fname "hot") true ; 实名举报不登录可访问   
@@ -53,8 +52,7 @@
                    "not-found"))
     (index-all)))
 
-;;;--------------------------------------------------------------------------------------------------- pn  考评员
-(def pn---------- nil)
+(def pn---------- nil) ; 考评员
 
 (defn pn-apply
   "service: 考评员申请导航页"
@@ -123,8 +121,7 @@
             (html [:h1 "已受聘于如下考评机构："]
                   (result-html- rs [] [:name :belong :fulltime :contract0 :contract1] {}) )))))
 
-;;;--------------------------------------------------------------------------------------------------- org 考评机构
-(def org---------- nil)
+(def org---------- nil) ; 考评机构
 
 (defn org-apply
   "service: 考评机构申请导航"
@@ -370,8 +367,7 @@
         m (merge (:stand doc) {:role (wr3role request)})] 
     (stand- type2 enid m)))
   
-;;;--------------------------------------------------------------------------------------------------- en  企业
-(def en---------- nil)
+(def en---------- nil) ; 企业
 
 (defn en-apply
   "service: 企业申请导航页"
@@ -453,8 +449,7 @@
         (html [:h2 (format "已提交过%s次申请：" (count rs))]
               (result-html- rs [] [:date :grade :type2 :admin :_id] {:form "docv/en-apply"}) )))))
 
-;;;--------------------------------------------------------------------------------------------------- mot 主管机关
-(def mot---------- nil)
+(def mot---------- nil) ; 主管机关
 
 (defn- mot-subs
   "获取下一级主管机关列表
@@ -546,9 +541,19 @@
   @orgid-as-select 标识把:orgid显示为可选列表（2选1） "
   [typ oid & orgid-as-select]
   (let [tb (apply-tb (name typ)) 
-        f-click (fn [y-n] (format "esp_mot_apply('%s','%s','%s')" (name typ) oid y-n))]
+        rs (with-oid- tb oid)
+        deleted (or (:del rs) "0") ; '1': 此申请已经标记为删除, '0': 正常
+        f-click (fn [y-n] (format "esp_mot_apply('%s','%s','%s')" (name typ) oid y-n)) 
+        js (format "ajax_post('/c/esp/apply-resp-del/%s/%s/%s', function(){window.location.reload()} )" (name typ) oid deleted)]
     (doc- tb oid
-          {:after
+          {:rs rs
+           :before (html [:h1 {:align "center"} (dd-cert typ) "申请审批"]
+                         (if (= deleted "1")
+                           (eui-button {:onclick js :iconCls "icon-undo" :style "margin:10px"}
+                                       "恢复此记录")
+                           (eui-button {:onclick js :iconCls "icon-cancel" :style "margin:10px"} 
+                                       "删除此申请记录（放入垃圾箱）") ))
+           :after
            (fn [rt]
              (html
                (case typ
@@ -962,8 +967,7 @@
       (html
         [:h2 (format "用户列表（%s 名）：" (count rs))]
         (result-html- rs [] [:admin :name :uid :_id] 
-                      {:show-uid? true
-                       :form "mot-fn-doc"}) ))))
+                      {:show-uid? true :form "mot-fn-doc"}) ))))
 
 (defn mot-fn
   "service: mot向下级主管机关用户委托代办工作。
@@ -1002,37 +1006,18 @@
                                  ["委托管理的级别" :fngrade {:t dd-grade}]
                                  ] {:title "主管机关工作委托" :buttons button :require-hide? true})
                     (eui-tip "提交提示“完成更新”后，请关闭此页，并刷新列表查看更改结果。")) })))
-
-(defn user-list
-  "app: 根据mot用户的权限从:user表中得到不同的ukey用户列表
-  @admin 主管机关代码，'01' 可以看到所有；其他只能看到自己属下及pn/org/en用户
-  @id user-type 用户类型 'mot' | 'pn' | 'en' | 'org' "
-  [request id]
-  (let [admin (user-admin request)
-        role id
-        where (case admin "01" {} {:admin (re-pattern (str "^" admin))})
-        where (into {:role role :pid {:$exists true} :del {:$ne "1"}} where)
-        rs (with-esp- (fetch :user :where where :sort {:admin 1 :_id -1 }))]
-    (html
-      [:h1 (format "登录认证U盘用户——%s用户调整" (dd-role role))]
-      (result-html- rs {:pid "证件号" :contact "联系人" :mobile "联系人手机"} 
-                    [:name :admin :contact :mobile :pid :uid :usable :_id] 
-                    {:admin (merge dd-role dd-admin)
-                     :form "mot-user-doc"
-                     :show-uid? true
-                     :readonly? (user-readonly? request)}))))
   
 (defn mot-user-admin
   "mot对注册用户进行管理：指定admin、启用、停用等. "
   [request]
-  (let [js "ajax_load($('#ulist'), '/c/esp/user-list/'+$('#utype').val())"]
+  (let [js "ajax_load($('#ulist'), '/c/esp/users-list/'+$('#utype').val())"]
     (html
       (eui-tip "管理注册了登录认证U盘的用户：审批；停用/启用；调整主管机关（即：部分注册了登录认证U盘的用户申请时填写的省市或者主管机关可能有误，需要再次进行调整指定。）") [:br]
       [:h2 [:a {:href "/c/esp/mot-user-check" :target "_blank"} "待审批的用户"]] [:br]
       [:label "选择登录认证U盘用户类型："] 
       (eui-combo {:id "utype" :style "width:150px" :onchange js} dd-role) (space 10)
       (eui-button {:iconCls "icon-reload" :onclick js} "刷 新")
-      [:div#ulist (user-list request "mot")])))
+      [:div#ulist (users-list request "mot")])))
 
 (defn mot-user-doc
   "调整一个用户的主管机关，启用/停用该用户
@@ -1104,12 +1089,12 @@
         uid (str (:role r) "-" (:pid r))
         r1 (first (with-uid- :user uid))]
     (html-body 
-      [:h2 "注册用户："]
+      [:h2 "【登录认证U盘申请子系统】："]
       (doc2- :user nil {:rs r}) [:hr]
       (if r1
-        (html [:h2 "系统已审批导入此证件号的用户："] 
+        (html [:h2 "【标准化主系统】已审批导入过持此证件号的用户："] 
               (doc2- :user nil {:rs r1 :show-uid? true}))
-        (html [:h2 "系统尚未发现相同证件号的用户："] [:br]
+        (html [:h2 "【标准化主系统】中尚未发现持此证件号的用户："] [:br]
               (eui-button {:onclick (format "ajax_post('/c/esp/mot-user-check-del/%s', function(){window.close()}); " id) 
                            :iconCls "icon-cancel"} "删除该用户") (space 5)
               (eui-button {:onclick (format "ajax_post('/c/esp/mot-user-check-save/%s')" id) :iconCls "icon-ok"} 
@@ -1128,29 +1113,24 @@
   "service: 更新sqlserver的userregiester表某个注册用户的checkflag字段为pass，并导入该用户到esp系统mdb中。
   @id 注册rdb表中的TradeGuid字段内容 "
   [id]
-  (let [sql (format "SELECT * FROM userregister where TradeGuid='%s'" id)
-        sql2 (format "UPDATE userregister set checkflag='pass' where TradeGuid='%s' " id)
-        r (wr3.clj.db/select-row wr3.clj.app.espreg/db-reg sql)
-        {nam :commonname pid :paperid role :usertype} r
-        uid (str role "-" pid)
-        m {:name nam
-           :pid pid 
-           :role role 
-           :uid uid 
-           :tel (:telephonenumber r)
-           :address (:postaladdress r)
-           :province (:province r)
-           :date-import (datetime)}
-        ; 得到初次报名申请时填写的admin，注意证件中的大小写“x”“X”
-        admin (:admin (with-mdb2 "esp" 
-                        (fetch-one (apply-tb role) :where {:pid {:$in [(.toLowerCase pid) (.toUpperCase pid)]}}))) 
-        m (case role 
-            "pn" (into m {:admin admin :mobile (:telephonenumber r)}) 
-            (into m {:admin admin :contact (:transname r) :legalp (:leagalperson r) :mobile (:transmobile r) }))]
-    (do 
-      (insert- :user m)
-      (wr3.clj.db/update wr3.clj.app.espreg/db-reg sql2)
-      (format "已经将 %s 导入并生效 " nam))))
+  (let [id (or id "")
+        sql (format "SELECT * FROM userregister where TradeGuid='%s'" id)
+        r (wr3.clj.db/select-row wr3.clj.app.espreg/db-reg sql) ; 无结果返回nil
+        {nam :commonname pid :paperid role :usertype} r]
+    (cond
+      (nil? r) (format "err: 未找到TradeGuid=%s" id)
+      (first (with-pid- :user pid)) (format "err: pid=%s的用户已存在" pid)
+      :else (let [uid (str role "-" pid)
+                  m {:name nam :pid pid :role role :uid uid :tel (:telephonenumber r) :address (:postaladdress r) 
+                     :province (:province r) :date-import (datetime)}
+                  admin (:admin (first (with-pid- (apply-tb role) pid))) ; 得到初次报名申请时填写的admin
+                  m (case role 
+                      "pn" (into m {:admin admin :mobile (:telephonenumber r)}) 
+                      (into m {:admin admin :contact (:transname r) :legalp (:leagalperson r) :mobile (:transmobile r) })) 
+                  sql2 (format "UPDATE userregister set checkflag='pass' where TradeGuid='%s' " id) ]
+              (insert- :user m)
+              (wr3.clj.db/update wr3.clj.app.espreg/db-reg sql2)
+              (format "已经将 %s 导入并生效 " nam)))))
 
 (defn mot-user-check-all
   "service: 更新sqlserver的userregiester表所有未处理注册用户的checkflag字段为pass，并导入这些用户到esp系统mdb中。"
@@ -1250,100 +1230,6 @@
           (str "成功提交\n\n“" (:ptitle vars) "”"))
         (str "如下必填字段尚未填写：\n\n" (join err "，"))))))
 
-(defn- portal-items
-  "根据portal type从mdb库得到portal条目
-  @portal-type dd-portal的key：1/2/3/4 "
-  [portal-type]
-  (let [limit (case portal-type (1 2 3) 7 20)
-        rs (with-esp- (fetch :portal :limit limit :where {:ptype (str portal-type) :pdel {:$ne "1"}} 
-                             :sort {:pno 1 :date -1}))]
-    [:ul (for [{title :ptitle link :link content :content file :file id :_id pno :pno} rs] 
-           [:li (cond 
-                  (not-nullity? link) [:a {:href link :target "_blank"} title]
-                  (not-nullity? content) [:a {:href (str "/c/esp/pview/" id) :target "_blank"} title]
-                  :else title)
-            (when (not-nullity? file) [:a {:href file} "（附件）"])
-            (when (and (= portal-type 4) (= pno "0")) [:img {:src "/esp/img/new.gif"}]) ]) ] ))
-
-(defn- portal-links
-  []
-  (html
-    [:div.links_item
-     [:ul
-      [:li [:a {:href "http://www.mot.gov.cn" :target "_blank"} "中华人民共和国交通运输部"]]
-      [:li [:a {:href "http://www.mot.gov.cn/zizhan/siju/anquanjiandusi" :target "_blank"} "中华人民共和国交通运输部安全监督司"]]
-      [:li [:a {:href "#"} "省级系统连接（暂无）"]]
-      ]] ))
-
-(defn pview
-  "app: 显示一项有正文，无link（有link的直接点标题连到外部链接）的portal内容"
-  [id] 
-  (let [doc (if (= 24 (count id)) (with-oid- :portal id) nil)
-        {title :ptitle content :content file :file} doc]
-    (html-body
-      [:center [:h1 title]]
-      (for [p (split content "\n")] [:p {:style "text-indent:2em; font:20/1.5 仿宋"} p])
-      (when (not-nullity? file) (format "<p><a href='%s'>附件</a></p>" file)) [:hr][:br]
-      [:center (eui-button-close)])))
-  
-(defn- div-moc-con-
-  "生成portal页面"
-  []
-  [:div.moc_con
-   [:div.moc_login
-    (for [[url img] {:mot "j_r3_c3.jpg" :en  "j_r3_c4.jpg" :org "j_r3_c5.jpg" :pn  "j_r3_c6.jpg"}]
-      [:div.login_a 
-       [:a {:href (str "/c/esp/index/" (name url))} [:img {:src (str "img/" img) :border "0"}] ] ])
-    [:div.login_b [:a {:href "/c/espc/hot"} [:img {:src "img/j_r8_c9.jpg"}]]]
-    [:div.moc_list 
-     [:div.moc_list_left 
-      [:div.moc_list_left_news ; flash图片
-       [:script {:src "js/config.js"}]
-       [:script {:src "js/fun.js"}]
-       [:div.links "相关链接：" (portal-links)]]
-      [:div.moc_list_left_space ""]
-      [:div.moc_list_left_news
-       [:div.news_top
-        [:h3 "政策法规"] ; portal-type: 1
-        [:span [:a {:href "#"} "更多&gt;&gt;"]]]
-       (portal-items 1) ]
-      [:div.moc_list_left_news
-       [:div.news_top
-        [:h3 "图片新闻"] ; portal-type: 2
-        [:span [:a {:href "#"} "更多&gt;&gt;"]]]
-       (portal-items 2) ]
-      [:div.moc_list_left_space "" ]
-      [:div.moc_list_left_news
-       [:div.news_top
-        [:h3 "工作动态"] ; portal-type: 3
-        [:span [:a {:href "#"} "更多&gt;&gt;"]] ]
-       (portal-items 3) ] ]
-     [:div.moc_list_right 
-      [:div.moc_list_right_news
-       [:div.right_top [:h3 "公告公示"]]  ; portal-type: 4
-       (portal-items 4) ] ] ]]])
-
-(defn- portal-gen
-  "生成esp/index.html文件代码html "
-  []
-  (let [title "交通运输企业安全生产标准化系统（试行）"
-        copyright (str "版权所有：<a href='http://www.mot.gov.cn' target='_blank'>中华人民共和国交通运输部</a> "
-                       "信息维护：<a href='http://www.mot.gov.cn/zizhan/siju/anquanjiandusi' target='_blank'>安全监督司</a> "
-                       "备案编号：京ICP备05046837号")] 
-    (str ; DOCTYPE 这行是必须的，否则footer看不见 
-      "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"
-      (html
-        [:html
-         [:head 
-          [:meta {:http-equiv "Content-Type" :content "text/html; charset=utf-8"} ]
-          [:title title]
-          [:link {:href "esp.css" :rel "stylesheet" :type "text/css"}] ]
-         [:body
-          [:div {:id "moc_top"} [:img {:src "img/j_r1_c1.jpg"}]]
-          [:div {:id "moc_main"}
-           (div-moc-con-)
-           [:div.moc_footer copyright] ]]]))))
-
 (require '[wr3.clj.file :as file])
 
 (defn mot-portal-update
@@ -1357,16 +1243,21 @@
     "已生成主页。"))
 
 (defn mot-log
-  "app: 管理员查看系统日志 "
+  "app: 管理员查看系统日志 "  
   [request]
   (let [admin (user-admin request)]
     (if (or (not= admin "01") (user-readonly? request)) 
       (html (eui-tip "系统日志目前由交通运输部安监处用户进行管理。"))
-      (let [rs (with-esp- (fetch :log :limit 100 :sort {:date -1}))]
+      (let [rs (with-esp- (fetch :log :where {:type "login"} :limit 100 :sort {:date -1}))]
         (html
-          [:h1 "最近系统登录日志："]
-          (result-html- rs {:pid "证件号" :no "U盘号"} [:uid :role :pid :no :date] 
-                        {:admin dd-role}))))))
+          [:h1 "系统日志："]
+          [:p [:form#fm1 {}
+               [:label "日志类型："] (eui-combo {:name "type"} dd-log) (space 5)
+               [:label {:title "可按退格键清空"} "日期："] (eui-datebox {:name "date" :value "" :required false}) (space 5)
+               [:label "证件号："] (eui-text {:name "pid" :title "可输入完整证件号或部分进行匹配"})]]
+          [:p (eui-button {:onclick "ajax_load($('#logs'), '/c/esp/logs?'+$('#fm1').serialize())"
+                           :iconCls "icon-reload"} "查询") (space 5) 
+           (eui-button-reset "fm1") (space 5) 
+           (eui-button {:href "/c/esp/logs-olap" :target "_blank" :iconCls "icon-bar"} "记录统计")]
+          [:div#logs (logs "login" "" "")] )))))
 
-
-;(wr3.clj.file/file-set-text "f:\\dev3\\webapp\\esp\\index-test.html" (portal-gen) "UTF-8")

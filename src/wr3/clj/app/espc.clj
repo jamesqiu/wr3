@@ -29,7 +29,7 @@
   (= "1" (:readonly (user-info request))))
   
 (defn- input-save-submit-
-  "service: 共用函数，考评员、考评机构、企业申请表提交保存或更新
+  "service: 共用函数，考评员、考评机构、企业申请表提交保存或更新；todo：增加校验字段为空，@see espn/input-submit
   @id form名称如'pn' 'en' 'org' "
   [id request submit?]
   (let [vars (query-vars request)
@@ -70,7 +70,7 @@
   [tb uid]
   (with-esp- (fetch tb :where {:uid uid})))
 
-(defn- with-pid-
+(defn with-pid-
   "得到 pn-apply/en-apply/org-apply/mot-apply 表中指定pid的多条记录"
   [tb pid]
   (with-esp- (fetch tb :where {:pid {:$in [(.toLowerCase pid) (.toUpperCase pid)]}} :sort {:date -1})))
@@ -124,6 +124,15 @@
   [uid]
   (if-let [rs (with-mdb2 "esp" (fetch-one :user :only [:name] :where {:uid uid}))]
     (:name rs) uid))
+
+(defn log-
+  "在esp库的:log中日志记录消息m。
+  @m 例如：{:msg '..' :url '..'} "
+  [request m]
+  (let [info (user-info request)
+        {uid :uid role :role pid :pid} info
+        no (session request "wr3no")]
+    (insert- :log (into {:uid uid :role role :pid pid :no no :date (datetime) :date1 (date)} m))))
 
 (defn- format-date-by
   "共用函数：格式化形如“2011-5-4”的日期"
@@ -207,6 +216,7 @@
       :_id (if (:readonly? m) [:span {:title "权限受限，请联系主管机关管理员。"} "查看"] 
              [:a {:href (format "/c/esp/%s/%s" (:form m) v) :target "_blank"} "查看"])
       :_id-fj [:a {:href (format "/c/espfj/%s/%s" (:form m) (:_id row)) :target "_blank"} "查看"] ; 福建
+      :_id-fj2 [:a {:onclick (format "espfj2_mark('%s')" (:_id row))} "标注"]
       :_select [:input {:type "checkbox" :group "select" :sid (:uid row)}]
       :_issue [:a {:href (case (:issue m)
                            "pn-apply" (format "/c/esp/cert-issue-pn/%s" (:_id row))
@@ -215,7 +225,7 @@
       :_cdate-end (date-add (:cdate row) (dd-cert-year (:type m)) 0 0)
       :type (format-type v)
       :type2 (or (dd-type2 (to-int v0)) v)
-      :grade (or (dd-grade (to-int v0)) v)
+      :grade (or (dd-grade (to-int v0 0)) v)
       :fulltime (if v0 "专职" "<font color=gray>兼职</font>")
       :contract0 (format-date- v)
       :contract1 (if v0 (format-date- v0) "<b>目前在职</b>")
@@ -298,7 +308,7 @@
     :enid [:a {:href (str "/c/esp/docv/en/" v) :target "_blank"} "查看"]
     (:info :content) (replace-all v "\r\n" "<br/>")
     :reason (or (get (case tb :org-backup dd-org-backup :en-backup dd-en-backup) (to-int v)) v) ; 考评机构备案原因
-    (:safe :photo :perf2 :proof :proof2 :proof3 :titlefile :beginfile :refine-doc :met :pns 
+    (:safe :photo :perf2 :proof :proofb :proof2 :proof3 :titlefile :beginfile :refine-doc :met :pns 
            :license :report :qual) [:a {:href v} "查看"]
     (:resp :resp-review :resp-reg) [:b (format-resp- v)]
     :pass-direct (format-pass-direct v)
@@ -495,8 +505,8 @@
         tb typ
         tb-apply (apply-tb (name tb))
         r0 (first (with-pid- tb-apply pid)) ; 初次申请记录
-        r1 (first (with-uid- tb uid)) ; 保存的最后录入信息
-        rs2 (with-uid- tb-apply uid)  ; 提交过的所有信息
+        r1 (first (with-uid- tb uid)) ; 保存的最后录入记录
+        rs2 (with-esp- (fetch tb-apply :where {:uid uid :del {:$ne "1"}}))  ; 提交过的所有未标记删除记录
         cert-name (dd-cert typ)]
     (html
       [:h1 (format "%s申请" cert-name)]
@@ -961,7 +971,7 @@
 
 (defn- apply-reg-count-
   "@typ 类型 en、pn、org、mot
-   @uid 是否有:uid字段, 没有:uid字段的是U盘报名申请，有:uid字段的是资质/资格证书申请。
+   @uid? 是否有:uid字段, false没有:uid字段的是U盘报名申请，true有:uid字段的是资质/资格证书申请。
    @admin admin是那个主管机关的查询 "
   [typ uid? admin]
   (let [tb (apply-tb typ)
@@ -1003,8 +1013,9 @@
   [t]
   (case t
     "pn" [:admin :name :pid :org :title :type :date :resp-reg :_id]
-    "en" [:admin :name :type2 :date :resp-reg :_id]
-    [:admin :name :type :date :resp-reg :_id] ))
+    "mot" [:admin :name :date :resp-reg :_id]
+    "en" [:admin :name :type2 :grade :date :resp-reg :_id]
+    [:admin :name :type :grade :date :resp-reg :_id] ))
   
 (defn- apply-cert-fs-
   "资格/资质证书申请的列表显示字段
@@ -1012,8 +1023,9 @@
   [t]
   (case t
     "pn" [:admin :name :pid :org :title :type :date :respdate :_id]
-    "en" [:admin :name :type2 :date :resp :respdate-review :_id]
-    [:admin :name :type :date :resp :respdate :_id] ))
+    "mot" [:admin :name :date :resp :respdate-review :_id]
+    "en" [:admin :name :type2 :grade :date :resp :respdate-review :_id]
+    [:admin :name :type :grade :date :resp :respdate :_id] ))
   
 (defn reg-list
   "service: 报名初审列表
@@ -1024,9 +1036,14 @@
         tb (apply-tb id)
         where {:uid nil :del {:$ne "1"}}
         where (if (= admin "01") where (assoc where :admin admin))
-        rs (with-esp- (fetch tb :where where :sort {:date -1})) ]
+        count1 (with-mdb2 "esp" (fetch-count tb :where where))
+        vars (query-vars2 request)
+        skip (or (:skip vars) 0)
+        onchange (format "ajax_load($('#list'), '/c/esp/reg-list/%s?skip='+$('#pagers').val())" id)
+        rs (with-esp- (fetch tb :skip (to-int skip) :limit 100 :where where :sort {:date -1})) ]
     (html
       [:h2 (format "%s报名申请" (dd-role id))]
+      (pager-html count1 skip onchange)
       (result-html- rs (apply-reg-th- id) (apply-reg-fs- id) 
                     {:form (str "reg-resp-doc/" id)
                      :readonly? (user-readonly? request)}))))
@@ -1039,21 +1056,24 @@
         tb (apply-tb typ)
         rs (with-oid- tb id)
         deleted (or (:del rs) "0") ; '1': 此申请已经标记为删除, '0': 正常
-        js (format "ajax_post('/c/esp/reg-resp-del/%s/%s/%s', function(){window.location.reload()} )" typ id deleted)]
+        js (format "ajax_post('/c/esp/apply-resp-del/%s/%s/%s', function(){window.location.reload()} )" typ id deleted)
+        js2 (format (str "ajax_post('/c/esp/apply-resp-change-admin/%s/%s?admin='+$('#admin').val(), " 
+                         "function(){window.location.reload()} )") typ id)]
     (doc- tb id 
           {:rs rs :admin dd-admin :from dd-province
            :before (html [:h1 {:align "center"} (dd-role typ) "报名申请初审"]
                          (if (= deleted "1")
-                           (eui-button {:onclick js :iconCls "icon-undo" :style "margin:10px"}
-                                       "恢复此记录")
-                           (eui-button {:onclick js :iconCls "icon-cancel" :style "margin:10px"} 
-                                       "删除此申请记录（放入垃圾箱）") ))
+                           (eui-button {:onclick js :iconCls "icon-undo" :style "margin:10px"} "恢复此记录")
+                           (eui-button {:onclick js :iconCls "icon-cancel" :style "margin:10px"} "删除此记录") )
+                         (space 5)
+                         (eui-combo {:id "admin" :value (:admin rs)} dd-admin) 
+                         (eui-button {:onclick js2 :title "请关闭，交由调整后的主管机关处理该报名申请。"} "调整主管机关") )
            :after (html 
                     [:hr]
                     [:form#fm1
                      [:p [:label "初审意见："] (eui-textarea {:name "advice-reg"} (:advice-reg rs))]
                      [:p [:label "初审结果："] (eui-combo {:name "resp-reg" :value (:resp-reg rs)} 
-                                                     {"yes" "同 意" "no" "不同意"})]
+                                                     {"yes" "同 意" "no" "不同意" "" "尚未处理"})]
                      [:p (eui-button {:onclick (format "ajax_form($('#fm1'), '/c/esp/reg-resp-submit/%s/%s')" typ id) 
                                       :iconCls "icon-ok"} "提 交")]] )
            :orders (map second cfg-apply-pn)
@@ -1084,12 +1104,17 @@
                        "TransPaperID" nil}))
         sql (format "insert into userregister (%s) values(%s) " 
                     (join (keys fs) ",") (join (vals fs) "," {:quo "'"}))]
+    ; 写操作日志
+    (log- request {:type "resp-reg" :oid id 
+                   :msg (format "审批%s报名申请: %s, %s" (dd-role typ) (:name r) (format-resp- resp-reg) )})
     (update- tb {:_id (object-id id)} {:resp-reg resp-reg :advice-reg advice-reg})
     (when (= resp-reg "yes") (wr3.clj.db/update wr3.clj.app.espreg/db-reg sql))
     "已保存"))
 
-(defn reg-resp-del
-  "service: 把该报名申请删除到垃圾箱"
+(defn apply-resp-del
+  "service: 把该报名申请删除到垃圾箱/或从垃圾箱中恢复; 
+  通用：报名申请和证书申请都可以用
+  @ids typ: 'pn'/'org'/'en'; id: object-id; deleted: '0'/'1' "
   [ids]
   (let [[typ id deleted] ids
         tb (apply-tb typ)]
@@ -1109,7 +1134,8 @@
       [:h1 "进行报名申请初审"]
       (eui-tip "对考评员、考评机构、企业、主管机关用户未申请登录认证U盘前填写的初步报名申请信息进行审批。")
       (for [[k v] dd-role] (eui-button {:style "margin:5px" :onclick (format "ajax_load($('#list'), '/c/esp/reg-list/%s')" k)} 
-                                       (format "%s <font color=red>%s</font>" v (count-reg k admin))))
+                                       (format "%s <font color=red>%s</font>" v (count-reg k admin)))) (space 5)
+      (when (= "01" admin) (eui-button {:href "/c/esp/reg-olap" :target "_blank" :iconCls "icon-bar"} "各省厅报名数统计"))
       [:div#list])))
 
 (defn apply-resp
@@ -1118,7 +1144,10 @@
   [id request]
   (let [tb (apply-tb id) ; :pn-apply :org-apply :en-apply
         cname (dd-cert (keyword id))
-        rs (with-esp- (fetch tb :where {:uid {:$ne nil}} :sort {:date -1}))
+        where {:uid {:$ne nil} :del {:$ne "1"}}
+        admin (user-admin request)
+        where (if (= admin "01") where (into where {:admin admin}))
+        rs (with-esp- (fetch tb :where where :sort {:date -1}))
         form (cond 
                (= id "pn") "mot-pn-apply"
                (= id "org") "mot-org-apply" 
@@ -1368,16 +1397,4 @@
       (when-let [oid (:_id r0)]
         (eui-button {:href (str (case id "pn" ukey-reapply-url-pn ukey-reapply-url-en) pid) :target "_blank"} 
                     "再次申请登录认证U盘")) )))
-
-;;------------------------------------------------- test
-;(use 'wr3.clj.datagen)
-;--- 注：文件大小不能大于64k（65536）字节，否则报错
-;(with-esp- (fetch :user :where {:pid (re-pattern (str "(?i)" "52251616-X"))}))
-;(with-mdb2 "esp" (destroy! :user {:name #"测试0807"}))
-;(update- :portal {} (fn [r] (map-key-rename r [:title :type] [:ptitle :ptype])) :replace)
-;(insert- :user  {:name "交通运输企业测试001", :pid "12345678-0", :role "en", :uid "en-12345678-0", :admin "01" :contact "岳传志"})
-;(with-esp- (fetch :en-apply :where {:orgid ["4f8aebd175e0ae92833680f4" "4f8aebd175e0ae92833680ff"]}))
-;(pager-options 201)
-;(doseq [[k v] m] 
-;  (insert- :user {:name k :pid v :role "mot" :uid (str "mot-" v) :admin "01"}))
 

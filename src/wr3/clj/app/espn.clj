@@ -44,7 +44,7 @@
       (first (fetch tb :where {:pid {:$in [(.toLowerCase pid) (.toUpperCase pid)]}} :sort {:date -1})))))
 
 (defn input-login-check
-  "service: 校验考评员姓名和证件号是否符合"
+  "service: 校验考评员/联系人姓名和证件号是否符合"
   [ptype pname pid]
   (let [f (case ptype "pn" :name :contact)]
     (json-str 
@@ -106,8 +106,10 @@
                  (case ptype "pn" (wr3.bank.IDUtil/is18 pid)
                    (and pid (wr3.bank.OrgID/isid (.toUpperCase (trim pid))))))
                "证件号码格式不符合规则")
+        c3 (or (not= "00" (:admin m)) "主管机关不能为空") 
+        _ (println "c3=" c3)
         ]
-    {:rt (all-true? c1 c2) :msg (join (remove true? [c1 c2]) "\n")}))
+    {:rt (all-true? c1 c2 c3) :msg (join (remove true? [c1 c2 c3]) "\n")}))
   
 (defn input-submit
   "service: 初次报名申请表提交保存或更新

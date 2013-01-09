@@ -53,7 +53,7 @@ function espfj_input_submit_check(form) {
  * app 如："espn"，缺省是espfj
  */
 function espfj_input_submit(form, app) {
-	var app2 = app || "espfj"
+	var app2 = app || 'espfj'
 	var form2 = form || 'pn'
 	var rt = espfj_input_submit_check(form2)
 	if (rt) {

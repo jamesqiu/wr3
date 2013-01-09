@@ -1,6 +1,9 @@
 package app;
 
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.util.GregorianCalendar;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -109,5 +112,24 @@ public class Test2 {
 		map.put("k2", new wr3.Table(3, 5));
 
 		return Render.render(this, map);
+	}
+	
+	public Render test2() {
+		new Thread() {
+			public void run() {
+				try {
+					URL url = new URL("http://219.141.223.141/c/esp/mot-user-check-save/1234");
+					 BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
+				     String rt;
+				     while ((rt = in.readLine()) != null) {
+				    	 System.out.println("rt="+new String(rt.getBytes("gbk"), "utf8"));
+				     }
+				     in.close();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}.start();
+		return Render.html("Á¢¼´·µ»Ø");
 	}
 }

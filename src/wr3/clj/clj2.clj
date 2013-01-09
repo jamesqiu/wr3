@@ -461,6 +461,27 @@
       (if (or (> c 10) (no0? m)) (print-m m)
         (recur (if m1 m1 m0) (inc c))))))
 
+
+;		ConvertCmd cmd = new ConvertCmd(true);
+;		IMOperation op = new IMOperation();	
+;		op.addImage();
+;		op.resize(100, 40);
+;		op.addImage();
+;		cmd.setSearchPath("e:\\GraphicsMagick");
+;		cmd.run(op, "f:\\logo.jpg", "f:\\logo4.jpg");
+
+(import [org.im4java.core ConvertCmd IMOperation IMOps])
+(defn img-resize
+  "更改文件尺寸"
+  [fname0 fname1 width height]
+  (let [cmd (ConvertCmd. true)
+        op (IMOperation.) ]
+    (doto op .addImage (.resize (int width) (int height)) .addImage)
+    (.setSearchPath cmd "e:\\GraphicsMagick")
+    (.run cmd op (to-array [fname0 fname1])) ))
+  
+;(img-resize "f:/m1.jpg" "f:/m2.jpg" 100 100)
+  
 ;(print-m (put-rand (put-rand m0 2 8) 0 1))
 ;(put-r m0 8)
 ;(shudu m0)
@@ -474,6 +495,3 @@
 ;(join (reverse (map #(join (reverse (split % "")) "") (re-seq #"\d{3}|\d+$" (join (reverse (split "20000001" "")) "")))) " ")
 ;(-> (map #(-> % (split "") reverse (join "")) (->> (-> "20000001" (split "") reverse (join "")) (re-seq #"\d{3}|\d+$"))) reverse (join " "))
 ;(-> "20000001" (split "") reverse (join "") (->> (re-seq #"\d{3}|\d+$") (map #(-> % (split "") reverse (join "")))) reverse (join " "))
-
-
-

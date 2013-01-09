@@ -28,7 +28,7 @@ public class Datetime {
 	}
 
 	/**
-	 * get: "2008-11-24", "2010-3-4" alike
+	 * get: "2008-11-24", "2010-03-04" alike
 	 * @return
 	 */
 	public static String date() {

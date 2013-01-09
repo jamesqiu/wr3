@@ -96,7 +96,7 @@
           ]
          ["系统管理"     "icon-setting"
           ["首页内容维护"     "icon-file" "mot-portal"]
-          ["登录日志查询"     "icon-file" "mot-log"]
+          ["登录日志查询"     "icon-text" "mot-log"]
           ["密钥用户管理"     "icon-user" "mot-user-admin"]
           ["当前用户信息"     "icon-info" "whoami/mot"]
           ]
@@ -195,6 +195,7 @@
           ]
          ["其他" "icon-setting" ; title id
           ["考评员基本信息查询"     "icon-info" "who/pn"]
+          ["考评机构基本信息查询"     "icon-info" "who/org"]
           ["当前用户信息"     "icon-info" "whoami/en"]
           ]      
          ]   
@@ -349,8 +350,9 @@
                          海南 河北 河南 内蒙古 山西 西藏 青海 江西 云南 宁夏))]
     (apply array-map (flatten (for [e ls] [e e])))))
 ; 交通运输主管部门
-(def dd-admin 
+(def dd-admin0 
   (array-map
+    "00" "--请选择--"
     "01" "交通运输部"
     "02" "北京市"
     "03" "天津市"
@@ -387,6 +389,7 @@
     "34" "长江航务管理局"
     "35" "珠江航务管理局"
     ))
+(def dd-admin (dissoc dd-admin0 "00"))
 ; 学历
 (def dd-edu 
   {
@@ -428,7 +431,11 @@
    "022"	"青海" "023"	"山东" "024"	"上海" "025"	"山西" "026"	"陕西" "027"	"四川" "028"	"台湾"
    "029"	"天津" "030"	"新疆" "031"	"西藏" "032"	"云南" "033"	"浙江" "034"	"宁夏" "035"	"兵团"
    "036"	"长航局" "037"	"珠航局" })
-
+; 登录类型
+(def dd-log
+  {"login" "登录" 
+   "resp-reg" "报名申请审批"})
+  
 ; 首页portal项目表单
 (def cfg-portal
   [
@@ -444,7 +451,7 @@
 ; 考评员申请表
 (def cfg-apply-pn ; [name id {:t :title ..}] :t类型,不写时为text 
   [
-   ["主管机关" :admin {:t (dissoc dd-admin "01") :title "请自选主管机关" :require true}]
+   ["主管机关" :admin {:t (dissoc dd-admin0 "01") :title "请自选主管机关" :require true}]
    ["姓名" :name {:require true}]
    ["身份证号" :pid {:t 'pid :require true :title "15位或18位身份证"}]
    ["常住地" :from {:t dd-province :require true}]
@@ -477,7 +484,7 @@
 ; 考评机构申请表  
 (def cfg-apply-org 
   [
-   ["主管机关" :admin {:t dd-admin :require true :title "提示：若须申请一级考评机构资质证书，请选择“交通运输部”"}]
+   ["主管机关" :admin {:t dd-admin0 :require true :title "提示：若须申请一级考评机构资质证书，请选择“交通运输部”"}]
    ["单位名称" :name {:require true :v "" :style "width:300px" :title "一般为：学校/交通相关学会/协会/研究所"}]
    ["组织机构代码" :pid {:require true :v ""}]
    ["法人代表" :legalp {:require true}]
@@ -500,7 +507,7 @@
 ; 企业申请表
 (def cfg-apply-en ; en-input-form 
   [
-   ["主管机关" :admin {:t dd-admin :require true :title "提示：若须申请一级企业达标等级证书，请选择“交通运输部”"}]
+   ["主管机关" :admin {:t dd-admin0 :require true :title "提示：若须申请一级企业达标等级证书，请选择“交通运输部”"}]
    ["企业名称" :name {:require true :v "" :style "width:300px"}]
    ["组织机构代码" :pid {:require true :v ""}]
    ["法人代表" :legalp {:require true }]
@@ -522,7 +529,7 @@
 ; 主管机关申请表
 (def cfg-apply-mot ; en-input-form 
   [
-   ["上级主管机关" :admin {:t dd-admin :require true :title "省级交通厅、交委请选择“交通运输部”"}]
+   ["上级主管机关" :admin {:t dd-admin0 :require true :title "省级交通厅、交委请选择“交通运输部”"}]
    ["单位名称" :name {:require true :v "" :style "width:300px"}]
    ["组织机构代码" :pid {:require true :v ""}]
    ["法人代表" :legalp {:require true }]

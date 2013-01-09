@@ -45,14 +45,15 @@
 (def cfg-pn
   (let [n (count conf/cfg-apply-pn)
         rt1 (take (- n 4) conf/cfg-apply-pn)
-        rt2 (assoc (vec rt1) 2 ["常住地" :from {:t dd-province-fj :v "1" :require true}])
-        rt3 (row-add rt2 6 ["职称证明文件" :titlefile {:t 'file}])
+        rt2 (assoc (vec rt1) 3 ["常住地" :from {:t dd-province-fj :v "1" :require true}])
+        rt3 (row-add rt2 7 ["职称证明文件" :titlefile {:t 'file}])
         rt4 (row-add rt3 17 ["相关专业从业年份证明文件" :beginfile {:t 'file}])
         rt5 (row-add rt4 17 ["证明人联系电话" :proofmobile {:require true}])
         rt6 (row-add rt5 17 ["证明人" :proofname {:require true}])
         rt7 (row-add rt6 17 ["证明单位" :prooforg {:require true}])
+        rt8 (assoc (vec rt7) 0 ["主管机关" :admin {:t dd-admin-fj :title "请自选主管机关" :require true}])
         ]
-    (concat rt7 [["主管机关" :admin {:t dd-admin-fj :title "请自选主管机关" :require true}]])))
+    rt8))
 
 ;--------------------------------------------------------------- 登录安全
 (def auth-login-url "/c/espfj/login") ; 本ns的登录页面 /login.html
@@ -347,7 +348,7 @@
 (defn users
   "所有系统用户列表，仅管理员可见"
   [request]
-  (let [rs (with-mdb2 "espfj" (vec (fetch :user :sort {:role 1} :where {:uid {:$ne "admin"}})))]
+  (let [rs (with-mdb2 "espfj" (vec (fetch :user :sort {:role 1} :where {:uid {:$ne "admin"}})))] ; 不显示admin
     (html-body
       [:center [:h1 "系统用户管理"]
        (eui-button {:href "/c/espfj/user" :target "_blank" :style "margin:10px"} "增加新用户" )
@@ -476,4 +477,5 @@
   (do (update-espfj :pn-apply {} (fn [r] {:date (date-format (:date r) "yyyy-MM-dd HH:mm:ss")}))
     (html "转换完毕")))
   
+
 ;(with-mdb2 "espfj" (doseq [r (fetch :pn-apply :where {})] (println (:date r))));(date-format (:date r) "yyyy-MM-dd HH:mm:ss"))))

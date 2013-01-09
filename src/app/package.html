@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=GBK">
-<title>Insert title here</title>
+<title>AppFilter, AppServlet</title>
 </head>
 <body>
 	<pre>
@@ -20,7 +20,7 @@ todo：目前的action都没有参数，可以把queryString里面的东西直接转为参数（参考Play!
 本目录包含web应用中所有由AppFilter/AppServlet/AppController动态装载的Controller.
 注意：
 0、
-	在conf/base.properties中设置动态app的路径和包名；
+	在conf/base.properties中设置动态app的路径和包名；classpath中不能包括此app目录
 1、
 	因为controller的名字和action的名字用于查找类名和方法名，必须严格区分大小写，
 	否则将报异常；

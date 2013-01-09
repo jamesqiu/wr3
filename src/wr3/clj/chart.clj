@@ -162,7 +162,7 @@
   "生成<embed ..> html代码段，参数：
   ctype: str类型，可为 bar line pie circle bars lines stack area barline tower funnel cup panel 
   data: 有|无标注的一组|多组数据; 注意：bars,lines只能接受多组数据；barline只能接受2组数据；其他只能接受一组数据
-  label: 标题及x、y轴的标注
+  label: 标题及x、y轴的标注 {:title .. :x .. :y ..}
   m: 可变参数，取前两个，第一个为图形width，第二个为图形height，之后的忽略"
   [ctype data label & m]
   (let [ctype2 (case (.toLowerCase (name ctype)) 
@@ -196,62 +196,65 @@
 
 ;;;---------- 常用Flash线柱饼环图形, 区别于png图形，后面都带上f
 (defn barf 
-  "1条bar或者多条bar"
+  "1条bar或者多条bar
+  @data: [10 20 30 40]；[[10 20 30 40] [9 3 6 4]]；{'aa' 10 'bb' 20} {:category ['1月' '2月'] '数量' [50 20] '资金' [9 3]}
+  @label: 标题及x、y轴的标注 {:title .. :x .. :y ..}
+  @m: 可变参数，取前两个，第一个为图形width，第二个为图形height，之后的忽略"
   [data label & m]
   (if (is-1? data) 
     (apply embed "bar" data label m)
     (apply embed "bars" data label m) ))
 
 (defn linef 
-  "1条line或者多条line"
+  "1条line或者多条line @see barf"
   [data label & m]
   (if (is-1? data)
     (apply embed "line" data label m)
     (apply embed "lines" data label m) ))
 
 (defn pief 
-  "1个pie"
+  "1个pie @see barf"
   [data label & m] 
   (apply embed "pie" data label m))
 
 (defn circlef
-  "1个circle环"
+  "1个circle环 @see barf"
   [data label & m] 
   (apply embed "circle" data label m))
 
 (defn stackf
-  "堆切的bar"
+  "堆切的bar @see barf"
   [data label & m] 
   (apply embed "stack" data label m))
 
-(defn areaf 
-  "堆切的area"
+(defn areaf
+  "堆切的area @see barf"
   [data label & m] 
   (apply embed "area" data label m))
 
 (defn barlinef
-  "组合bar和line"
+  "组合bar和line @see barf"
   [data label & m] 
   (apply embed "barline" data label m))
 
 ;;;---------- 其他Flash图形
 (defn towerf
-  "金字塔图"
+  "金字塔图 @see barf"
   [data label & m] 
   (apply embed "tower" data label m))
 
 (defn funnelf
-  "漏斗图：用于筛选"
+  "漏斗图：用于筛选 @see barf"
   [data label & m] 
   (apply embed "funnel" data label m))
   
 (defn cupf
-  "水杯图：用于完成百分比"
+  "水杯图：用于完成百分比  @see barf"
   [data label & m] 
   (apply embed "cup" data label m))
 
 (defn panelf
-  "仪表盘"
+  "仪表盘  @see barf"
   [data label & m] 
   (apply embed "panel" data label m))
 
