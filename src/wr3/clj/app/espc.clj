@@ -654,7 +654,6 @@
         rs (search-auto- tb term {:limit 20})] ;  :where {:cid {:$exists true}}
     (json-str (map #(format "%s, 证书号:%s" (:name %) (:cid %)) rs))))
 
-;;;-------------------------------------------------------------------------------------------------------- hot 热线举报投诉
 (def hot---------- nil)
 
 (defn hot
@@ -968,17 +967,19 @@
     (with-mdb "esp" 
       (update! tb {:uid uid :year yyyy} m))
     (str "已保存 " yyyy " 年度报告。")))
+ 
 
 (defn- apply-reg-count-
   "@typ 类型 en、pn、org、mot
-   @uid? 是否有:uid字段, false没有:uid字段的是U盘报名申请，true有:uid字段的是资质/资格证书申请。
-   @admin admin是那个主管机关的查询 "
+  @uid? 是否有:uid字段, false没有:uid字段的是U盘报名申请，true有:uid字段的是资质/资格证书申请。
+  @admin admin是那个主管机关的查询 "
   [typ uid? admin]
   (let [tb (apply-tb typ)
         where-uid (if uid? {:$ne nil} nil)
         where {:uid where-uid :del {:$ne "1"}}
-        where (if (= admin "01") where (into where {:admin admin}))] 
-    (with-mdb2 "esp" (fetch-count tb :where where))))
+        where (if (= admin "01") where (into where {:admin admin}))
+        where2 (into where {(if uid? :resp :resp-reg) {:$nin ["yes" "no"]}})] 
+    [(with-mdb2 "esp" (fetch-count tb :where where2)) (with-mdb2 "esp" (fetch-count tb :where where))] ))
 
 (defn count-apply
   "资质/资格证书申请条目数量统计。
@@ -991,7 +992,7 @@
   @t 类型 en、pn、org、mot"
   [t admin]
   (apply-reg-count- t false admin))
- 
+
 (defn- apply-reg-th-
   "初次报名申请，或资格证书申请的列表显示列头
   @t pn/en/org/mot "
@@ -1036,6 +1037,7 @@
         tb (apply-tb id)
         where {:uid nil :del {:$ne "1"}}
         where (if (= admin "01") where (assoc where :admin admin))
+        admins (gen-array-map (sort (select-keys dd-admin (with-esp- (distinct-values tb "admin" :where where)))))
         count1 (with-mdb2 "esp" (fetch-count tb :where where))
         vars (query-vars2 request)
         skip (or (:skip vars) 0)
@@ -1043,10 +1045,28 @@
         rs (with-esp- (fetch tb :skip (to-int skip) :limit 100 :where where :sort {:date -1})) ]
     (html
       [:h2 (format "%s报名申请" (dd-role id))]
+      [:form#fm2
+       [:label "选择主管机关："] (eui-combo {:name "admin"} admins) (space 5)
+       [:label "姓名/名称或者证件号："] (eui-text {:name "pid"}) (space 5)
+       (eui-button {} "条件查询")]
       (pager-html count1 skip onchange)
       (result-html- rs (apply-reg-th- id) (apply-reg-fs- id) 
                     {:form (str "reg-resp-doc/" id)
                      :readonly? (user-readonly? request)}))))
+
+(defn reg-resp
+  "报名初审。对无登录认证U盘用户（无:uid）的报名信息初审 "
+  [request]
+  (let [admin (user-admin request)]
+    (html
+      [:h1 "进行报名申请初审"]
+      (eui-tip "对考评员、考评机构、企业、主管机关用户未申请登录认证U盘前填写的初步报名申请信息进行审批。")
+      (for [[k v] dd-role :let [[c0 c1] (count-reg k admin)]] 
+        (eui-button {:onclick (format "ajax_load($('#list'), '/c/esp/reg-list/%s')" k) 
+                     :style "margin:5px" :title (format "有%s个尚未处理/共%s个报名申请" c0 c1)}
+                    (format "%s <font color=red>%s</font>/%s" v c0 c1))) (space 5)
+      (when (= "01" admin) (eui-button {:href "/c/esp/reg-olap" :target "_blank" :iconCls "icon-bar"} "各省厅报名数统计"))
+      [:div#list])))
 
 (defn reg-resp-doc
   "处理一个报名申请
@@ -1124,19 +1144,6 @@
       (if (= deleted "0") 
         "已删除申请记录，关闭后请刷新列表。"
         "已恢复申请记录，关闭后请刷新列表。"))))
-  
-(defn reg-resp
-  "报名初审。对无登录认证U盘用户（无:uid）的报名信息初审
-  @todo "
-  [request]
-  (let [admin (user-admin request)]
-    (html
-      [:h1 "进行报名申请初审"]
-      (eui-tip "对考评员、考评机构、企业、主管机关用户未申请登录认证U盘前填写的初步报名申请信息进行审批。")
-      (for [[k v] dd-role] (eui-button {:style "margin:5px" :onclick (format "ajax_load($('#list'), '/c/esp/reg-list/%s')" k)} 
-                                       (format "%s <font color=red>%s</font>" v (count-reg k admin)))) (space 5)
-      (when (= "01" admin) (eui-button {:href "/c/esp/reg-olap" :target "_blank" :iconCls "icon-bar"} "各省厅报名数统计"))
-      [:div#list])))
 
 (defn apply-resp
   "service: 主管机关对考评员、考评机构、企业的申请受理. 

@@ -1163,20 +1163,26 @@
   [request]
   (let [items (-> cfg-frame-mot :nav first rest rest rest)
         admin (user-admin request)
-        sums [(sum (map #(count-reg % admin) ["pn" "en" "org" "mot"]))
-              (count-apply "pn" admin) (cert-renew-count "pn") 
-              (count-apply "org" admin) (tb-count :org-backup) (cert-renew-count "org") 
-              (count-apply "en" admin) (count-apply "en" admin) (tb-count :en-backup) (cert-renew-count "en")
-              (tb-count :hot)]]
+        sums [(apply map + (map #(count-reg % admin) ["pn" "en" "org" "mot"])) ; '(7 13)
+              (count-apply "pn" admin) 
+              (cert-renew-count "pn") 
+              (count-apply "org" admin) 
+              (tb-count :org-backup) 
+              (cert-renew-count "org") 
+              (count-apply "en" admin) 
+              (count-apply "en" admin) 
+              (tb-count :en-backup) 
+              (cert-renew-count "en")
+              (tb-count :hot)]
+        f (fn [n] (format "<font color=%s>%s</font>" (if (zero? n) "lightgray" "red") n))]
     (html
       (eui-tip "待办事宜中个项目的数量提示：")
       [:ul 
-       (for [i (range (count items)) 
-             :let [item (nth items i) title (first item) url (nth item 2) sum (nth sums i)]]
-         [:li {:style ""} 
-          [:a {:href "#" :onclick (format "layout_load_center('/c/esp/%s')" url)}
-           [:h2  
-            (format "%s （<font color=%s>%s</font>）" title (if (zero? sum) "lightgray" "red") sum)]]])] ) ))
+       (for [i (range (count items)) :let [item (nth items i) title (first item) url (nth item 2) n (nth sums i)]]
+         [:li [:a {:href "#" :onclick (format "layout_load_center('/c/esp/%s')" url)}
+               [:h2 title (if (sequential? n) 
+                            (format "（%s/%s）" (f (first n)) (last n))
+                            (format "（%s）" n) )]]])] ) ))
 
 (defn mot-portal-list
   "service: 列出所有的portal项目"

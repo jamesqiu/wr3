@@ -390,6 +390,10 @@
     "35" "珠江航务管理局"
     ))
 (def dd-admin (dissoc dd-admin0 "00"))
+
+(def dd-admin-province0 (dissoc dd-admin0 "01" "34" "35"))
+(def dd-admin-province (dissoc dd-admin-province0 "00"))
+
 ; 学历
 (def dd-edu 
   {
@@ -485,6 +489,7 @@
 (def cfg-apply-org 
   [
    ["主管机关" :admin {:t dd-admin0 :require true :title "提示：若须申请一级考评机构资质证书，请选择“交通运输部”"}]
+   ["所在省市" :province {:t dd-admin-province0 :require true :title "注：除一级考评机构及长航局、珠航局考评机构外，请和上面主管机关选项一致"}]
    ["单位名称" :name {:require true :v "" :style "width:300px" :title "一般为：学校/交通相关学会/协会/研究所"}]
    ["组织机构代码" :pid {:require true :v ""}]
    ["法人代表" :legalp {:require true}]
@@ -508,6 +513,7 @@
 (def cfg-apply-en ; en-input-form 
   [
    ["主管机关" :admin {:t dd-admin0 :require true :title "提示：若须申请一级企业达标等级证书，请选择“交通运输部”"}]
+   ["所在省市" :province {:t dd-admin-province0 :require true :title "注：除一级企业及长航局、珠航局企业外，请和上面主管机关选项一致"}]
    ["企业名称" :name {:require true :v "" :style "width:300px"}]
    ["组织机构代码" :pid {:require true :v ""}]
    ["法人代表" :legalp {:require true }]
@@ -596,7 +602,7 @@
      :pid "证件号"
      :pn "考评员"
      :pnids "选择的考评员"
-     :province "省份"
+     :province "省市"
      :pwd "密码"
      :readonly "操作权限"
      :reason "原因"

@@ -72,8 +72,10 @@
         title (str (conf/dd-role ptype) "报名申请")
         ukey-apply-url (case ptype "pn" ukey-apply-url-pn ukey-apply-url-en)
         tip (case (:resp-reg r) 
-              "yes" (format "已经通过初审，请进行 <b><a href='%s%s'>登录认证U盘申请</a></b>。" ukey-apply-url pid)
-              "no" (str "没有通过初审，请核实所填信息或咨询主管机关。<font color=red>附审核意见：</font>" (:advice-reg r))
+              "yes" (format "已经通过初审 %s，请进行 <b><a href='%s%s'>登录认证U盘申请</a></b>。" 
+                            (apply str (repeat 5 "<img src='/css/easyui/icons/ok.png'/> ")) ukey-apply-url pid)
+              "no" (format "没有通过初审 %s，请核实所填信息或咨询主管机关。<font color=red>附审核意见：【%s】</font> " 
+                        (apply str (repeat 5 "<img src='/css/easyui/icons/cancel.png'/> ")) (:advice-reg r))
               "请认真填写如下所有信息，并等待主管机关进行报名申请初审。")]
     (html-body
       {:js "app-espfj.js" 
@@ -101,15 +103,15 @@
   @ptype 'en'/'pn'/'org'/'mot' 
   @m 字段 "
   [ptype m]
-  (let [c1 (or (not-nullity? (:name m)) "姓名/名称不能为空")
+  (let [c1 (or (not-nullity? (:name m)) "姓名/名称：不能为空")
         c2 (or (let [pid (:pid m)] 
                  (case ptype "pn" (wr3.bank.IDUtil/is18 pid)
                    (and pid (wr3.bank.OrgID/isid (.toUpperCase (trim pid))))))
-               "证件号码格式不符合规则")
-        c3 (or (not= "00" (:admin m)) "主管机关不能为空") 
-        _ (println "c3=" c3)
-        ]
-    {:rt (all-true? c1 c2 c3) :msg (join (remove true? [c1 c2 c3]) "\n")}))
+               "证件号码：格式不符合规则")
+        c3 (or (not= "00" (:admin m)) "主管机关：不能为空")
+        c4 (or (not= "00" (:province m)) "所在省市：不能为空")
+        cs [c1 c2 c3 c4] ]
+    {:rt (apply all-true? cs) :msg (join (remove true? cs) "\n")}))
   
 (defn input-submit
   "service: 初次报名申请表提交保存或更新

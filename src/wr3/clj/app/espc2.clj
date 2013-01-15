@@ -278,7 +278,7 @@
         {:title "报名数统计图" :y "报名数"} 1200 600)
       (result-html- rs (into dd-form {:mot "主管机关"}) [:admin :mot :pn :org :en] {}) )))
 
-;; 导入福建数据
+;;------ 导入福建数据
 (def espfj-files
   {:photo "照片"
    :titlefile "职称证明文件"
