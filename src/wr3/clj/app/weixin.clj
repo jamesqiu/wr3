@@ -77,7 +77,7 @@
 (defn- xml-text
   "根据模板生成text类型的回应消息xml
   @m 请求消息的hash-map
-  @text 回应的内容"
+  @text 回应的内容，注意控制字节数不要超过2048 "
   [m text]
   (format template-text (:FromUserName m) (:ToUserName m) (int (/ (System/currentTimeMillis) 1000)) text))
 
@@ -168,6 +168,7 @@
   (let [s (.toLowerCase (.trim (:Content m)))]
     (log- {:type "text" :from (:FromUserName m) :in s})
     (cond
+      (= s "hello2bizuser") (xml-text m help)
       (in? s ["图" "圖" "pic"]) (reply-pic- m)
       (.startsWith s "去") (reply-map- m s)
       (in? (first s) [\1 \y \Y \译]) (xml-text m (translate- s))
@@ -209,6 +210,36 @@
   [m]
   (xml-text m (format "发给公众平台号ems_pub(%s)的信息" (:ToUserName m))))
 
+;------------- 处理公众号 clj-lang 的请求. 函数例子及文档、src
+(def clj-ns-fns (mapcat ns-publics ['clojure.core]))
+(def clj-fns (sort (keys clj-ns-fns)))
+;(println clj-fns)
+
+(defn- reply-clj-
+  "给出clojure.core函数名模糊查询，得到列表或者文档+源码"
+  [s]
+  (let [s (or s "")
+        fns (filter #(has? (str %) s) clj-fns)
+        rt (cond
+             (in? (symbol s) clj-fns) ["--- 文档 ---" 
+                                       (let [m (meta (resolve (symbol s)))] (format "%s\n%s\n  %s\n" s (:arglists m) (:doc m)))
+                                       "--- 源码 ---" 
+                                       (source-fn2 s)]
+             (empty? fns) ["请输入clojure.core函数名全称如“reduce”，或部分如："
+                           (join (take 30 (shuffle clj-fns)) " ")   
+                           "参阅Clojure手册： http://qiujj.com/static/clojure-handbook.html" ]
+             :else (take 100 fns))
+        rt (join rt "\n") ]
+    (format "clojure.core函数[%s]:\n%s\n--- end ---" s rt)))
+  
+(defn- handle-clj
+  [m]
+  (let [rt (reply-clj- (:Content m))
+        n (count (.getBytes rt))
+        rt (if (< n 2048) rt
+             (str (subs+ rt 0 (- 2048 100)) (format "\n…… 消息超长： %s>2048字节！" n)))]
+    (xml-text m rt)))
+  
 ;------------- 处理没有撰写服务程序的公众号的请求
 (defn- handle-unknown
   [m]
@@ -216,7 +247,8 @@
 
 (def id-map ; 微信公众平台内部号对应处理函数
   {"gh_bc4960f69978" handle-qiujj
-   "gh_59b8f18417ae" handle-ems})
+   "gh_59b8f18417ae" handle-ems
+   "gh_344792328c76" handle-clj})
 
 (defn index
   "对get返回echostr；对post返回xml"

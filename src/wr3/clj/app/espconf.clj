@@ -263,7 +263,7 @@
 
 (def dd-renew
   {
-   0 ""
+   0 "-- 无 --"
    1 "1、考评员：资格证书到期"
    2 "2、考评员：户籍所在地或常住地发生省际间变更"
    3 "3、企业：达标等级证书到期"
@@ -391,8 +391,8 @@
     ))
 (def dd-admin (dissoc dd-admin0 "00"))
 
-(def dd-admin-province0 (dissoc dd-admin0 "01" "34" "35"))
-(def dd-admin-province (dissoc dd-admin-province0 "00"))
+(def dd-admin-province0 (dissoc dd-admin0 "01" "34" "35")) ; 有“ "00" "--请选择--" ”项
+(def dd-admin-province (dissoc dd-admin-province0 "00")) ; 无“ "00" "--请选择--" ”项
 
 ; 学历
 (def dd-edu 
@@ -410,6 +410,7 @@
    "2" "图片新闻"
    "3" "工作动态"
    "4" "公告公示"
+   "5" "相关下载"
    })
 ; 登录认证U盘用户表role类型
 (def dd-role
@@ -439,7 +440,10 @@
 (def dd-log
   {"login" "登录" 
    "resp-reg" "报名申请审批"})
-  
+; 处理结果
+(def dd-resp
+  {"yes" "同 意" "no" "不同意" "" "尚未处理"})
+
 ; 首页portal项目表单
 (def cfg-portal
   [
@@ -476,6 +480,7 @@
    ["主要学习（培训）经历" :train {:t 'textarea :require true}]
    ["主要工作简历" :resume {:t 'textarea :require true}]
    ["专业工作业绩" :perf {:t 'textarea :require true :title "不得少于10个字"}]
+   ["专业技术职称及相关材料" :perf1 {:t 'file}]
    ["专业工作业绩附件" :perf2 {:t 'file}]
    ["身份证明文件" :proof {:t 'file :title "二代身份证、护照等的正面（pdf, doc或者jpg格式）" :require true}]
    ["身份证明文件（背面）" :proofb {:t 'file :title "二代身份证、护照等的反面（pdf, doc或者jpg格式）" :require true}]
@@ -547,6 +552,7 @@
    ["单位传真" :tax {:require true }]
    ])
 ;---------------- end
+(def dd-cfg-apply {:pn cfg-apply-pn :en cfg-apply-en :org cfg-apply-org :mot cfg-apply-mot})
 
 (defn- cfg-meta [cfg] (into {} (for [[v k & _] cfg] [k v])))
 ; 数据项英文、中文对照
@@ -602,7 +608,6 @@
      :pid "证件号"
      :pn "考评员"
      :pnids "选择的考评员"
-     :province "省市"
      :pwd "密码"
      :readonly "操作权限"
      :reason "原因"
@@ -641,5 +646,12 @@
      :prooforg "证明单位"
      }))
 
+(defn dd+
+  "无论dd的key是1还是“1”，都能取到值"
+  [dd k] (let [rt (if (string? (key (first dd))) (dd (str k))
+                    (dd (wr3.clj.n/to-int k k)))]
+           (or rt k)))
+
+;(dd+ dd-portal 0)
 ;(use 'wr3.clj.s)
-;(count dd-meta) ; 76
+;(count dd-meta) ; 

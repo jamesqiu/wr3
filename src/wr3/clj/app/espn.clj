@@ -58,7 +58,7 @@
 (def ukey-apply-url-en (str "http://219.141.223.141:8080/userregister/ShowReport.wx?PAGEID=registerfirst_en"
                             "&report1_ACCESSMODE=update&from=register&txtpageid="))
 
-  (defn input
+(defn input
   "app: 填写考评员注册信息
   @ids 第一个参数为申请类型pn/en/org/mot，第二个参数为身份证号或组织机构代码pid（可选）" 
   [ids request]
@@ -110,11 +110,14 @@
                "证件号码：格式不符合规则")
         c3 (or (not= "00" (:admin m)) "主管机关：不能为空")
         c4 (or (not= "00" (:province m)) "所在省市：不能为空")
-        cs [c1 c2 c3 c4] ]
+        [c5 c6 c7 c8 c9 c10] (for [k [:photo :proof :proofb :proof2 :mobile :type]] 
+                               (or (not= ptype "pn") (not-nullity? (k m)) 
+                                   (str ((into conf/dd-meta {:type "申请专业类型"}) k) "：不能为空")))
+        cs [c1 c2 c3 c4 c5 c6 c7 c8 c9 c10] ]
     {:rt (apply all-true? cs) :msg (join (remove true? cs) "\n")}))
   
 (defn input-submit
-  "service: 初次报名申请表提交保存或更新
+  "service: 初次报名申请表提交保存或更新. @todo 已经审批通过的update时带上 :resp-reg :advice-reg
   @id form名称如'pn' 'en' 'org' "
   [id request]
   (let [tb (keyword (str (or id "pn") "-apply"))
@@ -123,8 +126,7 @@
         {pid :pid nam :name contact :contact} vars
         check-rt (input-submit-check- id m)]
     (if (:rt check-rt)
-      (do (with-mdb2 "esp"
-            (update! tb {:pid pid} (into m {:date (datetime)}))) 
+      (do (with-mdb2 "esp" (update! tb {:pid pid} (into m {:date (datetime)})))
         (json-str {:rt true 
                    :msg (format (str "已提交 %s 的申请表。\n\n"
                                      "请等待主管机关进行初审，可使用 %s 和 %s 登录查阅进度或修改。\n\n"

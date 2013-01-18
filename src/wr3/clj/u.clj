@@ -266,6 +266,7 @@
   "从2列多行的二维数组生成array-map
   @coll 如：[[1 10] [3 30] [4 40] [2 20]] 或 '([1 10] [3 30] [4 40] [2 20]) "
   [coll]
-  (apply array-map (reduce into coll)))
+  (if (empty? coll) (array-map)
+    (apply array-map (reduce into coll))))
 
 ;(days "2012-7-21")

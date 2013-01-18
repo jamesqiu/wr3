@@ -1040,7 +1040,7 @@
                                  ] {:title "设置管理该用户" :buttons button :require-hide? true})
                     (eui-tip "提交提示“完成更新”后，请关闭此页，并刷新列表查看更改结果。")) 
            :show-uid? true})))
-
+  
 (defn mot-user-del
   "service：删除:user表中一个登录认证U盘用户，标志del
   @id 文档 object-id 字符串 "

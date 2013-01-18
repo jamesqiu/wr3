@@ -101,20 +101,29 @@
                      :readonly? (user-readonly? request)}))))
 
 ;;--- portal
+(defn- portal-data-li-
+  [typ limit]
+  (let [rs (with-esp- (fetch :portal :limit limit :where {:ptype (str typ) :pdel {:$ne "1"}} :sort {:pno 1 :date -1}))]
+    (html
+      (for [{title :ptitle link :link content :content file :file id :_id pno :pno} rs] 
+        [:li (cond 
+               (not-nullity? link) [:a {:href link :target "_blank"} title]
+               (not-nullity? content) [:a {:href (str "/c/esp/pview/" id) :target "_blank"} title]
+               :else title)
+         (when (not-nullity? file) [:a {:href file} "（附件）"])
+         (when (and (= typ 4) (= pno "0")) [:img {:src "/esp/img/new.gif"}]) ]) )))
+
 (defn- portal-items
-  "根据portal type从mdb库得到portal条目
+  "根据portal type从mdb库得到portal条目；除了“相关下载”外的其他显示项
   @portal-type dd-portal的key：1/2/3/4 "
   [portal-type]
-  (let [limit (case portal-type (1 2 3) 7 12)
-        rs (with-esp- (fetch :portal :limit limit :where {:ptype (str portal-type) :pdel {:$ne "1"}} 
-                             :sort {:pno 1 :date -1}))]
-    [:ul (for [{title :ptitle link :link content :content file :file id :_id pno :pno} rs] 
-           [:li (cond 
-                  (not-nullity? link) [:a {:href link :target "_blank"} title]
-                  (not-nullity? content) [:a {:href (str "/c/esp/pview/" id) :target "_blank"} title]
-                  :else title)
-            (when (not-nullity? file) [:a {:href file} "（附件）"])
-            (when (and (= portal-type 4) (= pno "0")) [:img {:src "/esp/img/new.gif"}]) ]) ] ))
+  (let [limit (case portal-type (1 2 3) 7 12) ]
+    [:ul (portal-data-li- portal-type limit) ] ))
+
+(defn- portal-downloads
+  "比较特殊不带[:ul ]包括的“相关下载” 显示项"
+  []
+  (portal-data-li- "5" 4))
 
 (defn- portal-links
   []
@@ -177,6 +186,7 @@
         [:li [:a {:href "/c/esp/verify" :target "_blank" :style "font-size:14px; font-weight:bold"} 
               [:img {:src "img/question.png"}] " 查验 企业/考评员/考评机构"]]
         [:li [:h3 {:style "font-size:15px; color:gray"} "相关下载："]]
+        (portal-downloads)
 ;        [:li "连接1"]
 ;        [:li "连接2"]
 ;        [:li "连接3"]
@@ -278,6 +288,47 @@
         {:title "报名数统计图" :y "报名数"} 1200 600)
       (result-html- rs (into dd-form {:mot "主管机关"}) [:admin :mot :pn :org :en] {}) )))
 
+(def reg-filter-value-all- "<font color=gray>全部</font>")
+
+(defn reg-filter-type
+  "ajax: 显示mot报名申请列表筛选类型'pn'/'en'/'mot'/'org' "
+  [id request]
+  (let [admin (user-admin request)
+        filter-combo {"" "--全部--" "admin" "主管机关" "name" "姓名/名称" "pid" "证件号" "resp-reg" "初审结果"}
+        filter-combo (if (= admin "01") filter-combo (dissoc filter-combo "admin"))
+        filter-js (format "ajax_load($('#span1'), '/c/esp/reg-filter-value/%s?ftype='+$('#ftype').val())" id) 
+        uri "ftype='+$('#ftype').val()+'&fvalue='+$('#fvalue').val()"
+        list-js (format "ajax_load($('#list'), '/c/esp/reg-list/%s?%s)" id uri) ]
+    (html
+      [:h2 (format "%s报名申请筛选" (dd-role id))]
+      [:form#fm2
+       [:label "筛选条件："] (eui-combo {:name "ftype" :id "ftype" :onchange filter-js} 
+                                   (case id ("pn" "mot") filter-combo
+                                     ("en" "org") (into filter-combo {"grade" "级别" "province" "所在省市"}))) (space 5)
+       [:label "筛选内容："] [:span#span1 reg-filter-value-all-] (space 5)
+       (eui-button {:onclick list-js :iconCls "icon-reload"} "按筛选条件刷新列表")])))
+        
+(defn reg-filter-value
+  "ajax：报名申请，根据筛选条件(@id ftype)，得到筛选内容 fvalue. 
+  @ids 第一个参数为'pn'/'en'/'mot'/'org', 第二个参数为ftype "
+  [id ftype request]
+  (let [admin (user-admin request)
+        typ id
+        ftype (or ftype "")
+        tb (apply-tb typ)
+        attr {:name "fvalue" :id "fvalue"}
+        where {:uid nil :del {:$ne "1"}}
+        where (if (= admin "01") where (assoc where :admin admin))
+        f (fn [tb fd dd] 
+            (gen-array-map (for [e (sort (with-esp- (distinct-values tb fd :where where)))] [e (dd+ dd e)])))]
+    (case ftype
+      "admin" (eui-combo attr (f tb "admin" dd-admin))
+      "grade" (eui-combo attr (f tb "grade" dd-grade))
+      "province" (eui-combo attr (f tb "province" dd-admin))
+      ("name" "pid") (eui-text attr)
+      "resp-reg" (eui-combo attr (f tb "resp-reg" dd-resp)) 
+      reg-filter-value-all-)))
+
 ;;------ 导入福建数据
 (def espfj-files
   {:photo "照片"
@@ -318,4 +369,9 @@
 ;  (insert- :user {:name k :pid v :role "mot" :uid (str "mot-" v) :admin "01"}))
 ;(with-mdb2 "esp" (mdb-group :pn-apply [:admin]))
 
-
+(defn tmp-set-province-1-16
+  "临时设置:en-apply :org-apply的province字段"
+  []
+  (doseq [tb [:en-apply :org-apply]]
+    (update- tb {:admin "34"} {:province "18"}))
+  "更新province完毕")

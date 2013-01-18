@@ -148,13 +148,10 @@
   [s] (format-date-by s "%s年 %02d月 %02d日"))
 
 (defn- format-resp-
-  "格式化'yes' 'no'的显示，用于函数(result-html- ..)， (doc- ..)
-  @yes-or-no 'yes' or 'no' "
+  "格式化'yes' 'no'的显示.  @yes-or-no 'yes' or 'no' "
   [yes-or-no]
-  (case yes-or-no 
-    "yes" "<font color=green>同 意</font>" 
-    "no" "<font color=red>不同意</font>" 
-    "<font color=gray>尚未受理</font>"))
+  (format "<font color='%s'>%s</font>" (case yes-or-no "yes" "green" "no" "red" "gray") 
+          (or (dd-resp yes-or-no) "尚未处理"))) 
 
 (defn- format-pass-direct
   [on-off]
@@ -167,11 +164,11 @@
     (dd-type types)
     (if (nullity? types) types
       (let [ss (split types "&")
-            nn (map #(or (dd-type (to-int % 1)) %) ss)]
+            nn (map #(dd+ dd-type %) ss)]
         (join nn ", ")))))
 
 (defn format-orgid1
-  "通过uid字符串得到org名称"
+  "通过uid字符串得到org名称， @m {:link true}"
   ([uid m]
     (let [r (first (with-uid- :org uid))
           nam (or (:name r) uid)]
@@ -204,6 +201,24 @@
   [s]
   (if (= s "0") "<font color=red>停用</font>" "可用"))
   
+(defn- format-field-
+  "在列表和文档中都涉及的字段值格式化（一般为查dd-xx ） "
+  [k v]
+  (case k
+    :type (format-type v)
+    :type2 (dd+ dd-type2 v) 
+    :grade (dd+ dd-grade v)
+    :fulltime (if v "专职" "<font color=gray>兼职</font>")
+    :pnids (join (format-ids- :pn v {:link true :form "pn-doc" :uid true}) "、")
+    :province (or (dd-admin-province v) v)
+    :info (replace-all v "\r\n" "<br/>")
+    (:resp :resp-eval :resp-review :resp-reg) [:b (format-resp- v)]
+    :pass-direct (format-pass-direct v)
+    :usable (format-usable- v)
+    :ptype (dd+ dd-portal v)
+    :renew (dd+ dd-renew v)
+    v))
+
 (defn- format-result-field-
   "把列表显示中某个字段的值进行格式化，如 :type字段的'1'->'道路运输'
   @row 一行数据如 {:type '1' ..}
@@ -223,10 +238,6 @@
                            (format "/c/esp/cert-issue/%s/%s" (:issue m) (:_id row)))
                    :target "_blank"} "发证"]
       :_cdate-end (date-add (:cdate row) (dd-cert-year (:type m)) 0 0)
-      :type (format-type v)
-      :type2 (or (dd-type2 (to-int v0)) v)
-      :grade (or (dd-grade (to-int v0 0)) v)
-      :fulltime (if v0 "专职" "<font color=gray>兼职</font>")
       :contract0 (format-date- v)
       :contract1 (if v0 (format-date- v0) "<b>目前在职</b>")
       :uid (if (:show-uid? m) v0 (wr3user-name v0))
@@ -235,30 +246,19 @@
       (:freport :refine-doc) (html [:a {:href v0 :target "_blank"} "下载"] (space 3)
                                    [:a {:href (when (not-nullity? v0) (str "/c/esp/doc-html?fname=" v0)) 
                                         :target "_blank"} "查看"])
-      :info (replace-all v "\r\n" "<br/>")
       :admin (or (get (or (:admin m) dd-admin) v) v)
       :respdate (if (nil? v0) "<font color=gray>尚未处理</font>" v)
       :respdate-review (if (nil? v0) "<font color=gray>尚未处理</font>" v)
       :cstate (if (nil? v0) "正常" "撤销") ; 考评机构证书状态
-      :reason (or (get (case (:id m) 
-                         "org" dd-org-backup 
-                         "en" dd-en-backup) 
-                       (to-int v0)) v)
+      :reason (dd+ ({"org" dd-org-backup "en" dd-en-backup} (:id m)) v0)
       :content (if (> (count v) 20) (str (subs v 0 20) " ……") v)
       :stand (html "评分：" [:b (:sum v0)] "；" 
                    "等级：" (when-let [grd (:grade v0)] 
-                           [:b (dd-grade (to-int grd))]) "；"
+                           [:b (dd+ dd-grade grd)]) "；"
                    (when-let [report (:report v0)] [:a {:href report} "报告"])) ; 企业达标自评
-      (:resp :resp-eval :resp-review :resp-reg) (format-resp- v0)
-      :pass-direct (format-pass-direct v)
       :orgid1 (format-orgid1 v {:link true})
-      :pnids (join (format-ids- :pn v0 {:link true :form "pn-doc" :uid true}) "、")
       :belong (str v (when-let [n (wr3user-name v)] (format " (%s)" n)))
-      :renew (or (dd-renew (to-int v 0)) v)
-      :ptype (or (dd-portal v) v)
-      :usable (format-usable- v)
-      :province (or (dd-bjca-province v) v)
-      v)))
+      (format-field- col v0))))
 
 (defn result-html-
   "共用函数：对没有特殊要求的结果进行列表展示
@@ -292,11 +292,7 @@
   @m 客户定制化的设置 "
   [tb k v m]
   (case k ; 显示转换，如：有些代码可以用字典得到名称
-    :type (format-type v) 
-    :type2 (or (dd-type2 (to-int v 11)) v) 
-    :grade (or (dd-grade (to-int v)) v)
     :belong (str v (when-let [n (wr3user-name v)] (format " (%s)" n)))
-    :fulltime (if v "专职" "兼职")
     :admin (or (get (or (:admin m) dd-admin) (str v)) v) ; espfj 可在m中指定 {:admin dd-admin-fj}
     (:uid :admin-uid) (if (:show-uid? m) v (wr3user-name v))
     :from (or (get (or (:from m) dd-province) v) v) ; espfj 可在m中指定 {:admin dd-province-fj}
@@ -304,24 +300,19 @@
              (eui-combo {:id "orgid" :name "orgid"} (zipmap v (format-ids- :org v {:uid true})))
              (join (format-ids- :org v {:link true :uid true}) "，"))
     :orgid1 [:a {:href (str "/c/esp/docv/org/" v) :target "_blank"} (format-orgid1 v {:link true})]
-    :pnids (join (format-ids- :pn v {:link true :form "pn-doc" :uid true}) "、")
     :enid [:a {:href (str "/c/esp/docv/en/" v) :target "_blank"} "查看"]
-    (:info :content) (replace-all v "\r\n" "<br/>")
-    :reason (or (get (case tb :org-backup dd-org-backup :en-backup dd-en-backup) (to-int v)) v) ; 考评机构备案原因
-    (:safe :photo :perf2 :proof :proofb :proof2 :proof3 :titlefile :beginfile :refine-doc :met :pns 
+    :content (replace-all v "\r\n" "<br/>")
+    (:safe :photo :perf1 :perf2 :proof :proofb :proof2 :proof3 :titlefile :beginfile :refine-doc :met :pns 
            :license :report :qual) [:a {:href v} "查看"]
-    (:resp :resp-review :resp-reg) [:b (format-resp- v)]
-    :pass-direct (format-pass-direct v)
+    :reason (dd+ ({:org-backup dd-org-backup :en-backup dd-en-backup} tb) v) ; 考评机构备案原因
     :otype (or (dd-form (keyword v)) v)
     :role (or (dd-role v) v) ; 登录认证U盘user表的角色
     :pwd "*"
     :fnmenu (join (map dd-menu2 (split v "&")) ", ")
     :fntype (format-type v)
     :fngrade (join (map (comp dd-grade to-int) (split v "&")) ", ")
-    :usable (format-usable- v)
-    :ptype (dd-portal (to-int v))
     :readonly (or ({"1" "仅查阅" "0" "正常操作"} v) v)
-    v))
+    (format-field- k v) ))
 
 (defn doc2-
   "显示指定表中指定object-id的记录内容。
@@ -455,9 +446,9 @@
   (let [fcol (fn [r c] (let [v (c r)] 
                          (wr3.util.Csv/toCsv 
                            (case c
-                             :type (dd-type (to-int v))
-                             :type2 (dd-type2 (to-int v))
-                             :grade (dd-grade (to-int v))
+                             :type (dd+ dd-type v)
+                             :type2 (dd+ dd-type2 v)
+                             :grade (dd+ dd-grade v)
                              :orgid1 (format-orgid1 v)
                              v))))
         frow (fn [r] (join (map #(fcol r %) col-ids) ","))]
@@ -540,7 +531,7 @@
   (let [uid (wr3user request)
         pid (right uid "-")
         ntype (name typ)
-        cfg0 ({:pn cfg-apply-pn :en cfg-apply-en :org cfg-apply-org :mot cfg-apply-mot} typ)
+        cfg0 (dd-cfg-apply typ)
         nam (dd-cert typ)
         r (or (first (with-uid- typ uid)) (first (with-pid- (apply-tb ntype) pid))) ; 如：pn表或pn-apply表中已有记录
         cfg (if r (cfg-set-values- cfg0 r) cfg0)]
@@ -889,8 +880,8 @@
         cfg [["证书编号" :cid {:v (cert-id {:admin (:admin r) :max max})}]
              ["有效期开始日期" :date {:v (date)}]
              ["名称" :name {:v (:name r) :style "width:400px"}]
-             ["类型类别" :type {:v (get type-dd (to-int type-value))}]
-             ["达标/资质等级" "grade" {:v (dd-grade (to-int (:grade r)))}]
+             ["类型类别" :type {:v (dd+ type-dd type-value)}]
+             ["达标/资质等级" "grade" {:v (dd+ dd-grade (:grade r))}]
              ["正本/副本选择" :copy {:t {"正本" "—— 打印正本 ——" "副本" "—— 打印副本 ——"}}]
              comment-field
              ] ]
@@ -1031,28 +1022,31 @@
 (defn reg-list
   "service: 报名初审列表
   @id pn/en/org/mot 
-  todo: 部mot用户能看到所有申请，但突出显示机构一级申请；省市mot只能看到自己辖内的申请。"
-  [id request]
+  @skip 分页skip值 "
+  [id skip ftype fvalue request]
   (let [admin (user-admin request)
+        skip (or skip 0)
+        ftype (or ftype "")
+        fvalue (or fvalue "")
+        uri "skip='+$('#pagers').val()+'&ftype='+$('#ftype').val()+'&fvalue='+$('#fvalue').val()"
+        list-js (format "ajax_load($('#list'), '/c/esp/reg-list/%s?%s)" id uri)
         tb (apply-tb id)
         where {:uid nil :del {:$ne "1"}}
         where (if (= admin "01") where (assoc where :admin admin))
-        admins (gen-array-map (sort (select-keys dd-admin (with-esp- (distinct-values tb "admin" :where where)))))
+        where (if (nullity? ftype) where 
+                (into where {(keyword ftype) (case ftype
+                                               ("name" "pid") (re-pattern fvalue)
+                                               "resp-reg" (case fvalue ("yes" "no") fvalue {:$nin ["yes" "no"]})
+                                               fvalue)}))
         count1 (with-mdb2 "esp" (fetch-count tb :where where))
-        vars (query-vars2 request)
-        skip (or (:skip vars) 0)
-        onchange (format "ajax_load($('#list'), '/c/esp/reg-list/%s?skip='+$('#pagers').val())" id)
         rs (with-esp- (fetch tb :skip (to-int skip) :limit 100 :where where :sort {:date -1})) ]
     (html
-      [:h2 (format "%s报名申请" (dd-role id))]
-      [:form#fm2
-       [:label "选择主管机关："] (eui-combo {:name "admin"} admins) (space 5)
-       [:label "姓名/名称或者证件号："] (eui-text {:name "pid"}) (space 5)
-       (eui-button {} "条件查询")]
-      (pager-html count1 skip onchange)
+      [:h2 (format "%s报名申请列表" (dd-role id))]
+      (pager-html count1 skip list-js)
       (result-html- rs (apply-reg-th- id) (apply-reg-fs- id) 
                     {:form (str "reg-resp-doc/" id)
-                     :readonly? (user-readonly? request)}))))
+                     :readonly? (user-readonly? request)})
+      (when (> count1 100) (eui-tip "有多页，请点击下拉框翻页。")))))
 
 (defn reg-resp
   "报名初审。对无登录认证U盘用户（无:uid）的报名信息初审 "
@@ -1062,10 +1056,12 @@
       [:h1 "进行报名申请初审"]
       (eui-tip "对考评员、考评机构、企业、主管机关用户未申请登录认证U盘前填写的初步报名申请信息进行审批。")
       (for [[k v] dd-role :let [[c0 c1] (count-reg k admin)]] 
-        (eui-button {:onclick (format "ajax_load($('#list'), '/c/esp/reg-list/%s')" k) 
+        (eui-button {:onclick (format (str "ajax_load($('#filter'), '/c/esp/reg-filter-type/%s'); "
+                                           "ajax_load($('#list'), '/c/esp/reg-list/%s'); ") k k)
                      :style "margin:5px" :title (format "有%s个尚未处理/共%s个报名申请" c0 c1)}
                     (format "%s <font color=red>%s</font>/%s" v c0 c1))) (space 5)
       (when (= "01" admin) (eui-button {:href "/c/esp/reg-olap" :target "_blank" :iconCls "icon-bar"} "各省厅报名数统计"))
+      [:div#filter]
       [:div#list])))
 
 (defn reg-resp-doc
@@ -1092,11 +1088,10 @@
                     [:hr]
                     [:form#fm1
                      [:p [:label "初审意见："] (eui-textarea {:name "advice-reg"} (:advice-reg rs))]
-                     [:p [:label "初审结果："] (eui-combo {:name "resp-reg" :value (:resp-reg rs)} 
-                                                     {"yes" "同 意" "no" "不同意" "" "尚未处理"})]
+                     [:p [:label "初审结果："] (eui-combo {:name "resp-reg" :value (:resp-reg rs)} dd-resp)]
                      [:p (eui-button {:onclick (format "ajax_form($('#fm1'), '/c/esp/reg-resp-submit/%s/%s')" typ id) 
                                       :iconCls "icon-ok"} "提 交")]] )
-           :orders (map second cfg-apply-pn)
+           :orders (map second (dd-cfg-apply (keyword typ)))
            }) ))
 
 (defn reg-resp-submit
