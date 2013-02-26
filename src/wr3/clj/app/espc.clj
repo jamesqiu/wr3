@@ -7,8 +7,12 @@
 (use 'clojure.contrib.json)
 (require 'wr3.clj.db 'wr3.clj.app.espreg)
 
+(defn where-admin
+  [where admin]
+  (if (= admin "01") where (into where {:admin admin})))
+
 (defn apply-tb
-  "根据类型字符串 pn/en/org/mot 得到表名 :pn-apply :en-apply :org-apply :mot-apply "
+  "根据字符串 'pn'/en/org/mot 得到表名 :pn-apply 等"
   [typ]
   (keyword (str typ "-apply")))
   
@@ -19,17 +23,17 @@
     (with-mdb2 "esp" (fetch-one :user :where {:uid uid}))))
   
 (defn user-admin
-  "获取用户在:user表中的:admin代码，如'01' '14' ；没找到该用户或者没有:admin则返回nil。"
+  "获取用户在:user表中的:admin代码，如'01' '14'；无用户或无:admin返回nil。"
   [request]
   (:admin (user-info request)))
 
 (defn user-readonly?
-  "如果用户在:user表中的存在:readonly字段为“1”，则返回true"
+  "如果用户在:user表中:readonly字段为“1”，返回true"
   [request]
   (= "1" (:readonly (user-info request))))
   
 (defn- input-save-submit-
-  "service: 共用函数，考评员、考评机构、企业申请表提交保存或更新；todo：增加校验字段为空，@see espn/input-submit
+  "service: 共用函数，pn/org/en申请表提交保存或更新；todo：增加校验字段为空，@see espn/input-submit
   @id form名称如'pn' 'en' 'org' "
   [id request submit?]
   (let [vars (query-vars request)
@@ -90,7 +94,7 @@
             (with-mdb2 "esp" (fetch-count tb :where (merge where1 where2))))))
   
 (defn data-
-  "取出数据表所有记录（1000条以内）并持久化。
+  "取出数据表所有记录（100条以内）并持久化。
   @tb 如 :pn | :en | :org"
   ([tb] (with-esp- (fetch tb :limit 100)))
   ([tb m] 
@@ -297,8 +301,8 @@
     (:uid :admin-uid) (if (:show-uid? m) v (wr3user-name v))
     :from (or (get (or (:from m) dd-province) v) v) ; espfj 可在m中指定 {:admin dd-province-fj}
     :orgid (if (:orgid-as-select m) 
-             (eui-combo {:id "orgid" :name "orgid"} (zipmap v (format-ids- :org v {:uid true})))
-             (join (format-ids- :org v {:link true :uid true}) "，"))
+             (eui-combo {:id "orgid" :name "orgid"} (zipmap v (format-ids- :user v {:uid true})))
+             (join (format-ids- :user v {:link true :uid true}) "，"))
     :orgid1 [:a {:href (str "/c/esp/docv/org/" v) :target "_blank"} (format-orgid1 v {:link true})]
     :enid [:a {:href (str "/c/esp/docv/en/" v) :target "_blank"} "查看"]
     :content (replace-all v "\r\n" "<br/>")
@@ -740,22 +744,30 @@
 
 (defn- cert-renew-sql
   "@f fetch 或 fetch-count"
-  [f id]
+  [f id admin]
   (let [tb (apply-tb id)
-        v (case id "pn" ["1" "2"] "en" ["3"] "org" ["4"])] ; @see dd-renew
+        v (case id "pn" ["1" "2"] "en" ["3"] "org" ["4"]) ; @see dd-renew
+        where (where-admin {:renew {:$in v}} admin) ]
     (with-mdb2 "esp" 
-      (let [rs (f tb :where {:renew {:$in v}})]
+      (let [rs (f tb :where where)]
         (if (= f fetch) (vec rs) rs)))))
-    
-(defn cert-renew-data [id] (cert-renew-sql fetch id))
-(defn cert-renew-count [id] (cert-renew-sql fetch-count id))
+
+(defn cert-renew-data 
+  [id admin]
+  (cert-renew-sql fetch id admin))
+
+(defn cert-renew-count 
+  [id admin] 
+  (cert-renew-sql fetch-count id admin))
 
 (defn cert-renew-resp
   "service: 主管机关对考评员、考评机构、企业的换证申请受理
   @id pn或org或en "
-  [id]
-  (let [cname (dd-form (keyword id))
-        rs (cert-renew-data id)]
+  [id request]
+  (let [admin (user-admin request)
+        cname (dd-form (keyword id))
+        rs (cert-renew-data id admin)
+        ]
     (html
       [:h1 (format "%s换证申请受理" cname)]
       (result-html- rs [] [:name :date :type :renew :_id] 
@@ -764,8 +776,9 @@
 (defn cert-resp
   "service: 用户：org和mot；mot制发考评员、考评机构证书，org制发企业证书。
   @id 'pn','en','org' "
-  [id]
-  (let [title (format "%s制发" (dd-cert (keyword id)))]
+  [id request]
+  (let [title (format "%s制发" (dd-cert (keyword id)))
+        admin (user-admin request)]
     (html
       [:h1 title]
       (eui-tip (if (= id "pn") "系统可导出列表，由专业打印机进行打印制发。"
@@ -774,14 +787,14 @@
       (eui-button {:href (format "/c/esp/cert-resp-export/%s/exp-证书列表.csv?content-type=text/csv&charset=GBK" id) 
                    :target "_blank" :style "margin:10px"} "导出电子表格")
       (case id
-        "en" (let [rs (with-esp- (fetch :en-apply :where {:resp-review "yes"}))]
-               (result-html- rs [] [:name :resp :resp-eval :resp-review :respdate-review :_id :_issue] 
+        "en" (let [rs (with-esp- (fetch :en-apply :where (where-admin {:resp-review "yes"} admin)))]
+               (result-html- rs [] [:admin :name :resp :resp-eval :resp-review :respdate-review :_id :_issue] 
                              {:form "docv/en-apply" :issue "en-apply"}))
-        "org" (let [rs (with-esp- (fetch :org-apply :where {:resp "yes"}))]
-                (result-html- rs [] [:name :resp :respdate :_id :_issue] 
+        "org" (let [rs (with-esp- (fetch :org-apply :where (where-admin {:resp "yes"} admin)))]
+                (result-html- rs [] [:admin :name :resp :respdate :_id :_issue] 
                               {:form "docv/org-apply" :issue "org-apply"}))
-        "pn" (let [rs (with-esp- (fetch :pn-apply :where {:resp "yes"}))]
-               (result-html- rs {:name "姓名"} [:name :resp :respdate :_id :_issue]
+        "pn" (let [rs (with-esp- (fetch :pn-apply :where (where-admin {:resp "yes"} admin)))]
+               (result-html- rs {:name "姓名"} [:admin :name :resp :respdate :_id :_issue]
                              {:form "docv/pn-apply" :issue "pn-apply"}))
         nil) )))
 
@@ -963,26 +976,28 @@
 (defn- apply-reg-count-
   "@typ 类型 en、pn、org、mot
   @uid? 是否有:uid字段, false没有:uid字段的是U盘报名申请，true有:uid字段的是资质/资格证书申请。
-  @admin admin是那个主管机关的查询 "
-  [typ uid? admin]
+  @admin admin是那个主管机关的查询 
+  @m 其他where条件
+  @return [未处理的记录数 全部的记录数]"
+  [typ uid? admin m]
   (let [tb (apply-tb typ)
         where-uid (if uid? {:$ne nil} nil)
-        where {:uid where-uid :del {:$ne "1"}}
-        where (if (= admin "01") where (into where {:admin admin}))
+        where (merge m {:uid where-uid :del {:$ne "1"}})
+        where (where-admin where admin)
         where2 (into where {(if uid? :resp :resp-reg) {:$nin ["yes" "no"]}})] 
     [(with-mdb2 "esp" (fetch-count tb :where where2)) (with-mdb2 "esp" (fetch-count tb :where where))] ))
 
 (defn count-apply
   "资质/资格证书申请条目数量统计。
   @t 类型 en、pn、org、mot"
-  [t admin]
-  (apply-reg-count- t true admin))
+  ([t admin m] (apply-reg-count- t true admin m))
+  ([t admin] (apply-reg-count- t true admin {})))
 
 (defn count-reg
   "报名申请条目数量统计。
   @t 类型 en、pn、org、mot"
-  [t admin]
-  (apply-reg-count- t false admin))
+  ([t admin m] (apply-reg-count- t false admin m))
+  ([t admin] (apply-reg-count- t false admin {})))
 
 (defn- apply-reg-th-
   "初次报名申请，或资格证书申请的列表显示列头
@@ -1032,7 +1047,7 @@
         list-js (format "ajax_load($('#list'), '/c/esp/reg-list/%s?%s)" id uri)
         tb (apply-tb id)
         where {:uid nil :del {:$ne "1"}}
-        where (if (= admin "01") where (assoc where :admin admin))
+        where (where-admin where admin)
         where (if (nullity? ftype) where 
                 (into where {(keyword ftype) (case ftype
                                                ("name" "pid") (re-pattern fvalue)
@@ -1140,21 +1155,27 @@
         "已删除申请记录，关闭后请刷新列表。"
         "已恢复申请记录，关闭后请刷新列表。"))))
 
+;(println (with-esp- (fetch :en-apply :where {:orgid {:$in ["org1"]}})))
+
 (defn apply-resp
   "service: 主管机关对考评员、考评机构、企业的申请受理. 
   @id 代表申请来源的字符串：pn,org,en 无U盘报名申请还包括mot "
   [id request]
   (let [tb (apply-tb id) ; :pn-apply :org-apply :en-apply
+        uid (wr3user request) 
         cname (dd-cert (keyword id))
         where {:uid {:$ne nil} :del {:$ne "1"}}
         admin (user-admin request)
-        where (if (= admin "01") where (into where {:admin admin}))
+        where (where-admin where admin)
+        mot-en? (and (wr3role? request "mot") (= id "en"))
+        org-en? (and (wr3role? request "org") (= id "en"))
+        where (if org-en? (into where {:orgid {:$in [uid]}}) where) ; 显示选中当前org来进行考评的企业
         rs (with-esp- (fetch tb :where where :sort {:date -1}))
         form (cond 
                (= id "pn") "mot-pn-apply"
                (= id "org") "mot-org-apply" 
-               (and (= id "en") (wr3role? request "mot")) "mot-en-apply" ; mot对en的受理
-               (and (= id "en") (wr3role? request "org")) "org-en-apply" )  ; org对en的受理
+               mot-en? "mot-en-apply" ; mot对en的受理
+               org-en? "org-en-apply" )  ; org对en的受理
         tip (case id 
               "pn" (str "同意则颁发资格证书；<br/>注：直接从事交通运输安全生产行政管理工作10年以上，"
                         "熟悉掌握交通运输安全生产相关法规和企业安全生产标准化规定者，身体健康，经本人申请、所在单位推荐、"
@@ -1380,23 +1401,3 @@
       (do (Word/toHtml fpath1 fpath2)
         [:h1 "文档生成"] ))
     [:a {:href fname2} "点击查看"])))  
-
-(defn whoami
-  "ajax: 当前用户的信息
-  @id 'pn/en/org/mot' "
-  [id request]
-  (let [uid (wr3user request)
-        rt (first (with-uid- :user uid))
-        {pid :pid admin :admin} rt
-        admin-name (:name (with-mdb2 "esp" (fetch-one :mot :where {:code admin})))
-        tb-apply (apply-tb id)
-        r0 (when pid (first (with-pid- tb-apply pid))) ; 初次申请记录        
-        ]
-    (html
-      [:h1 (format "当前用户【%s】信息：" (:name rt))]
-      [:h3 "证件号码：" pid]
-      [:h3 "主管机关：" admin-name]
-      (when-let [oid (:_id r0)]
-        (eui-button {:href (str (case id "pn" ukey-reapply-url-pn ukey-reapply-url-en) pid) :target "_blank"} 
-                    "再次申请登录认证U盘")) )))
-

@@ -318,7 +318,7 @@
         tb (apply-tb typ)
         attr {:name "fvalue" :id "fvalue"}
         where {:uid nil :del {:$ne "1"}}
-        where (if (= admin "01") where (assoc where :admin admin))
+        where (where-admin where admin)
         f (fn [tb fd dd] 
             (gen-array-map (for [e (sort (with-esp- (distinct-values tb fd :where where)))] [e (dd+ dd e)])))]
     (case ftype
@@ -328,6 +328,54 @@
       ("name" "pid") (eui-text attr)
       "resp-reg" (eui-combo attr (f tb "resp-reg" dd-resp)) 
       reg-filter-value-all-)))
+
+(defn mot-admin2-list
+  "@id mot的代码 '01' ~ '35' "
+  [id]
+  (let [admin (or id "01")
+        rs (with-esp- (fetch :mot :where {:upper admin} :sort {:code 1}))
+        mot01? (= admin "01")
+        rs (if (not mot01?) rs 
+             (let [admin-count (with-esp- (mdb-group :mot [:upper]))
+                   m (into {} (for [{upp :upper n :count} admin-count :when (not (nil? upp))] [upp (int n)]))]
+               (for [r rs] (into r {:count (m (r :code))}))))
+        fs [:code :name]
+        fs (if mot01? (conj fs :count) fs)]
+    (html
+      [:h2 (if mot01? "省级" "地市级") "主管机关："]
+      (result-html- rs {:code "代码" :count "下级机构数量"} fs {}))))
+
+(defn mot-admin2
+  "交通部mot用户查看省级和地市级主管机关"
+  [request]
+  (let [admin (user-admin request)]
+    (if (= admin "01")
+      (html-body
+        [:h1 "直接下级主管机关："]
+        (eui-combo {:id "mot2" :onchange "ajax_load($('#list'), '/c/esp/mot-admin2-list/'+$('#mot2').val())"} 
+                   dd-admin)
+        [:div#list (mot-admin2-list "01")])
+      "仅交通部用户可查阅")))
+
+(defn my-info
+  "ajax: 当前各类用户查看自己的用户信息
+  @id 'pn/en/org/mot' "
+  [id request]
+  (let [uid (wr3user request)
+        rt (first (with-uid- :user uid))
+        {pid :pid admin :admin} rt
+        admin-name (:name (with-mdb2 "esp" (fetch-one :mot :where {:code admin})))
+        tb-apply (apply-tb id)
+        r0 (when pid (first (with-pid- tb-apply pid))) ; 初次申请记录        
+        ]
+    (html
+      [:h1 "我的用户信息："]
+      [:h3 "名称：" (:name rt)]
+      [:h3 "证件号码：" pid]
+      [:h3 "主管机关：" admin-name]
+      (when-let [oid (:_id r0)]
+        (eui-button {:href (str (case id "pn" ukey-reapply-url-pn ukey-reapply-url-en) pid) :target "_blank"} 
+                    "再次申请登录认证U盘")) )))
 
 ;;------ 导入福建数据
 (def espfj-files
@@ -369,9 +417,5 @@
 ;  (insert- :user {:name k :pid v :role "mot" :uid (str "mot-" v) :admin "01"}))
 ;(with-mdb2 "esp" (mdb-group :pn-apply [:admin]))
 
-(defn tmp-set-province-1-16
-  "临时设置:en-apply :org-apply的province字段"
-  []
-  (doseq [tb [:en-apply :org-apply]]
-    (update- tb {:admin "34"} {:province "18"}))
-  "更新province完毕")
+;(print-seq (with-esp- (fetch :user :only [:name :admin :usable :del :uid] :where {:role "org" :usable "0"})))
+;(update- :user {:role "org" :uid "org-X0009960-5"} {:usable "1"})

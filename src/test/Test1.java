@@ -449,7 +449,7 @@ public class Test1 {
 		temp();
 		System.out.println(indexOfAny("hello world", new char[]{'z','m','n'}));
 		System.out.println("------- end --------c");
-		
+				
 //		img4j();
 	}
 

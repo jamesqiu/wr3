@@ -98,7 +98,7 @@
           ["首页内容维护"     "icon-file" "mot-portal"]
           ["登录日志查询"     "icon-text" "mot-log"]
           ["密钥用户管理"     "icon-user" "mot-user-admin"]
-          ["当前用户信息"     "icon-info" "whoami/mot"]
+          ["当前用户信息"     "icon-info" "my-info/mot"]
           ]
          ]   
    :frame-main (html [:script "layout_load_center('/c/esp/mot-resp-sum')"]
@@ -124,7 +124,7 @@
          ["其他" "icon-setting" ; title id          
           ["考评机构基本信息查询"     "icon-info" "who/org"]
           ["企业基本信息查询"     "icon-info" "who/en"]
-          ["当前用户信息"     "icon-info" "whoami/pn"]
+          ["当前用户信息"     "icon-info" "my-info/pn"]
           ]      
          ] 
    :frame-main (html [:h2 "考评员用户主界面"]
@@ -142,6 +142,7 @@
    :title "交通运输企业安全生产标准化——考评机构管理系统（试行）"
    :nav [
          ["待办事宜" "icon-arrow" ; title icon
+          ["待办事宜概况一览"     "icon-sum"   "org-main"]
           ["企业考评待办工作" "icon-list" "apply-resp/en"] ; title icon id 
           ["整改报告" "icon-list" "refine-resp"] ; title icon id 
           ]
@@ -166,7 +167,7 @@
          ["其他" "icon-setting" ; title id          
           ["考评员信息查询"     "icon-info" "who/pn"]
           ["企业基本信息查询"     "icon-info" "who/en"]
-          ["当前用户信息"     "icon-info" "whoami/org"]
+          ["当前用户信息"     "icon-info" "my-info/org"]
           ]      
          ]   
    :frame-main (html [:h2 "考评机构用户主界面"]
@@ -186,7 +187,7 @@
          ["企业申请" "icon-star" ; title id
           ["1、达标自评" "icon-list"    "en-stand"] 
           ["2、等级申请" "icon-list"    "en-apply"] 
-          ["3、选择考评机构（拟去除）" "icon-list" "en-select-org"] 
+          ["3、选择考评机构" "icon-list" "en-select-org"] 
           ["进度查询" "icon-list"    "en-process"] 
           ["企业年度工作报告" "icon-list"  "report/en"] 
           ["变更申请" "icon-list"    "backup/en"] 
@@ -196,7 +197,7 @@
          ["其他" "icon-setting" ; title id
           ["考评员基本信息查询"     "icon-info" "who/pn"]
           ["考评机构基本信息查询"     "icon-info" "who/org"]
-          ["当前用户信息"     "icon-info" "whoami/en"]
+          ["当前用户信息"     "icon-info" "my-info/en"]
           ]      
          ]   
    :frame-main (html [:h2 "交通运输企业用户主界面"]
@@ -463,7 +464,7 @@
    ["姓名" :name {:require true}]
    ["身份证号" :pid {:t 'pid :require true :title "15位或18位身份证"}]
    ["常住地" :from {:t dd-province :require true}]
-   ["照片" :photo {:t 'file :title "照片文件请勿超过10M大小" :require true}]
+   ["照片" :photo {:t 'file :title "照片文件请勿超过10M大小；多次上传会覆盖之前的。" :require true}]
    ["工作单位" :org {:require true :style "width:300px"}]
    ["职称" :title]
    ["通讯地址" :address {:require true :style "width:300px"}]
@@ -480,14 +481,14 @@
    ["主要学习（培训）经历" :train {:t 'textarea :require true}]
    ["主要工作简历" :resume {:t 'textarea :require true}]
    ["专业工作业绩" :perf {:t 'textarea :require true :title "不得少于10个字"}]
-   ["专业技术职称及相关材料" :perf1 {:t 'file}]
-   ["专业工作业绩附件" :perf2 {:t 'file}]
+   ["专业技术职称及相关材料" :perf1 {:t 'file :title "注：多次上传会覆盖之前的。"}]
+   ["专业工作业绩附件" :perf2 {:t 'file :title "注：多次上传会覆盖之前的。"}]
    ["身份证明文件" :proof {:t 'file :title "二代身份证、护照等的正面（pdf, doc或者jpg格式）" :require true}]
    ["身份证明文件（背面）" :proofb {:t 'file :title "二代身份证、护照等的反面（pdf, doc或者jpg格式）" :require true}]
    ["学历证明文件" :proof2 {:t 'file :title "学历证书（pdf, doc或者jpg格式）" :require true}]
    ["培训合格证明文件" :proof3 {:t 'file :title "其他各类培训合格证明的照片、编号页、发证机关印章页（pdf, doc或者jpg格式）"}]
    ["换证原因<b>（仅换证申请）</b>" :renew {:t dd-renew}]
-   ["继续教育证明<b>（仅换证申请）</b>" :edu2 {:t 'file}]
+   ["继续教育证明<b>（仅换证申请）</b>" :edu2 {:t 'file :title "注：多次上传会覆盖之前的。"}]
    ["工作业绩证明<b>（仅换证申请）</b>" :orgproof {:t 'file :title "由所在考评机构出具的工作业绩证明。"}]
    ])
 ; 考评机构申请表  
@@ -510,8 +511,8 @@
    ["邮编" :pcode {:t 'pcode}]
    ["联系电话" :tel {:require true}]
    ["传真号码" :fax {:require true}]
-   ["单位基本情况相关材料" :met {:t 'file :require true}]
-   ["专职考评员聘用<br/>证明与职称证明" :pns {:t 'file :require true :title "文件10M以内大小"}]
+   ["单位基本情况相关材料" :met {:t 'file :require true :title "注：多次上传会覆盖之前的。"}]
+   ["专职考评员聘用<br/>证明与职称证明" :pns {:t 'file :require true :title "文件10M以内大小；多次上传会覆盖之前的。"}]
    ["换证原因<b>（仅换证申请）</b>" :renew {:t dd-renew}]
    ])
 ; 企业申请表
@@ -531,9 +532,9 @@
    ["通讯地址" :address {:require true :style "width:300px" :title "请填写清楚通讯地址"}]
    ["联系电话" :tel {:require true }]
    ["传真" :tax {:require true }]
-   ["安全生产组织架构" :safe {:t 'file :require true }]
-   ["企业法人资格证件" :qual {:t 'file :require true }] 
-   ["经营许可证" :license {:t 'file :require true }]
+   ["安全生产组织架构" :safe {:t 'file :require true :title "注：多次上传会覆盖之前的。"}]
+   ["企业法人资格证件" :qual {:t 'file :require true :title "注：多次上传会覆盖之前的。"}] 
+   ["经营许可证" :license {:t 'file :require true :title "注：多次上传会覆盖之前的。"}]
    ["标准化达标自评报告" :report {:t 'file :require true :title "即：企业安全生产工作报告"}] 
    ["换证原因<b>（仅换证申请）</b>" :renew {:t dd-renew}]
    ])
@@ -570,10 +571,10 @@
      :_select "选择"
      :admin-uid "主管机关用户"
      :advice "处理意见"
-     :advice-eval "考评意见"
+     :advice-eval "考评意见"   ; org对en的考评结果
      :advice-refine "整改意见"
-     :advice-reg "初审意见"
-     :advice-review "审核意见"
+     :advice-reg "初审意见"    ; mot对初次报名申请的结果
+     :advice-review "审核意见" ; mot对en的最终审核结果
      :belong "所属考评机构"
      :birth "出生日期"
      :cdate "发证时间"
@@ -613,9 +614,9 @@
      :reason "原因"
      :refine-doc "整改报告"
      :resp "受理结果"
-     :resp-eval "考评结果"
-     :resp-reg "初审结果"
-     :resp-review "审核结果"
+     :resp-eval "考评结果"   ; org对en的考评意见
+     :resp-reg "初审结果"    ; mot对初次报名申请的意见
+     :resp-review "审核结果" ; mot对en的最终审核意见
      :respdate "受理日期"
      :respdate-eval "考评日期"
      :respdate-refine "整改报告日期"

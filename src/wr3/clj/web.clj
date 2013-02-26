@@ -443,7 +443,7 @@ m: 如{:title 'Title 2' :html 'aaaaaaaa..bbbbbbb'}"
   [id m & body]
   (html
     (tags :div {:id id :class "easyui-dialog1" :title "对话框1" :resizable1 "true"
-                :style "width:400px;height:200px; left:400px;top:150px;padding:10px"
+                :style "width:400px;height:220px; left:400px;top:150px;padding:10px"
                 :buttons (format "#%s-buttons" id)} m body)
     (tags :div {:id (str id "-buttons")} nil
           (eui-button {:id (str id "_ok") :iconCls "icon-ok"} "确定")

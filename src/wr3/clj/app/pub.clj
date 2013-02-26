@@ -25,7 +25,10 @@
     [:form {:name "fm_fileupload" :id "fm_fileupload" :method "POST" :action (or action "/c/pub/filesave")
             :enctype "multipart/form-data" :target "ifrm_fileupload"}
      (eui-text {:name "f_fileupload" :id "f_fileupload" :type "file"}) 
-     (eui-tip "选择好文件后请按确定进行上传。<br/><font color=red>注意：文件大小请勿超过10M！.BMP图像文件可先保存成.PNG或者.JPG格式。</font>") ]
+     (eui-tip (str "选择好文件后请按确定进行上传。<br/>"
+                   "<font color=red>注意：文件大小请勿超过10M！<br/>"
+                   "  BMP图像文件可先保存成PNG或者JPG格式；<br/>"
+                   "  多个图片文件可粘帖在一个Word文件中上传。</font>")) ]
     [:iframe {:name "ifrm_fileupload" :style "display:none"}] ))
 
 (defn filesave

@@ -58,7 +58,7 @@
     (apply str (reverse s))))
 
 (defn leftback
-  "s中最右边sep左边的部分"
+  "s中最右边sep左边的部分. todo 实现有误，sep.length>1即出错"
   [s sep]
   (str-reverse (right (str-reverse s) sep)))
 

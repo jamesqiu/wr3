@@ -72,7 +72,7 @@
   "为pn-list en-list org-list 生成用户限制相关的where条件 "
   [request]
   (let [admin (user-admin request)]
-    (if (= admin "01") {} {:admin admin}) ))
+    (where-admin {} admin)))
 
 (defn pn-list
   "service: 考评员列表
@@ -416,19 +416,20 @@
   "app: 企业选择考评机构"
   [request]
   (let [uid (wr3user request)
-        admin (:admin (first (with-uid- :user uid)))
-        rs (with-esp- (fetch :org :where {:admin admin}))
-        r (first (with-esp- (fetch :en-apply :where {:uid uid} :sort {:date -1}))) ; 第一条申请
+        admin (or (user-admin request) "01")
+        rs (with-esp- (fetch :user :where {:role "org" :usable {:$ne "0"} :del {:$ne "0"} :admin admin})) ; 共同主管机关的所有考评机构
+        r (first (with-esp- (fetch :en-apply :where {:uid uid} :sort {:date -1}))) ; 最近一次申请记录
         ] 
     (html
-      [:h1 (format "%s主管的考评机构（%s 名）" (dd-admin admin) (count rs))]
+      [:h1 (format "%s主管的考评机构（%s 名）" (dd+ dd-admin admin) (count rs))]
       (eui-tip "请在如下的考评机构列表中自行选择两个。")
-      (result-html- rs [] [:name :admin :_id :_select] {:form "docv/org"}) [:br]
+      (result-html- rs [] [:admin :name :contact :_select] {}) [:br]
       (eui-button {:onclick "esp_en_select_org()"} "提 交")
       [:script (format "esp_mark_selected('%s')" (join (:orgid r) ","))] )))
-
+           
 (defn en-select-org-save
-  "service: 保存企业所选2个考评机构的object-id "
+  "service: 保存企业所选2个考评机构的uid
+  @id en的uid "
   [id request]
   (with-mdb2 "esp"
     (let [sid (vec (split id " "))
@@ -606,9 +607,13 @@
 
 (defn mot-en-review
   "主管机关对org评审过的企业考评结论审核"
-  []
-  (let [rs (with-esp- (fetch :en-apply ))
-        rs2 (filter #(> (days (:respdate-review %)) 7) (with-esp- (fetch :en-apply :where {:resp-review "yes"})))]
+  [request]
+  (let [admin (user-admin request)
+        where {:del {:$ne "1"} :uid {:$ne nil} :resp-eval {:$ne nil} }
+        where (where-admin where admin)        
+        rs (with-esp- (fetch :en-apply :where where))
+        rs2 (filter #(> (days (:respdate-review %)) 7) 
+                    (with-esp- (fetch :en-apply :where (merge {:resp-review "yes"} where))))]
     (html
       [:h1 "企业考评结论审核"]
       (eui-tip (str "企业考评结论受理：" 
@@ -723,26 +728,26 @@
 
 (defn mot-pn-train-list
   "service: 列出考评员培训考试列表"
-  [skip]
+  [skip request]
   (let [count1 (tb-count :pn-train)
+        admin (user-admin request)
         skip (to-int skip 0)
-        rt2 (with-esp- (fetch :pn-train :skip skip :limit 100 :sort {:train-start 1}))] 
+        rt2 (with-esp- (fetch :pn-train :skip skip :limit 100 :sort {:train-start 1} :where (where-admin {} admin)))] 
     (html
       [:div#pn_train_list
        [:h2 (format "已录入的考评员培训、考试记录（%s 条）：" count1)]
        (pager-html count1 skip "esp_pager('/c/esp/mot-pn-train-list', $('#pn_train_list'))")
        (result-html- rt2 
-                     ["姓名" "培训合格证" "开始日期" "结束日期" "学时" "类型" "考试日期" "考试成绩"] 
-                     [:name :train-id :train-start :train-end :train-hour :type :exam-date :exam-score])])))
+                     ["主管机关" "姓名" "培训合格证" "开始日期" "结束日期" "学时" "类型" "考试日期" "考试成绩"] 
+                     [:admin :name :train-id :train-start :train-end :train-hour :type :exam-date :exam-score])])))
 
 (defn mot-pn-train
   "省级主管机关管理的考评员培训
   @see pn-learn 考评员自己的培训视图"
   [request]
-  (let [
-;        count (with-mdb2 "esp" (fetch-count :pn-train))
-        rt2 (with-esp- (fetch :pn-train :only [:train-start] :sort {:train-start 1}))
-        yyyymm (frequencies (map #(-> % :train-start (leftback "-")) rt2))]
+  (let [rt2 (with-esp- (fetch :pn-train :only [:train-start] :sort {:train-start 1}))
+        yyyymm (frequencies (map #(-> % :train-start (leftback "-")) rt2))
+        admin (user-admin request)]
     (html
       [:h1 "考评员培训、考试管理"]
       [:h2 "培训时间，培训学时（不少于24个学时），培训类别，培训合格证号"]
@@ -752,15 +757,9 @@
         (barf yyyymm {:title "各月份培训的考评员数量" :x "月份" :y "考评员人数"})) 
       [:h2 "尚无培训、考试记录的考评员："]
       (eui-tip "请点击查看考评员详情并录入培训、考试资料。") ; todo: 增加excel导入功能
-      (result-html- (data- :pn-apply) [] [:name :type :mobile :_id] {:form "mot-pn-train-doc"})[:br]
-
-;      [:h2 (format "已录入的考评员培训、考试记录（%s 条）：" count)]
-;      (result-html- rt2 
-;                    ["姓名" "培训合格证" "开始日期" "结束日期" "学时" "类型" "考试日期" "考试成绩"] 
-;                    [:name :train-id :train-start :train-end :train-hour :type :exam-date :exam-score])
-      
-      (mot-pn-train-list 100)
-      )))
+      (result-html- (data- :pn-apply {:where (where-admin {} admin)}) [] 
+                    [:admin :name :type :mobile :_id] {:form "mot-pn-train-doc"})[:br]
+      (mot-pn-train-list 100 request) )))
 
 (defn mot-pn-train-doc
   "mot录入考评员培训及考试结果"
@@ -904,6 +903,7 @@
         rs (with-esp- (fetch :mot :where {:upper admin} :sort {:code 1}))]
     (html
       (eui-tip "管理本主管机关的直接下级主管机关。") 
+      (when (= admin "01") (eui-button {:href "/c/esp/mot-admin2" :target "_blank"} "查看全部主管机关（含地市级）"))
       [:h1 (format "【%s】的直接下级主管机关：" (:name mot))]
       (when-not (= admin "01")
         (eui-button {:href "/c/esp/mot-admin-doc" :target "_blank" :style "margin:10px"} "新增下级主管机关"))
@@ -1165,14 +1165,14 @@
         admin (user-admin request)
         sums [(apply map + (map #(count-reg % admin) ["pn" "en" "org" "mot"])) ; '(7 13)
               (count-apply "pn" admin) 
-              (cert-renew-count "pn") 
+              (cert-renew-count "pn" admin) 
               (count-apply "org" admin) 
               (tb-count :org-backup) 
-              (cert-renew-count "org") 
-              (count-apply "en" admin) 
-              (count-apply "en" admin) 
+              (cert-renew-count "org" admin) 
+              (count-apply "en" admin {:resp-review nil}) ; 还没被mot处理过的，org有可能处理过
+              (count-apply "en" admin {:resp-eval {:$ne nil}}) ; 被org处理过的，mot有可能处理过
               (tb-count :en-backup) 
-              (cert-renew-count "en")
+              (cert-renew-count "en" admin)
               (tb-count :hot)]
         f (fn [n] (format "<font color=%s>%s</font>" (if (zero? n) "lightgray" "red") n))]
     (html

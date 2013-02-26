@@ -177,9 +177,7 @@ function esp_org_select_pn(oid) {
 
 /**
  * 根据逗号分隔的值@sid给所有checkbox中value在其中的打勾。 如：标识出企业已经选择了的2个考评机构；标识org已经选中的多个考评员；……
- * 
- * @param sid
- *            选中的多个uid（orgid、pnids等），如 "pn1,pn-110114200002130012"
+ * @param sid 选中的多个uid（orgid、pnids等），如 "pn1,pn-110114200002130012"
  */
 function esp_mark_selected(sid) {
 	$('input[type="checkbox"]').each(function(i,e) {
