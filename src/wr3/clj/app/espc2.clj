@@ -74,7 +74,7 @@
   []
   (let [rs (with-esp- (mdb-group :log [:date1]))
         rt (gen-array-map (for [{d :date1 c :count} rs] [d c]))]
-    (chart/linef rt {:title "登录、审批操作日志" :x "日期" :y "操作数"} 1000 600) ))
+    (chart/linef rt {:title "登录、审批操作日志" :x "日期" :y "操作数"} 1350 650) ))
 
 (defn users-list
   "app: 根据mot用户的权限从:user表中得到不同的ukey用户列表；用于 esp/mot-user-admin
@@ -298,7 +298,7 @@
         filter-combo (if (= admin "01") filter-combo (dissoc filter-combo "admin"))
         filter-js (format "ajax_load($('#span1'), '/c/esp/reg-filter-value/%s?ftype='+$('#ftype').val())" id) 
         uri "ftype='+$('#ftype').val()+'&fvalue='+$('#fvalue').val()"
-        list-js (format "ajax_load($('#list'), '/c/esp/reg-list/%s?%s)" id uri) ]
+        list-js (format "ajax_load($('#list'), encodeURI('/c/esp/reg-list/%s?%s) )" id uri) ]
     (html
       [:h2 (format "%s报名申请筛选" (dd-role id))]
       [:form#fm2
@@ -377,7 +377,7 @@
         (eui-button {:href (str (case id "pn" ukey-reapply-url-pn ukey-reapply-url-en) pid) :target "_blank"} 
                     "再次申请登录认证U盘")) )))
 
-;;------ 导入福建数据
+;;------ 导入福建数据（文件）
 (def espfj-files
   {:photo "照片"
    :titlefile "职称证明文件"
@@ -387,6 +387,48 @@
    :proof2 "相关证明文件（学历证书）"
    :proof3 "相关证明文件（其他证书）"
    })
+
+;;------- 导入福建数据（pid）
+; 导入条件：{:resp "yes" :del {:$ne "1"} :pid "upper后在pn-csv中"}
+; from: "福建" 
+; from2: from，下级代码对应的中文 dd-province-fj 
+; admin: "14"
+; admin2: admin 
+; import-date: (datetime)
+
+;(require 'wr3.clj.app.espfj)
+;(defn tmp-import-espfj-pn-apply
+;  []
+;  (with-mdb2 "esp" (destroy! :pn-apply {:import-date {:$exists true}}))
+;  (let [pids (map :pid (with-mdb2 "espfj" (vec (fetch :pn-csv :only [:pid] :where {:pid {:$exists true}}))))]
+;    (with-mdb2 "espfj" 
+;      (let [rs (fetch :pn-apply :where {:resp "yes" :del {:$ne "1"}})]
+;        (doseq [r rs :let [{pid :pid from2 :from admin2 :admin} r
+;                           not-imported? (empty? (with-esp- (fetch :pn-apply :where {:pid pid :import-date {:$exists true}})))]]
+;          (when (and (in? (.toUpperCase pid) pids) not-imported?) 
+;            (insert- :pn-apply (into (dissoc r :resp) 
+;                                     {:from "福建" :from2 (wr3.clj.app.espfj/dd-province-fj from2)
+;                                      :admin "14" :admin2 admin2 
+;                                      :resp-reg "yes" :import-date (datetime)})) ) )) )
+;    "福建考评员导入完毕"))
+
+;(tmp-import-espfj-pn-apply)
+;(filter #(> (val %) 1) (frequencies (map :pid (with-esp- (fetch :pn-apply :only [:pid] :where {:import-date {:$exists true}})))))
+;(with-mdb2 "espfj" (vec (map :pid (fetch :pn-apply :only [:pid] :where {:resp "yes" :del {:$ne "1"}}))))
+;(print-seq (with-mdb2 "espfj" (vec (fetch :pn-apply :where {:pid "350102196004180455"}))))
+;(doseq [{n :name pid :pid a :address p :pcode} (with-esp- (fetch :pn-apply :where {:import-date {:$exists true}}))]
+;  (println n pid a p))
+
+;(require 'wr3.clj.file)
+;(defn tmp-import-espfj
+;  "从文本导入pid到espfj"
+;  []
+;  (let [f (fn [l] (let [[i nam pid] (split l ",")]
+;                    (when pid 
+;                      (with-mdb2 "espfj" (insert! :pn-csv {:i i :name (trim nam) :pid (.toUpperCase pid)}))))) ]
+;    (wr3.clj.file/line-filter "f:/espfj.csv" f)))
+;(tmp-import-espfj)
+;(with-mdb2 "espfj" (drop-coll! :pn-csv))
 
 ;(let [rt (with-mdb2 "espfj" (vec (fetch :pn-apply :limit 5 :only (vec (keys espfj-files)) 
 ;                                        :where {:del {:$ne "1"} :resp "yes"})))]

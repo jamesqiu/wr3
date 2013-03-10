@@ -527,8 +527,8 @@
    ["联系人手机" :mobile {:require true}]
    ["联系人邮箱" :email {:require true}]
    ["申请等级" :grade {:require true :t dd-grade :v 1 :title "报名申请时，填一个拟申请等级即可；\n报名申请通过后，可试情况申请多个等级的证书"}]
-   ["生产经营类型" :type {:t dd-type :require true :v 1}]
-   ["生产经营类别" :type2 {:t dd-type2 :require true :v 11}]
+   ["生产经营类型" :type {:t dd-type :require true :v 1 :title "最多选两个。"}]
+   ["生产经营类别" :type2 {:t dd-type2 :require true :v 11 :title "报名申请时，选填一个即可。"}]
    ["通讯地址" :address {:require true :style "width:300px" :title "请填写清楚通讯地址"}]
    ["联系电话" :tel {:require true }]
    ["传真" :tax {:require true }]
@@ -640,6 +640,9 @@
      :workdate "参加工作日期"
      :yyyy "年份"
      ;-- espfj
+     :admin2 "主管机关（地市）"
+     :from2 "常住地（地市）"
+     :import-date "导入时间"
      :titlefile "职称证明文件"
      :beginfile "相关专业从业年份证明文件"
      :proofmobile "证明人联系电话"

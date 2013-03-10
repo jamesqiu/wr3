@@ -645,7 +645,7 @@
       (if (empty? rs)
         (eui-tip "无已达标企业") 
         (result-html- 
-          rs ["企业名称" "达标类别" "达标等级" "实施考评的考评机构" "详情"] 
+          rs ["企业名称" "达标类别" "达标等级" "指定的考评机构" "详情"] 
           [:name :type2 :grade :orgid1 :_id] {:form "mot-en-review-doc"}))
       ))) 
 

@@ -221,6 +221,7 @@
     :usable (format-usable- v)
     :ptype (dd+ dd-portal v)
     :renew (dd+ dd-renew v)
+    :admin2 (:name (with-mdb2 "esp" (fetch-one :mot :only [:name] :where {:code v})))
     v))
 
 (defn- format-result-field-
@@ -791,7 +792,7 @@
                (result-html- rs [] [:admin :name :resp :resp-eval :resp-review :respdate-review :_id :_issue] 
                              {:form "docv/en-apply" :issue "en-apply"}))
         "org" (let [rs (with-esp- (fetch :org-apply :where (where-admin {:resp "yes"} admin)))]
-                (result-html- rs [] [:admin :name :resp :respdate :_id :_issue] 
+                (result-html- rs [] [:admin :name :grade :resp :respdate :_id :_issue] 
                               {:form "docv/org-apply" :issue "org-apply"}))
         "pn" (let [rs (with-esp- (fetch :pn-apply :where (where-admin {:resp "yes"} admin)))]
                (result-html- rs {:name "姓名"} [:admin :name :resp :respdate :_id :_issue]
@@ -1044,7 +1045,7 @@
         ftype (or ftype "")
         fvalue (or fvalue "")
         uri "skip='+$('#pagers').val()+'&ftype='+$('#ftype').val()+'&fvalue='+$('#fvalue').val()"
-        list-js (format "ajax_load($('#list'), '/c/esp/reg-list/%s?%s)" id uri)
+        list-js (format "ajax_load($('#list'), encodeURI('/c/esp/reg-list/%s?%s) )" id uri)
         tb (apply-tb id)
         where {:uid nil :del {:$ne "1"}}
         where (where-admin where admin)

@@ -57,7 +57,13 @@
 ; 初审通过后en/org/mot的ukey申请url连接，后跟pid
 (def ukey-apply-url-en (str "http://219.141.223.141:8080/userregister/ShowReport.wx?PAGEID=registerfirst_en"
                             "&report1_ACCESSMODE=update&from=register&txtpageid="))
-
+(println 
+  (let [cfg2 conf/cfg-apply-en
+        n (count cfg2)
+        n2 (- n 5)]
+    (concat (subvec cfg2 0 n2) (for [[v1 v2 m] (subvec cfg2 n2)] [v1 v2 (into m {:require false})]) )) 
+  )
+  
 (defn input
   "app: 填写考评员注册信息
   @ids 第一个参数为申请类型pn/en/org/mot，第二个参数为身份证号或组织机构代码pid（可选）" 
@@ -65,7 +71,8 @@
   (let [[ptype pid] ids
         r (when pid (with-pid- ptype pid))
         cfg ({"pn" conf/cfg-apply-pn 
-              "en" conf/cfg-apply-en 
+              "en" (let [c2 conf/cfg-apply-en n (count c2) n2 (- n 5)] 
+                     (concat (subvec c2 0 n2) (for [[v1 v2 m] (subvec c2 n2 (- n 2))] [v1 v2 (into m {:require false})]) )) 
               "org" conf/cfg-apply-org 
               "mot" conf/cfg-apply-mot} ptype)
         cfg (if (not pid) cfg (espc/cfg-set-values- cfg r))
@@ -94,8 +101,7 @@
                       (eui-button {:onclick (format "espfj_input_submit('%s', 'espn')" ptype)} "提交申请") (space 5)
                       (eui-button {:onclick "$('form').get(0).reset()"} " 重 填 ")) })]
        [:h2 {:style "padding:15px; background-color:lightgray; margin-bottom:0px; color:#333; text-shadow:0 1px 0 #EEE;"}
-        "版权所有：交通运输部 2012 年"] 
-       ]
+        "版权所有：交通运输部 2012 年"] ]
       (fileupload-dialog)) ))
 
 (defn- input-submit-check-
