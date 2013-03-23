@@ -46,16 +46,30 @@
         [:h2 (format "[%s] 的集合表: " db)]
         [:div (join (f dbc2) " &nbsp;|&nbsp; ")]) )))
 
+(defn pagers
+  "每页100行记录的eui-combo的options，注意key是integer型。
+  如: ([0 \"1-100\"] [100 \"第2页：101-200\"] [200 \"第3页：201-201\"]) "
+  [n limit]
+  (let [pages (int (Math/ceil (/ n limit)))]
+    (for [i (range pages) :let [ii (* i limit)]] 
+      [ii (format "%s-%s" (inc ii) (if (= i (dec pages)) n (* limit (inc i))))])))
+
 (defn data
   "service：给定db和collection，得到前1000条数据"
-  [ids]
+  [ids skip]
   (let [dbname (first ids)
         collection (second ids)
+        tb (keyword collection)
+        skip (or skip 0)
+        n (with-mdb2 dbname (fetch-count tb))
         limit 1000]
     (with-mdb2 dbname
       (html
-        [:h2 (format "[%s.%s]的数据(前%s条)：" dbname collection limit)]
-        (for [r (fetch (keyword collection) :limit limit)] 
+        [:h2 (format "[%s.%s]的数据：%s" dbname collection 
+                     (html (for [[k v] (pagers n limit)]
+                             [:a {:onclick (format "mdb_data(this,'%s','%s','%s')" dbname collection k) 
+                                  :style (format "margin-left:10px;color:%s" (if (= (str k) skip) "red" ""))} v])))]
+        (for [r (fetch tb :limit limit :skip (to-int skip 0))] 
           (html [:div (str (update-in r [:_id] #(str %)))]))))))
 
 ;;;--------------------- meta/dict管理

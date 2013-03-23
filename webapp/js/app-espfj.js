@@ -21,7 +21,9 @@ function espfj_onload(type_vals) {
 				$('#type').combobox('setText', typeText)				
 			}
 		}
-	}).combobox('setValues', type_vals)	
+	}).combobox('setValues', type_vals)
+	// 把初次报名申请的type2业务类别改为多选无限制
+	$('#type2').combobox({multiple:true, width:250})
 }
 
 function espfj_input_submit_check(form) {

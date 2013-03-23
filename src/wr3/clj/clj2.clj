@@ -495,3 +495,4 @@
 ;(join (reverse (map #(join (reverse (split % "")) "") (re-seq #"\d{3}|\d+$" (join (reverse (split "20000001" "")) "")))) " ")
 ;(-> (map #(-> % (split "") reverse (join "")) (->> (-> "20000001" (split "") reverse (join "")) (re-seq #"\d{3}|\d+$"))) reverse (join " "))
 ;(-> "20000001" (split "") reverse (join "") (->> (re-seq #"\d{3}|\d+$") (map #(-> % (split "") reverse (join "")))) reverse (join " "))
+

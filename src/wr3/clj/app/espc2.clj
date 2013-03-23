@@ -23,7 +23,7 @@
   (let [typ id
         type-name (dd-role typ)
         cert-name (dd-cert (keyword typ))
-        name2 (case typ "pn" "姓名" "名称")]
+        name2 (name-label typ)]
     (html 
       [:h1 type-name "信息查询"] 
       (eui-tip (format "请输入%s%s 或者 %s编号进行查询" type-name name2 cert-name))
@@ -288,46 +288,67 @@
         {:title "报名数统计图" :y "报名数"} 1200 600)
       (result-html- rs (into dd-form {:mot "主管机关"}) [:admin :mot :pn :org :en] {}) )))
 
-(def reg-filter-value-all- "<font color=gray>全部</font>")
+(def filter-value-all- "<font color=gray>全部</font>")
 
-(defn reg-filter-type
-  "ajax: 显示mot报名申请列表筛选类型'pn'/'en'/'mot'/'org' "
-  [id request]
+(defn- filter-type-
+  "@t 申请列表筛选类型'pn'/'en'/'mot'/'org' 
+  @admin '01' 或其他 
+  @reg? 是否u盘初次报名申请"
+  [t request reg?]
   (let [admin (user-admin request)
-        filter-combo {"" "--全部--" "admin" "主管机关" "name" "姓名/名称" "pid" "证件号" "resp-reg" "初审结果"}
+        f-resp (if reg? "resp-reg" "resp") ; resp或resp-reg字段
+        f-list (if reg? "reg-list" "apply-list") ; 显示链表的函数
+        filter-combo {"" "--全部--" "admin" "主管机关" "name" "姓名/名称" "pid" "证件号" f-resp "受理结果"}
         filter-combo (if (= admin "01") filter-combo (dissoc filter-combo "admin"))
-        filter-js (format "ajax_load($('#span1'), '/c/esp/reg-filter-value/%s?ftype='+$('#ftype').val())" id) 
+        filter-js (format "ajax_load($('#span1'), '/c/esp/filter-value/%s?isreg=%s&ftype='+$('#ftype').val())" t reg?) 
         uri "ftype='+$('#ftype').val()+'&fvalue='+$('#fvalue').val()"
-        list-js (format "ajax_load($('#list'), encodeURI('/c/esp/reg-list/%s?%s) )" id uri) ]
+        list-js (format "ajax_load($('#list'), encodeURI('/c/esp/%s/%s?%s) )" f-list t uri) ]
     (html
-      [:h2 (format "%s报名申请筛选" (dd-role id))]
+      [:h2 (format "进行%s申请的筛选" (dd-role t))]
       [:form#fm2
        [:label "筛选条件："] (eui-combo {:name "ftype" :id "ftype" :onchange filter-js} 
-                                   (case id ("pn" "mot") filter-combo
+                                   (case t ("pn" "mot") filter-combo
                                      ("en" "org") (into filter-combo {"grade" "级别" "province" "所在省市"}))) (space 5)
-       [:label "筛选内容："] [:span#span1 reg-filter-value-all-] (space 5)
+       [:label "筛选内容："] [:span#span1 filter-value-all-] (space 5)
        (eui-button {:onclick list-js :iconCls "icon-reload"} "按筛选条件刷新列表")])))
         
-(defn reg-filter-value
+(defn reg-filter-type
+  "ajax: mot查看初次报名申请列表筛选类型'pn'/'en'/'mot'/'org' "
+  [id request]
+  (filter-type- id request true))
+
+(defn apply-filter-type
+  "ajax: mot查看证书报名申请列表筛选类型'pn'/'en'/'org' "
+  [id request]
+  (filter-type- id request false))
+
+(defn filter-value
   "ajax：报名申请，根据筛选条件(@id ftype)，得到筛选内容 fvalue. 
-  @ids 第一个参数为'pn'/'en'/'mot'/'org', 第二个参数为ftype "
-  [id ftype request]
+  @ids 第一个参数为'pn'/'en'/'mot'/'org', 第二个参数为筛选字段 ftype 如'name'/'pid' "
+  [id ftype isreg request]
   (let [admin (user-admin request)
         typ id
         ftype (or ftype "")
         tb (apply-tb typ)
         attr {:name "fvalue" :id "fvalue"}
-        where {:uid nil :del {:$ne "1"}}
+        isreg? (= "true" isreg)
+        where {:uid (if isreg? nil {:$ne nil}) :del {:$ne "1"}}
         where (where-admin where admin)
-        f (fn [tb fd dd] 
-            (gen-array-map (for [e (sort (with-esp- (distinct-values tb fd :where where)))] [e (dd+ dd e)])))]
+        f (fn [fd dd] ; 得到指定字段值的下拉选择项如： {"yes" "同意" "no" "不同意"}
+            (gen-array-map (for [e (sort (with-esp- (distinct-values tb fd :where where)))] 
+                             [(or e "") (dd+ dd e)])))]
     (case ftype
-      "admin" (eui-combo attr (f tb "admin" dd-admin))
-      "grade" (eui-combo attr (f tb "grade" dd-grade))
-      "province" (eui-combo attr (f tb "province" dd-admin))
+      "admin" (eui-combo attr (f "admin" dd-admin))
+      "grade" (eui-combo attr (f "grade" dd-grade))
+      "province" (eui-combo attr (f "province" dd-admin))
       ("name" "pid") (eui-text attr)
-      "resp-reg" (eui-combo attr (f tb "resp-reg" dd-resp)) 
-      reg-filter-value-all-)))
+      ("resp-reg" "resp") (eui-combo attr (f ftype dd-resp))
+      filter-value-all-)))
+
+;(println 
+;  (for [e (sort (with-esp- (distinct-values :pn-apply "resp" :where {:uid  {:$ne nil}})))] 
+;    [(or e "") (dd+ dd-resp e)])
+;  )
 
 (defn mot-admin2-list
   "@id mot的代码 '01' ~ '35' "
@@ -376,6 +397,66 @@
       (when-let [oid (:_id r0)]
         (eui-button {:href (str (case id "pn" ukey-reapply-url-pn ukey-reapply-url-en) pid) :target "_blank"} 
                     "再次申请登录认证U盘")) )))
+
+;------ mot查看pn/org/en证书申请列表，可进行条件筛选。@see mot查看初次u盘报名申请
+(defn- apply-resp-th-
+  "资格/资质证书申请的列表显示列头
+  @t pn/en/org/mot "
+  [t]
+  {:name (name-label t) 
+   :resp (case t "en" "受理结果" "审核结果") ; en的申请由org受理，mot审核；其他的申请又mot直接审核
+   :respdate (case t "en" "受理日期" "审核日期")
+   })
+  
+(defn- apply-resp-fs-
+  "资格/资质证书申请的列表显示字段
+  @t pn/en/org "
+  [t]
+  (case t
+    "pn" [:admin :name :pid :org :type :date :resp :_id]
+    "en" [:admin :province :name :pid :type2 :grade :date :resp :resp-review :_id]
+    [:admin :province :name :pid :type :grade :date :resp :_id] ))
+
+(defn apply-list
+  "service: 证书申请列表
+  @id pn/en/org 
+  @skip 分页skip值 "
+  [id skip ftype fvalue request]
+  (let [uid (wr3user request) 
+        admin (user-admin request)
+        mot-en? (and (wr3role? request "mot") (= id "en")) ; mot查看en
+        org-en? (and (wr3role? request "org") (= id "en")) ; org查看en
+        skip (or skip 0)
+        ftype (or ftype "")
+        fvalue (or fvalue "")
+        uri "skip='+$('#pagers').val()+'&ftype='+$('#ftype').val()+'&fvalue='+$('#fvalue').val()"
+        list-js (format "ajax_load($('#list'), encodeURI('/c/esp/apply-list/%s?%s) )" id uri)
+        tb (apply-tb id)
+        where (where-apply {})
+        where (where-admin where admin)
+        where (if (nullity? ftype) where 
+                (into where {(keyword ftype) (case ftype
+                                               ("name" "pid") (re-pattern fvalue)
+                                               "resp" (case fvalue ("yes" "no") fvalue {:$nin ["yes" "no"]})
+                                               fvalue)}))
+        where (cond
+                mot-en? (into where {:orgid {:$exists true}}) ; 已经选择了考评机构的企业
+                org-en? (into where {:orgid {:$in [uid]}}) ; org只能查看由它进行考评的en 
+                :else where) 
+        form (cond 
+               (= id "pn") "mot-pn-apply"
+               (= id "org") "mot-org-apply" 
+               mot-en? "mot-en-apply" ; mot对en的受理
+               org-en? "org-en-apply" )  ; org对en的受理
+        count1 (with-mdb2 "esp" (fetch-count tb :where where))
+        rs (with-esp- (fetch tb :skip (to-int skip) :limit 100 :where where :sort {:date -1})) ]
+    (html
+      [:h2 (format "%s申请列表" (dd-cert (keyword id)))]
+      (pager-html count1 skip list-js)
+      (result-html- rs (apply-resp-th- id) (apply-resp-fs- id) 
+                    {:form form
+                     :readonly? (user-readonly? request)})
+      (when (> count1 100) (eui-tip "有多页，请点击下拉框翻页。")))))
 
 ;;------ 导入福建数据（文件）
 (def espfj-files

@@ -367,6 +367,8 @@
                 (wr3.util.Exec/exec (format "%s convert -resize 100x100 %s%s %s%s" 
                                             gm-dir ems-file-dir fname1 ems-file-dir fname2))
                 (log- (into m0 {:url url :file fname1})))
+      "link" (let [{title :Title desc :Description url :Url } m]
+               (log- (into m0 {:url url :title title :desc desc})))
       (log- (into m0 {:in (str "未知类型：" m)}) ))
     (.put ems-login-map- from login-code)    
     (xml-text m (format "已接收[%s]信息\n%s\n访问：\nhttp://gotoreal.com/c/weixin/ems/%s" msg-type (datetime) login-code))))
@@ -377,10 +379,11 @@
   (let [rs (mdb/with-mdb2 "weixin" 
              (vec (mongo/fetch :log :limit 100 :where {:from from :to "ems"} :sort {:date -1})))]
     (html
-      (for [r rs :let [{t :type d :date} r ds (html [:font {:color "gray"} " " d] [:br])]]
+      (for [r rs :let [{t :type d :date} r 
+                       ds (html [:font {:color "gray"} " " d] [:br])]]
         (case t
           "text" (let [s0 (escape-html (:in r))
-                       s (if (> (count s0) 100) (str (subs s0 0 100) "...") s0)]
+                       s (if (> (count s0) 50) (str (subs s0 0 50) "...") s0)]
                    [:div ds (cond 
                               (.startsWith s0 "http://ci.baidu.com/") [:a {:href s0} "多媒体链接"] 
                               (.startsWith s0 "http://") [:a {:href s0} s]
@@ -390,10 +393,14 @@
                      [:div  ds [:a {:href (format "/wx/ems/%s.jpg" f1)} [:img {:src (format "/wx/ems/%s-s.jpg" f1)}]]])
           "location" (let [{x :x y :y label :label} r] 
                        [:div ds (format "定位于：%s<br/>坐标：%s, %s" label x y) [:br] 
-                        [:a {:href (gmap-url- x y)} "看地图"]]) 
+                        [:a {:href (gmap-url- x y)} "看地图"]])
+          "link" [:div ds [:a {:href (:url r)} (:title r)] [:br] 
+                  (let [desc (or (:desc r) "空") len (count desc)] (subs desc 0 (min 50 len)))]
           [:div ds (format "暂未处理类型为%s的消息" t)])) 
       [:div {:style "text-align:center; font-weight:bolder"} 
        [:br] [:br] [:a {:href "/c/weixin/ems-logout"} "注销退出"]] )))
+
+(println (count "【公布减肥秘方】最近半年瘦了7公斤，主要是依照杨定一医师《真原医》中下图的饮食指南，多吃高纤蔬菜水果、五谷杂粮；"))
   
 (defn ems-logout
   [request]

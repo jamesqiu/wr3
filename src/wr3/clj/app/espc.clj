@@ -11,6 +11,14 @@
   [where admin]
   (if (= admin "01") where (into where {:admin admin})))
 
+(defn where-reg
+  "为where条件增加正常初次报名申请筛选条件"
+  [where] (into where {:uid nil :del {:$ne "1"}}))
+
+(defn where-apply
+  "为where条件增加正常证书申请筛选条件"
+  [where] (into where {:uid {:$ne nil} :del {:$ne "1"}}))
+
 (defn apply-tb
   "根据字符串 'pn'/en/org/mot 得到表名 :pn-apply 等"
   [typ]
@@ -161,15 +169,18 @@
   [on-off]
   (case on-off "true" "直接颁发" "否"))
 
-(defn- format-type
+(defn- format-type12
   "把形如 '1&2&5' 或者 '3'的多个或者1个类型转换成名称显示 "
-  [types]
+  [types dd]
   (if (integer? types) 
-    (dd-type types)
+    (dd types)
     (if (nullity? types) types
       (let [ss (split types "&")
-            nn (map #(dd+ dd-type %) ss)]
+            nn (map #(dd+ dd %) ss)]
         (join nn ", ")))))
+
+(defn- format-type  [types] (format-type12 types dd-type))
+(defn- format-type2 [types] (format-type12 types dd-type2))
 
 (defn format-orgid1
   "通过uid字符串得到org名称， @m {:link true}"
@@ -210,7 +221,7 @@
   [k v]
   (case k
     :type (format-type v)
-    :type2 (dd+ dd-type2 v) 
+    :type2 (format-type2 v) 
     :grade (dd+ dd-grade v)
     :fulltime (if v "专职" "<font color=gray>兼职</font>")
     :pnids (join (format-ids- :pn v {:link true :form "pn-doc" :uid true}) "、")
@@ -224,6 +235,8 @@
     :admin2 (:name (with-mdb2 "esp" (fetch-one :mot :only [:name] :where {:code v})))
     v))
 
+(defn- format-admin- [m v] (dd+ (or (:admin m) dd-admin-short) v))
+  
 (defn- format-result-field-
   "把列表显示中某个字段的值进行格式化，如 :type字段的'1'->'道路运输'
   @row 一行数据如 {:type '1' ..}
@@ -251,7 +264,7 @@
       (:freport :refine-doc) (html [:a {:href v0 :target "_blank"} "下载"] (space 3)
                                    [:a {:href (when (not-nullity? v0) (str "/c/esp/doc-html?fname=" v0)) 
                                         :target "_blank"} "查看"])
-      :admin (or (get (or (:admin m) dd-admin) v) v)
+      :admin (format-admin- m v)
       :respdate (if (nil? v0) "<font color=gray>尚未处理</font>" v)
       :respdate-review (if (nil? v0) "<font color=gray>尚未处理</font>" v)
       :cstate (if (nil? v0) "正常" "撤销") ; 考评机构证书状态
@@ -298,7 +311,7 @@
   [tb k v m]
   (case k ; 显示转换，如：有些代码可以用字典得到名称
     :belong (str v (when-let [n (wr3user-name v)] (format " (%s)" n)))
-    :admin (or (get (or (:admin m) dd-admin) (str v)) v) ; espfj 可在m中指定 {:admin dd-admin-fj}
+    :admin (format-admin- m v); espfj 可在m中指定 {:admin dd-admin-fj}
     (:uid :admin-uid) (if (:show-uid? m) v (wr3user-name v))
     :from (or (get (or (:from m) dd-province) v) v) ; espfj 可在m中指定 {:admin dd-province-fj}
     :orgid (if (:orgid-as-select m) 
@@ -407,25 +420,28 @@
       (eui-combo {:id "pagers" :name "pagers" :value skip :onchange onchange} (pager-options count1)) ))
   
 (defn list-
-  "共用函数：列表显示pn、org、en。相关函数： pn-list en-list org-list org-en-archive
+  "共用函数：列表显示已有cid证书的pn、org、en。相关函数： pn-list en-list org-list 
   @id name的pattern如'张' 或者为nil
   @tb :pn :org :en 
   @col-names @col-ids 列显示名称，存储名称
   @m 含:skip、:limit、:where等参数"
   [id tb col-names col-ids m]
   (let [nam (tb {:pn "考评员" :org "考评机构" :en "交通运输企业"})
-        rt (search-auto- tb id m)
+        tb-apply (apply-tb (name tb))
+        rt (search-auto- tb-apply id m)
         where (or (:where m) {})
-        count1 (if id (tb-count tb {:s id :where where}) (tb-count tb {:where where}))]
+        count1 (if id (tb-count tb-apply {:s id :where where}) 
+                 (tb-count tb-apply {:where where}))]
     (html
       [:div#table1
        [:h1 (format "%s 列表（%s 名）" nam (count rt))]
+       (eui-tip (format "仅列出已经获得交通运输企业安全生产标准化%s的%s" (dd-cert tb) (dd-form tb)))
        (pager-html count1 (:skip m) (format "esp_pager('/c/esp/%s-list/%s')" (name tb) (if id id "")))
        (eui-button 
-         {:href (format "/c/esp/list-export/exp-%s列表.csv?content-type=text/csv&charset=GBK&tb=%s&s=%s" 
+         {:href (format "/c/esp/list-exp/exp-%s列表.csv?content-type=text/csv&charset=GBK&tb=%s&s=%s" 
                         (dd-form tb) (name tb) (or id "")) :style "margin:10px"} 
          (format "文件导出（全部%s行）" count1))
-       (result-html- rt col-names col-ids {:form (str "docv/" (name tb))})]
+       (result-html- rt col-names col-ids {:form (str "docv/" (name tb-apply))})]
       [:br] )))
 
 (defn result-page-
@@ -451,8 +467,9 @@
   (let [fcol (fn [r c] (let [v (c r)] 
                          (wr3.util.Csv/toCsv 
                            (case c
-                             :type (dd+ dd-type v)
-                             :type2 (dd+ dd-type2 v)
+                             :admin (format-admin-  {} v)
+                             :type (format-type v)
+                             :type2 (format-type2 v)
                              :grade (dd+ dd-grade v)
                              :orgid1 (format-orgid1 v)
                              v))))
@@ -461,28 +478,25 @@
       (join (map #(wr3.util.Csv/toCsv %) col-names) ",") "\r\n"
       (join (for [r rt] (frow r) ) "\r\n"))))
 
-(defn list-export
+(defn list-exp
   "导出列表。调用url形如：
-  /c/esp/list-export/列表.csv?content-type=text/csv&charset=GBK&tb=en-apply&s=张
+  /c/esp/list-exp/列表.csv?content-type=text/csv&charset=GBK&tb=en-apply&s=张
   @tb 'pn' 'en' 'org'
   @s 搜索字符串如'张' 
   todo：增加id搜索字符串，真正导出列表"
-  [tb s]
-  (let [tb (keyword tb)
-        rt (if (= tb :en-apply) 
-             (with-esp- (fetch :en-apply :where {:cid {:$exists true}}))
-             (search-auto- tb s {:limit 0}))
-        col-names ({:en-apply ["企业名称" "达标类别" "达标等级" "实施考评的考评机构"]
-                    :pn ["姓名" "业务类型"]
-                    :en ["企业名称" "业务类型" "达标等级"]
-                    :org ["考评机构名称" "等级"]
-                    } tb)
-        col-ids ({:en-apply [:name :type2 :grade :orgid1]
-                  :pn [:name :type]
-                  :en [:name :type :grade]
-                  :org [:name :grade]
-                  } tb)
-        ]
+  [tb s request]
+  (let [admin (user-admin request)
+        where (where-admin {:cid {:$exists true} :del {:$ne "1"} } admin)
+        tb-apply (apply-tb tb)
+        rt (search-auto- tb-apply s {:limit 0 :where where})
+        col-names (case tb
+                    "pn" ["主管机关" "姓名" "单位" "业务类型" "证书号"]
+                    "en" ["主管机关" "名称" "业务类别" "等级" "证书号"]
+                    "org" ["主管机关" "名称" "业务类型" "等级" "证书号"] )
+        col-ids (case tb
+                  "pn" [:admin :name :org :type :cid]
+                  "en" [:admin :name :type2 :grade :cid]
+                  "org" [:admin :name :type :grade :cid]) ]
     (result-csv rt col-names col-ids) ))
 
 (def ukey-reapply-url-pn (str "http://219.141.223.141:8080/userregister/ShowReport.wx?PAGEID=registerfirst_pn"
@@ -650,6 +664,10 @@
         rs (search-auto- tb term {:limit 20})] ;  :where {:cid {:$exists true}}
     (json-str (map #(format "%s, 证书号:%s" (:name %) (:cid %)) rs))))
 
+(defn name-label 
+  ":name字段在pn中的显示"
+  [t] (case t "pn" "姓名" "名称"))
+
 (def hot---------- nil)
 
 (defn hot
@@ -774,43 +792,52 @@
       (result-html- rs [] [:name :date :type :renew :_id] 
                     {:form (format "mot-%s-apply" id)} ) )))
 
+(defn- list-apply-passed-
+  "得到证书申请通过的en/pn/org列表
+  @id 'pn/en/org' "
+  [id request]
+  (let [admin (user-admin request)
+        where {(if (= id "en") :resp-review :resp) "yes" :del {:$ne "1"}}
+        where (where-admin where admin)
+        tb-apply (apply-tb id)]
+    (with-esp- (fetch tb-apply :where where))))
+
+(defn- cols-apply-passed-
+  [id]
+  (case id 
+    "en"  [:admin :name :type2 :grade :_id :_issue]
+    "org" [:admin :name :type :grade :_id :_issue]
+    "pn"  [:admin :name :type :_id :_issue] ))
+
+(defn- th-apply-passed-
+  [id]
+  (case id
+    "en"  ["主管机关" "名称" "业务类别" "等级"]
+    "org" ["主管机关" "名称" "业务类型" "等级"]
+    "pn"  ["主管机关" "姓名" "业务类型"] ))
+
 (defn cert-resp
   "service: 用户：org和mot；mot制发考评员、考评机构证书，org制发企业证书。
   @id 'pn','en','org' "
   [id request]
-  (let [title (format "%s制发" (dd-cert (keyword id)))
-        admin (user-admin request)]
+  (let [tb-apply (str id "-apply")
+        rs (list-apply-passed- id request)]
     (html
-      [:h1 title]
-      (eui-tip (if (= id "pn") "系统可导出列表，由专业打印机进行打印制发。"
-                 "系统可直接套打A3纸，也可生成电子证书。"))
-      [:h2 "审核通过的申请：" ] 
-      (eui-button {:href (format "/c/esp/cert-resp-export/%s/exp-证书列表.csv?content-type=text/csv&charset=GBK" id) 
+      [:h1 (format "%s制发" (dd-cert (keyword id)))]
+      (eui-tip (if (= id "pn") "所有已审核通过的申请，从系统可导出列表，由专业打印机进行打印制发。"
+                 "所有已审核通过的申请，从系统可直接套打A3纸，也可生成电子证书送印刷机构批量套印。"))
+      (eui-button {:href (format "/c/esp/cert-resp-export/%s/exp-申请列表.csv?content-type=text/csv&charset=GBK" id) 
                    :target "_blank" :style "margin:10px"} "导出电子表格")
-      (case id
-        "en" (let [rs (with-esp- (fetch :en-apply :where (where-admin {:resp-review "yes"} admin)))]
-               (result-html- rs [] [:admin :name :resp :resp-eval :resp-review :respdate-review :_id :_issue] 
-                             {:form "docv/en-apply" :issue "en-apply"}))
-        "org" (let [rs (with-esp- (fetch :org-apply :where (where-admin {:resp "yes"} admin)))]
-                (result-html- rs [] [:admin :name :grade :resp :respdate :_id :_issue] 
-                              {:form "docv/org-apply" :issue "org-apply"}))
-        "pn" (let [rs (with-esp- (fetch :pn-apply :where (where-admin {:resp "yes"} admin)))]
-               (result-html- rs {:name "姓名"} [:admin :name :resp :respdate :_id :_issue]
-                             {:form "docv/pn-apply" :issue "pn-apply"}))
-        nil) )))
+      (result-html- rs {:name (name-label id)} (cols-apply-passed- id) 
+                    {:form (str "docv/" tb-apply) :issue tb-apply}) )))
 
 (defn cert-resp-export
   [id request]
-  (let [tb (apply-tb id)
-        col-names (case id
-                    "en" ["企业名称" "业务类型" "证书号" ]
-                    ("org" "pn") ["名称" "业务类型" "证书号" ])
-        col-ids (case id 
-                  "en" [:name :type2 :cid]
-                  ("org" "pn") [:name :type :cid])
-        f (case id "en" :resp-review ("org" "pn") :resp)
-        rs (with-esp- (fetch tb :where {f "yes"}))]
-    (result-csv rs col-names col-ids) ))
+  (let [rs (list-apply-passed- id request)
+        ths (th-apply-passed- id)
+        cols (cols-apply-passed- id)
+        cols2 (subvec cols 0 (- (count cols) 2))]
+    (result-csv rs ths cols2) ))
 
 (defn- has-digit4- [n] (some #(= \4 %) (str n)))
 (defn- cert-sid-max 
@@ -1000,21 +1027,6 @@
   ([t admin m] (apply-reg-count- t false admin m))
   ([t admin] (apply-reg-count- t false admin {})))
 
-(defn- apply-reg-th-
-  "初次报名申请，或资格证书申请的列表显示列头
-  @t pn/en/org/mot "
-  [t]
-  {:name (case t "pn" "姓名" "名称") })
-
-(defn- apply-cert-th-
-  "资格/资质证书申请的列表显示列头
-  @t pn/en/org/mot "
-  [t]
-  {:name (case t "pn" "姓名" "名称") 
-   :resp (case t "en" "受理结果" "审核结果") ; en的申请由org受理，mot审核；其他的申请又mot直接审核
-   :respdate (case t "en" "受理日期" "审核日期")
-   })
-
 (defn- apply-reg-fs-
   "初次报名申请的列表显示字段
   @t pn/en/org/mot "
@@ -1024,16 +1036,6 @@
     "mot" [:admin :name :date :resp-reg :_id]
     "en" [:admin :name :type2 :grade :date :resp-reg :_id]
     [:admin :name :type :grade :date :resp-reg :_id] ))
-  
-(defn- apply-cert-fs-
-  "资格/资质证书申请的列表显示字段
-  @t pn/en/org/mot "
-  [t]
-  (case t
-    "pn" [:admin :name :pid :org :title :type :date :respdate :_id]
-    "mot" [:admin :name :date :resp :respdate-review :_id]
-    "en" [:admin :name :type2 :grade :date :resp :respdate-review :_id]
-    [:admin :name :type :grade :date :resp :respdate :_id] ))
   
 (defn reg-list
   "service: 报名初审列表
@@ -1047,7 +1049,7 @@
         uri "skip='+$('#pagers').val()+'&ftype='+$('#ftype').val()+'&fvalue='+$('#fvalue').val()"
         list-js (format "ajax_load($('#list'), encodeURI('/c/esp/reg-list/%s?%s) )" id uri)
         tb (apply-tb id)
-        where {:uid nil :del {:$ne "1"}}
+        where (where-reg {})
         where (where-admin where admin)
         where (if (nullity? ftype) where 
                 (into where {(keyword ftype) (case ftype
@@ -1059,7 +1061,7 @@
     (html
       [:h2 (format "%s报名申请列表" (dd-role id))]
       (pager-html count1 skip list-js)
-      (result-html- rs (apply-reg-th- id) (apply-reg-fs- id) 
+      (result-html- rs {:name (name-label id)} (apply-reg-fs- id) 
                     {:form (str "reg-resp-doc/" id)
                      :readonly? (user-readonly? request)})
       (when (> count1 100) (eui-tip "有多页，请点击下拉框翻页。")))))
@@ -1152,9 +1154,7 @@
     (when-not (nullity? id)
       (with-mdb2 "esp" (update! tb {:_id (object-id id)}
                                 {:$set {:del (if (= deleted "1") "0" "1")}}))
-      (if (= deleted "0") 
-        "已删除申请记录，关闭后请刷新列表。"
-        "已恢复申请记录，关闭后请刷新列表。"))))
+      (format "已%s申请记录，关闭后请刷新列表。" (if (= deleted "0") "删除" "恢复")))))
 
 ;(println (with-esp- (fetch :en-apply :where {:orgid {:$in ["org1"]}})))
 
@@ -1162,33 +1162,15 @@
   "service: 主管机关对考评员、考评机构、企业的申请受理. 
   @id 代表申请来源的字符串：pn,org,en 无U盘报名申请还包括mot "
   [id request]
-  (let [tb (apply-tb id) ; :pn-apply :org-apply :en-apply
-        uid (wr3user request) 
-        cname (dd-cert (keyword id))
-        where {:uid {:$ne nil} :del {:$ne "1"}}
-        admin (user-admin request)
-        where (where-admin where admin)
-        mot-en? (and (wr3role? request "mot") (= id "en"))
-        org-en? (and (wr3role? request "org") (= id "en"))
-        where (if org-en? (into where {:orgid {:$in [uid]}}) where) ; 显示选中当前org来进行考评的企业
-        rs (with-esp- (fetch tb :where where :sort {:date -1}))
-        form (cond 
-               (= id "pn") "mot-pn-apply"
-               (= id "org") "mot-org-apply" 
-               mot-en? "mot-en-apply" ; mot对en的受理
-               org-en? "org-en-apply" )  ; org对en的受理
-        tip (case id 
-              "pn" (str "同意则颁发资格证书；<br/>注：直接从事交通运输安全生产行政管理工作10年以上，"
-                        "熟悉掌握交通运输安全生产相关法规和企业安全生产标准化规定者，身体健康，经本人申请、所在单位推荐、"
-                        "发证主管机关核准，可直接办理考评员资格证。")
-              "org" "主管机构处理：（同意/不同意）+意见"
-              "en" "企业申请处理：主管机关（同意+指派考评机构）/（不同意+意见）——> 考评机构（同意）/（不同意+意见）——> 主管机关审核")]
+  (let [cname (dd-cert (keyword id))
+        tip (str "请点击详情/查看进行处理" (when (= id "en") "，指派一个考评机构进行企业考评。"))]
     (html
       [:h1 (format "受理%s申请" cname)]
       (eui-tip tip)
-      (result-html- rs (apply-cert-th- id) (apply-cert-fs- id)
-                    {:form form
-                     :readonly? (user-readonly? request)}) [:br] )))
+      [:div#filter]
+      [:div#list]
+      (for [[k v] {"filter" "apply-filter-type" "list" "apply-list"}]
+        [:script (format "ajax_load($('#%s'), '/c/esp/%s/%s')" k v id)]) )))
 
 (defn backup
   "service: 考评机构、企业变更申请录入表单

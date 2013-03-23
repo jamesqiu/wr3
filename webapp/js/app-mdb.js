@@ -20,10 +20,13 @@ function mdb_onload() {
  * 
  * @return
  */
-function mdb_data(obj,db,coll) {
-	$('a.coll').css('color', '')
-	$(obj).css('color', 'red')
-	$("div#data").load(wr3path+"../c/mdb/data/"+db+"/"+coll);
+function mdb_data(obj,db,coll,skip) {
+	if (!skip) {
+		$('a.coll').css('color', '')
+		$(obj).css('color', 'red')
+	}
+	var skip = skip ? ('?skip='+skip) : ''
+	$("div#data").load(wr3path+"../c/mdb/data/"+db+"/"+coll+skip);
 }
 
 /**

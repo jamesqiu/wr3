@@ -1,4 +1,4 @@
-(ns ^{:doc "企业安全生产标准化管理系统 Enterprise Safety Production Standardization。" }
+(ns ^{:doc "企业安全生产标准化管理系统 Enterprise Safety Production Standardization。db说明见package.html" }
      wr3.clj.app.esp)
 
 ;; 注：use 后的函数可从/c/esp/foo 调用
@@ -72,14 +72,14 @@
   "为pn-list en-list org-list 生成用户限制相关的where条件 "
   [request]
   (let [admin (user-admin request)]
-    (where-admin {} admin)))
+    (where-admin {:cid {:$exists true} :del {:$ne "1"} } admin)))
 
 (defn pn-list
   "service: 考评员列表
   @id name的pattern如'张' "
   [id skip request]
   (let [where (where- request)]
-    (list- id :pn [] [:name :type :sex :edu :cid :admin :_id] {:skip (to-int skip 0) :where where})))
+    (list- id :pn [] [:admin :name :org :type :cid :_id] {:skip (to-int skip 0) :where where})))
 
 (defn pn-learn
   "service: 考评员培训、考试查询
@@ -144,7 +144,7 @@
   "service: 考评机构列表
   @id name的pattern如'学校' "
   [id skip request]
-  (list- id :org [] [:name :type :grade :cid :admin :_id] 
+  (list- id :org [] [:admin :name :type :grade :cid :_id] 
          {:skip (to-int skip 0) :where (where- request)})) 
 
 (defn org-pn-archive
@@ -383,7 +383,7 @@
   "service: 企业列表
   @id name的pattern如'安徽' "
   [id skip request]
-  (list- id :en [] [:name :type :grade :cid :admin :_id] 
+  (list- id :en [] [:admin :name :type2 :grade :cid :_id] 
          {:skip (to-int skip 0) :where (where- request)}))
 
 (defn en-stand
@@ -609,7 +609,7 @@
   "主管机关对org评审过的企业考评结论审核"
   [request]
   (let [admin (user-admin request)
-        where {:del {:$ne "1"} :uid {:$ne nil} :resp-eval {:$ne nil} }
+        where (where-apply  {:resp-eval {:$ne nil}})
         where (where-admin where admin)        
         rs (with-esp- (fetch :en-apply :where where))
         rs2 (filter #(> (days (:respdate-review %)) 7) 

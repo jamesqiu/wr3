@@ -264,7 +264,7 @@ function textarea_val(id) {
  * @see ajax_load
  */
 function ajax_post(url, func) {
-	$.post(url, function(data) {
+	$.post(encodeURI(url), function(data) {
 		alert('提示：' + data)
 		if (func)
 			func(data)
@@ -279,7 +279,7 @@ function ajax_post(url, func) {
  * @param func 提交后的客户化动作，可选
  */
 function ajax_form(fm, url, func) {
-	$.post(url, fm.serializeArray(), function(data) {
+	$.post(encodeURI(url), fm.serializeArray(), function(data) {
 		alert('提示：' + data)
 		if (func)
 			func(data)

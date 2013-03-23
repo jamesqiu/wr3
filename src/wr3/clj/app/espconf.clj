@@ -245,6 +245,7 @@
     42 "城市轨道交通运输"
     43 "出租汽车"
     51 "交通运输建筑施工"
+    61 "其他"
    ))
 ; 撤销考核员资格原因
 (def dd-reason
@@ -391,6 +392,8 @@
     "35" "珠江航务管理局"
     ))
 (def dd-admin (dissoc dd-admin0 "00"))
+(def dd-admin-short (into dd-admin {"06" "内蒙古" "22" "广西" "27" "西藏" "31" "宁夏" "32" "新疆" 
+                                    "33" "新疆兵团" "34" "长航局" "35" "珠航局"}))
 
 (def dd-admin-province0 (dissoc dd-admin0 "01" "34" "35")) ; 有“ "00" "--请选择--" ”项
 (def dd-admin-province (dissoc dd-admin-province0 "00")) ; 无“ "00" "--请选择--" ”项
@@ -513,7 +516,9 @@
    ["传真号码" :fax {:require true}]
    ["单位基本情况相关材料" :met {:t 'file :require true :title "注：多次上传会覆盖之前的。"}]
    ["专职考评员聘用<br/>证明与职称证明" :pns {:t 'file :require true :title "文件10M以内大小；多次上传会覆盖之前的。"}]
-   ["换证原因<b>（仅换证申请）</b>" :renew {:t dd-renew}]
+   ["考评管理制度" :rule {:t 'file :title "文件10M以内大小；多次上传会覆盖之前的。"}]
+   ["其他材料" :others {:t 'file :title "没有可不填；文件10M以内大小；多次上传会覆盖之前的。"}]
+   ["换证原因<b>（仅换证申请）</b>" :renew {:t dd-renew}]   
    ])
 ; 企业申请表
 (def cfg-apply-en ; en-input-form 
@@ -613,7 +618,7 @@
      :readonly "操作权限"
      :reason "原因"
      :refine-doc "整改报告"
-     :resp "受理结果"
+     :resp "受理结果"        ; mot对en的受理结果，或对pn/org/en的审核结果
      :resp-eval "考评结果"   ; org对en的考评意见
      :resp-reg "初审结果"    ; mot对初次报名申请的意见
      :resp-review "审核结果" ; mot对en的最终审核意见

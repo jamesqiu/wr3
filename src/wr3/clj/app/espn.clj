@@ -57,12 +57,6 @@
 ; 初审通过后en/org/mot的ukey申请url连接，后跟pid
 (def ukey-apply-url-en (str "http://219.141.223.141:8080/userregister/ShowReport.wx?PAGEID=registerfirst_en"
                             "&report1_ACCESSMODE=update&from=register&txtpageid="))
-(println 
-  (let [cfg2 conf/cfg-apply-en
-        n (count cfg2)
-        n2 (- n 5)]
-    (concat (subvec cfg2 0 n2) (for [[v1 v2 m] (subvec cfg2 n2)] [v1 v2 (into m {:require false})]) )) 
-  )
   
 (defn input
   "app: 填写考评员注册信息
@@ -78,11 +72,12 @@
         cfg (if (not pid) cfg (espc/cfg-set-values- cfg r))
         title (str (conf/dd-role ptype) "报名申请")
         ukey-apply-url (case ptype "pn" ukey-apply-url-pn ukey-apply-url-en)
+        advice (:advice-reg r)
         tip (case (:resp-reg r) 
-              "yes" (format "已经通过初审 %s，请进行 <b><a href='%s%s'>登录认证U盘申请</a></b>。" 
-                            (apply str (repeat 5 "<img src='/css/easyui/icons/ok.png'/> ")) ukey-apply-url pid)
+              "yes" (format "已经通过初审 %s，请进行 <b><a href='%s%s'>登录认证U盘申请</a></b>。附审核意见：【%s】" 
+                            (apply str (repeat 5 "<img src='/css/easyui/icons/ok.png'/> ")) ukey-apply-url pid advice)
               "no" (format "没有通过初审 %s，请核实所填信息或咨询主管机关。<font color=red>附审核意见：【%s】</font> " 
-                        (apply str (repeat 5 "<img src='/css/easyui/icons/cancel.png'/> ")) (:advice-reg r))
+                        (apply str (repeat 5 "<img src='/css/easyui/icons/cancel.png'/> ")) advice)
               "请认真填写如下所有信息，并等待主管机关进行报名申请初审。")]
     (html-body
       {:js "app-espfj.js" 
@@ -114,14 +109,22 @@
                  (case ptype "pn" (wr3.bank.IDUtil/is18 pid)
                    (and pid (wr3.bank.OrgID/isid (.toUpperCase (trim pid))))))
                "证件号码：格式不符合规则")
+        c2b (or (let [pid (:pid m) 
+                      r (with-mdb2 "esp" (fetch-one (keyword (str ptype "-apply")) :where {:pid pid :resp-reg "yes" :del {:$ne "1"} }))]
+                  (or (nullity? pid) (nil? r)))
+                (format "证件号码：已经存在证件号为%s的报名申请并通过了初审，不能再次申请。" (:pid m)))
         c3 (or (not= "00" (:admin m)) "主管机关：不能为空")
         c4 (or (not= "00" (:province m)) "所在省市：不能为空")
         [c5 c6 c7 c8 c9 c10] (for [k [:photo :proof :proofb :proof2 :mobile :type]] 
                                (or (not= ptype "pn") (not-nullity? (k m)) 
                                    (str ((into conf/dd-meta {:type "申请专业类型"}) k) "：不能为空")))
-        cs [c1 c2 c3 c4 c5 c6 c7 c8 c9 c10] ]
+        c11 (or (case ptype "pn" true (not-nullity? (:contact m))) "联系人姓名：不能为空")
+        cs [c1 c2 c2b c3 c4 c5 c6 c7 c8 c9 c10 c11] ]
     {:rt (apply all-true? cs) :msg (join (remove true? cs) "\n")}))
-  
+
+;(println (with-mdb2 "esp" (fetch-one (keyword (str "pn" "-apply")) :where {:name "重复"})))
+;(println (with-mdb2 "esp" (fetch-one :pn-apply :where {:pid "53342319481203657X"})))
+
 (defn input-submit
   "service: 初次报名申请表提交保存或更新. @todo 已经审批通过的update时带上 :resp-reg :advice-reg
   @id form名称如'pn' 'en' 'org' "
