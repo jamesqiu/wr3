@@ -36,7 +36,7 @@
          (eui-button {:onclick (format "espfj_input_login($('#fm1'), 'espn', '%s')" apply-type)} "登 录")]]
        body-tail ])))
   
-(defn- with-pid-
+(defn- with-pid-type-
   "得到 pn-apply/en-apply/org-apply/mot-apply 表中指定pid的一条记录"
   [ptype pid]
   (let [tb (keyword (str (or ptype "pn") "-apply"))]
@@ -49,7 +49,8 @@
   (let [f (case ptype "pn" :name :contact)]
     (json-str 
       (cond (or (nullity? pname) (nullity? pid)) false
-            :else (let [r (with-pid- ptype pid)] (= pname (f r))) ))))
+            :else (let [r (with-pid-type- (keyword ptype) pid)] 
+                    (= pname (f r))) ))))
 
 ; 初审通过后pn的ukey申请url连接，后跟pid
 (def ukey-apply-url-pn (str "http://219.141.223.141:8080/userregister/ShowReport.wx?PAGEID=registerfirst_pn"
@@ -63,7 +64,7 @@
   @ids 第一个参数为申请类型pn/en/org/mot，第二个参数为身份证号或组织机构代码pid（可选）" 
   [ids request]
   (let [[ptype pid] ids
-        r (when pid (with-pid- ptype pid))
+        r (when pid (with-pid-type- ptype pid))
         cfg ({"pn" conf/cfg-apply-pn 
               "en" (let [c2 conf/cfg-apply-en n (count c2) n2 (- n 5)] 
                      (concat (subvec c2 0 n2) (for [[v1 v2 m] (subvec c2 n2 (- n 2))] [v1 v2 (into m {:require false})]) )) 

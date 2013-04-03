@@ -24,6 +24,8 @@ function espfj_onload(type_vals) {
 	}).combobox('setValues', type_vals)
 	// 把初次报名申请的type2业务类别改为多选无限制
 	$('#type2').combobox({multiple:true, width:250})
+	// 处理admin下拉列表
+	espfj_admin_list()
 }
 
 function espfj_input_submit_check(form) {
@@ -107,6 +109,7 @@ function espfj_input_login(fm, app, ptype) {
 	var ptype2 = ptype ? (ptype+"/") : ""
 	$.post('/c/'+app2+'/input-login-check', fm.serialize(), function(data) {
 		var json = $.parseJSON(data)
+		alert(json)
 		if (json==true) {
 			window.location.href = '/c/'+app2+'/input/'+ptype2+$('#pid').val()
 		} else {
@@ -124,4 +127,22 @@ function espfj_pn_list_onchange(isPagers) {
 	var url = '/c/espfj/pn-apply-list?skip=' + skip
 	url += '&del='+ $('#del').val() + '&resp='+$('#resp').val()
 	ajax_load($('#list'),  url)
+}
+
+/**
+ * 操作admin下拉列表
+ */
+function espfj_admin_list() {
+	var e = $("select#admin")
+	e.after('<input id="admin_more" type="checkbox" value="y" onchange="espfj_admin_change()"> 显示地市级 </input>')
+}
+
+function espfj_admin_change() {	
+	var checked = $("#admin_more").prop('checked')
+	var selected = $('select#admin').val()
+//	alert("选择：" + checked + ", select=" + selected)
+	var url = '/c/espc2/all-admin-list/'+selected + '?checked=' + checked
+	$.get(url, function(data) {
+		$('select#admin').html(data)
+	})
 }

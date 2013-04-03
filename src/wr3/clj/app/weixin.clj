@@ -400,8 +400,6 @@
       [:div {:style "text-align:center; font-weight:bolder"} 
        [:br] [:br] [:a {:href "/c/weixin/ems-logout"} "注销退出"]] )))
 
-(println (count "【公布减肥秘方】最近半年瘦了7公斤，主要是依照杨定一医师《真原医》中下图的饮食指南，多吃高纤蔬菜水果、五谷杂粮；"))
-  
 (defn ems-logout
   [request]
   (session-close request)

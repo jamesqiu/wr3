@@ -9,7 +9,7 @@
 
 (defn where-admin
   [where admin]
-  (if (= admin "01") where (into where {:admin admin})))
+  (if (= admin "01") where (into where {:admin (re-pattern (str "^" admin))})))
 
 (defn where-reg
   "为where条件增加正常初次报名申请筛选条件"
@@ -18,6 +18,10 @@
 (defn where-apply
   "为where条件增加正常证书申请筛选条件"
   [where] (into where {:uid {:$ne nil} :del {:$ne "1"}}))
+
+(defn where-cid
+  "为where条件增加取得证书的筛选条件"
+  [where] (into {:cid {:$exists true} :del {:$ne "1"}} where))
 
 (defn apply-tb
   "根据字符串 'pn'/en/org/mot 得到表名 :pn-apply 等"
@@ -235,8 +239,15 @@
     :admin2 (:name (with-mdb2 "esp" (fetch-one :mot :only [:name] :where {:code v})))
     v))
 
-(defn- format-admin- [m v] (dd+ (or (:admin m) dd-admin-short) v))
-  
+(defn- get-mot-name-
+  "得到地市级admin的名称"
+  [code] (:name (with-mdb2 "esp" (fetch-one :mot :only ["name"] :where {:code code}))))
+
+(defn- format-admin- 
+  [m v]
+  (if (= 4 (count v)) (or (get-mot-name- v) v) 
+    (dd+ (or (:admin m) dd-admin-short) v)))
+               
 (defn- format-result-field-
   "把列表显示中某个字段的值进行格式化，如 :type字段的'1'->'道路运输'
   @row 一行数据如 {:type '1' ..}
@@ -284,10 +295,11 @@
   @head 表头名称 [余额 币种 日期]，如果为空如[] '() nil，则使用dd-meta自动从cols参数得到head；
     如果为map如{:name '姓名'}，则为覆盖dd-meta的定制字段名称；
     如果为非空列表如['姓名' '年龄' ..]，则直接用作表头。
-  @cols 列名称 [:ye :bz :_created] 
+  @cols 列名称 [:ye :bz :_created], 自动滤除为nil 
   @m 客户化定制 {} 设置 :form 表示cols中含 :_id 时文档显示所使用的form "
   ([rt head cols m]
-    (let [head (if (and (seq head) (sequential? head)) head
+    (let [cols (remove nil? cols)
+          head (if (and (seq head) (sequential? head)) head
                  (let [dd (if (map? head) (merge dd-meta head) dd-meta)]
                    (for [c cols] (or (dd c) c))))]
       (result-html 
@@ -486,7 +498,7 @@
   todo：增加id搜索字符串，真正导出列表"
   [tb s request]
   (let [admin (user-admin request)
-        where (where-admin {:cid {:$exists true} :del {:$ne "1"} } admin)
+        where (where-admin (where-cid {}) admin)
         tb-apply (apply-tb tb)
         rt (search-auto- tb-apply s {:limit 0 :where where})
         col-names (case tb
@@ -661,7 +673,7 @@
   @term 自动完成控件自动附上的参数，带搜索字符串 "
   [id term request]
   (let [tb (keyword id)
-        rs (search-auto- tb term {:limit 20})] ;  :where {:cid {:$exists true}}
+        rs (search-auto- tb term {:limit 20})] 
     (json-str (map #(format "%s, 证书号:%s" (:name %) (:cid %)) rs))))
 
 (defn name-label 
@@ -732,7 +744,7 @@
   (let [tb (keyword id)
         tb-apply (apply-tb id)
         uid (wr3user request)
-        rs (with-esp- (fetch tb-apply :where {:uid uid :cid {:$exists true}}))
+        rs (with-esp- (fetch tb-apply :where (where-cid {:uid uid})))
         y (case tb :pn 5 :org 5 :en 3 1) ; 有效期年份
         cname (dd-cert tb)]
     (html
@@ -805,16 +817,16 @@
 (defn- cols-apply-passed-
   [id]
   (case id 
-    "en"  [:admin :name :type2 :grade :_id :_issue]
-    "org" [:admin :name :type :grade :_id :_issue]
-    "pn"  [:admin :name :type :_id :_issue] ))
+    "en"  [:admin :name :type2 :grade :cid :_id :_issue]
+    "org" [:admin :name :type :grade :cid :_id :_issue]
+    "pn"  [:admin :name :type :cid :_id :_issue] ))
 
 (defn- th-apply-passed-
   [id]
   (case id
-    "en"  ["主管机关" "名称" "业务类别" "等级"]
-    "org" ["主管机关" "名称" "业务类型" "等级"]
-    "pn"  ["主管机关" "姓名" "业务类型"] ))
+    "en"  ["主管机关" "名称" "业务类别" "等级" "证书号"]
+    "org" ["主管机关" "名称" "业务类型" "等级" "证书号"]
+    "pn"  ["主管机关" "姓名" "业务类型" "证书号"] ))
 
 (defn cert-resp
   "service: 用户：org和mot；mot制发考评员、考评机构证书，org制发企业证书。
@@ -914,13 +926,14 @@
   (let [[apply-type oid] ids
         tb (keyword apply-type) ; :en-apply :org-apply 
         r (with-oid- tb oid)
+        {cid0 :cid date0 :cdate name0 :name } r
         max (cert-sid-max (left apply-type "-") (:admin r))
         uid (:uid r)
         type-dd (if (= tb :en-apply) dd-type2 dd-type)
         type-value (if (= tb :en-apply) (:type2 r) (:type r)) 
-        cfg [["证书编号" :cid {:v (cert-id {:admin (:admin r) :max max})}]
-             ["有效期开始日期" :date {:v (date)}]
-             ["名称" :name {:v (:name r) :style "width:400px"}]
+        cfg [["证书编号" :cid {:v (or cid0 (cert-id {:admin (:admin r) :max max}))}]
+             ["有效期开始日期" :date {:v (or date0 (date))}]
+             ["名称" :name {:v name0 :style "width:400px"}]
              ["类型类别" :type {:v (dd+ type-dd type-value)}]
              ["达标/资质等级" "grade" {:v (dd+ dd-grade (:grade r))}]
              ["正本/副本选择" :copy {:t {"正本" "—— 打印正本 ——" "副本" "—— 打印副本 ——"}}]
@@ -1054,6 +1067,7 @@
         where (if (nullity? ftype) where 
                 (into where {(keyword ftype) (case ftype
                                                ("name" "pid") (re-pattern fvalue)
+                                               "admin" (re-pattern (str "^" fvalue))
                                                "resp-reg" (case fvalue ("yes" "no") fvalue {:$nin ["yes" "no"]})
                                                fvalue)}))
         count1 (with-mdb2 "esp" (fetch-count tb :where where))
@@ -1082,13 +1096,35 @@
       [:div#filter]
       [:div#list])))
 
+(defn gen-admin-province-dd
+  "省级主管机关得到下属所有主管机关；地市级主管机关得到所有平级主管机关
+  @code 2位或者4位admin代码"
+  [code]
+  (let [code2 (subs code 0 2)
+        rs (with-esp- (fetch :mot :only ["code" "name"] :where {:code (re-pattern (str "^" code2))}))
+        m (for [{c :code n :name} rs] [c  n])]
+    (gen-array-map m)))
+
+(defn- add-upper-admin-dd-
+  "地市级主管机关加上dd-admin
+  @code4 4位地市级主管机关代码"
+  [code4]
+  (let [code2 (subs code4 0 2)
+        m (for [[k v] (dissoc (gen-admin-province-dd code4) code2)] [k (str (space 4) v)])
+        m (sort (concat m dd-admin))]
+    (gen-array-map m) ))
+
 (defn reg-resp-doc
   "处理一个报名申请
   @id object-id 字符串 "
   [ids request]
   (let [[typ id] ids ; typ: pn/en/org/mot id: object-id
+        admin (user-admin request)
         tb (apply-tb typ)
         rs (with-oid- tb id)
+        dd-admin2- (let [admin0 (:admin rs)]
+                     (if (= 2 (count admin0)) (add-upper-admin-dd- admin0)
+                       (gen-admin-province-dd admin0)))
         deleted (or (:del rs) "0") ; '1': 此申请已经标记为删除, '0': 正常
         js (format "ajax_post('/c/esp/apply-resp-del/%s/%s/%s', function(){window.location.reload()} )" typ id deleted)
         js2 (format (str "ajax_post('/c/esp/apply-resp-change-admin/%s/%s?admin='+$('#admin').val(), " 
@@ -1100,7 +1136,7 @@
                            (eui-button {:onclick js :iconCls "icon-undo" :style "margin:10px"} "恢复此记录")
                            (eui-button {:onclick js :iconCls "icon-cancel" :style "margin:10px"} "删除此记录") )
                          (space 5)
-                         (eui-combo {:id "admin" :value (:admin rs)} dd-admin) 
+                         (eui-combo {:id "admin" :value (:admin rs)} dd-admin2-) 
                          (eui-button {:onclick js2 :title "请关闭，交由调整后的主管机关处理该报名申请。"} "调整主管机关") )
            :after (html 
                     [:hr]
@@ -1156,14 +1192,13 @@
                                 {:$set {:del (if (= deleted "1") "0" "1")}}))
       (format "已%s申请记录，关闭后请刷新列表。" (if (= deleted "0") "删除" "恢复")))))
 
-;(println (with-esp- (fetch :en-apply :where {:orgid {:$in ["org1"]}})))
-
 (defn apply-resp
   "service: 主管机关对考评员、考评机构、企业的申请受理. 
   @id 代表申请来源的字符串：pn,org,en 无U盘报名申请还包括mot "
   [id request]
   (let [cname (dd-cert (keyword id))
-        tip (str "请点击详情/查看进行处理" (when (= id "en") "，指派一个考评机构进行企业考评。"))]
+        tip (str "请点击详情/查看进行处理" 
+                 (when (= id "en") "，指派一个考评机构进行企业考评（注：尚未预选两个考评机构的企业不显示）。"))]
     (html
       [:h1 (format "受理%s申请" cname)]
       (eui-tip tip)

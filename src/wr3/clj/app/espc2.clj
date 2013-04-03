@@ -95,7 +95,7 @@
       (pager-html count1 skip onchange) [:br]
       (result-html- rs {:pid "证件号" :contact "联系人" :mobile "联系人手机"} 
                     [:name :admin :contact :mobile :pid :uid :usable :_id] 
-                    {:admin (merge dd-role dd-admin)
+                    {:admin (merge dd-role dd-admin) ; 为何如此？
                      :form "mot-user-doc"
                      :show-uid? true
                      :readonly? (user-readonly? request)}))))
@@ -117,7 +117,7 @@
   "根据portal type从mdb库得到portal条目；除了“相关下载”外的其他显示项
   @portal-type dd-portal的key：1/2/3/4 "
   [portal-type]
-  (let [limit (case portal-type (1 2 3) 7 12) ]
+  (let [limit (case portal-type (1 2 3) 6 10) ]
     [:ul (portal-data-li- portal-type limit) ] ))
 
 (defn- portal-downloads
@@ -146,6 +146,16 @@
       (when (not-nullity? file) (format "<p><a href='%s'>附件</a></p>" file)) [:hr][:br]
       [:center (eui-button-close)])))
   
+(defn plist 
+  "app: 显示portal中某项的所有item列表
+  @id 1/2/3/4/5"
+  [id]
+  (let [typ (if (in? id (keys dd-portal)) (to-int id) 1)]
+    (html-body
+      (html-css "body {padding:20px}")
+      [:h1 (dd-portal (str typ))]
+      [:ul (portal-data-li- typ 100)] )))
+
 (defn- portal-div-moc-con-
   "生成portal页面"
   []
@@ -165,34 +175,41 @@
       [:div.moc_list_left_news
        [:div.news_top
         [:h3 "政策法规"] ; portal-type: 1
-        [:span [:a {:href "#"} "更多&gt;&gt;"]]]
+        [:span [:a {:href "/c/esp/plist/1" :target "_blank"} "更多&gt;&gt;"]]]
        (portal-items 1) ]
       [:div.moc_list_left_news
        [:div.news_top
         [:h3 "图片新闻"] ; portal-type: 2
-        [:span [:a {:href "#"} "更多&gt;&gt;"]]]
+        [:span [:a {:href "/c/esp/plist/2" :target "_blank"} "更多&gt;&gt;"]]]
        (portal-items 2) ]
       [:div.moc_list_left_space "" ]
       [:div.moc_list_left_news
        [:div.news_top
         [:h3 "工作动态"] ; portal-type: 3
-        [:span [:a {:href "#"} "更多&gt;&gt;"]] ]
+        [:span [:a {:href "/c/esp/plist/3" :target "_blank"} "更多&gt;&gt;"]] ]
        (portal-items 3) ] ]
      [:div.moc_list_right 
       [:div.moc_list_right_news
-       [:div.right_top [:h3 "公告公示"]]  ; portal-type: 4
+       [:div.right_top 
+        [:h3 "公告公示"]
+        [:span [:a {:href "/c/esp/plist/4" :target "_blank"} "更多&gt;&gt;"]]]  ; portal-type: 4
        (portal-items 4) 
        [:ul {:style "border-top:1px dashed gray"}
         [:li [:a {:href "/c/esp/verify" :target "_blank" :style "font-size:14px; font-weight:bold"} 
               [:img {:src "img/question.png"}] " 查验 企业/考评员/考评机构"]]
         [:li [:h3 {:style "font-size:15px; color:gray"} "相关下载："]]
         (portal-downloads)
-;        [:li "连接1"]
-;        [:li "连接2"]
-;        [:li "连接3"]
-;        [:li "连接4"]
+        [:li [:span [:a {:href "/c/esp/plist/5" :target "_blank" :style "font-family:宋体;color:#800"} "更多&gt;&gt;"]]]
         ] ] ] ]]])
 
+; <div style="z-index:10; position:absolute; padding:10px; left:0px; top:0px; background-color:yellow; font-weight:bold; font-family:微软雅黑; font-size:20px">
+;  <a href="./guide.html" target="_blank">系统使用帮助查看</a>（<a href="./guide.doc">下载</a>）</div>
+(def portal-guide-div  
+  [:div {:style (str "z-index:10; position:absolute; padding:6px; left:0px; top:0px; background-color:yellow; "
+                     "font-weight:bold; font-size:20px; font-family:微软雅黑")} 
+   [:a {:href "./guide.html" :target "_blank"} "查看系统使用帮助"] 
+   (format "（%s）" (html [:a {:href "./guide.doc"} "下载"] ))])
+    
 (defn portal-gen
   "生成esp/index.html文件代码html "
   []
@@ -209,15 +226,11 @@
           [:title title]
           [:link {:href "esp.css" :rel "stylesheet" :type "text/css"}] ]
          [:body
+          portal-guide-div
           [:div {:id "moc_top"} [:img {:src "img/j_r1_c1.jpg"}]]
           [:div {:id "moc_main"}
            (portal-div-moc-con-)
            [:div.moc_footer copyright] ]]]))))
-
-
-;(logs-olap)
-;(with-esp- (fetch :pn-apply :where {:$or [{:name "test1"} {:cid ""}] :cid {:$exists false}}))
-;(with-esp- (fetch :log :where {:type "login" :date #"2012-12-07" :pid #"998"}))
 
 (defn verify-search
   "ajax: 非mot用户（pn/en/org）查询其他用户的信息"
@@ -229,7 +242,7 @@
         rt (with-esp- (fetch tb :where {:$or [{:name nam} {:cid cid}] :cid {:$exists true}}))
         n (count rt) ]
     (html [:h2 "查询到" n "条记录"]
-          (when (not= 0 n) (result-html- rt [] [:name :cid :admin] {})))))
+          (when (not= 0 n) (result-html- rt [] [:name (when-not (= typ "pn") :grade) :cid (case typ "en" :type2 :type) :admin] {})))))
 
 (defn verify-input
   [typ]
@@ -299,7 +312,7 @@
         f-resp (if reg? "resp-reg" "resp") ; resp或resp-reg字段
         f-list (if reg? "reg-list" "apply-list") ; 显示链表的函数
         filter-combo {"" "--全部--" "admin" "主管机关" "name" "姓名/名称" "pid" "证件号" f-resp "受理结果"}
-        filter-combo (if (= admin "01") filter-combo (dissoc filter-combo "admin"))
+        ; filter-combo (if (= admin "01") filter-combo (dissoc filter-combo "admin"))
         filter-js (format "ajax_load($('#span1'), '/c/esp/filter-value/%s?isreg=%s&ftype='+$('#ftype').val())" t reg?) 
         uri "ftype='+$('#ftype').val()+'&fvalue='+$('#fvalue').val()"
         list-js (format "ajax_load($('#list'), encodeURI('/c/esp/%s/%s?%s) )" f-list t uri) ]
@@ -334,21 +347,18 @@
         isreg? (= "true" isreg)
         where {:uid (if isreg? nil {:$ne nil}) :del {:$ne "1"}}
         where (where-admin where admin)
+        f-distinct (fn [fd] (with-esp- (distinct-values tb fd :where where)))
         f (fn [fd dd] ; 得到指定字段值的下拉选择项如： {"yes" "同意" "no" "不同意"}
-            (gen-array-map (for [e (sort (with-esp- (distinct-values tb fd :where where)))] 
-                             [(or e "") (dd+ dd e)])))]
+            (gen-array-map (for [e (sort (f-distinct fd))] [(or e "") (dd+ dd e)])))]
     (case ftype
-      "admin" (eui-combo attr (f "admin" dd-admin))
+      "admin" (eui-combo attr (if (= admin "01") 
+                                (gen-array-map (for [e (sort (unique (map #(subs % 0 2) (f-distinct "admin"))))] [e (dd-admin e)]))
+                                (f "admin" (gen-admin-province-dd admin))))
       "grade" (eui-combo attr (f "grade" dd-grade))
       "province" (eui-combo attr (f "province" dd-admin))
       ("name" "pid") (eui-text attr)
       ("resp-reg" "resp") (eui-combo attr (f ftype dd-resp))
       filter-value-all-)))
-
-;(println 
-;  (for [e (sort (with-esp- (distinct-values :pn-apply "resp" :where {:uid  {:$ne nil}})))] 
-;    [(or e "") (dd+ dd-resp e)])
-;  )
 
 (defn mot-admin2-list
   "@id mot的代码 '01' ~ '35' "
@@ -441,7 +451,7 @@
                                                fvalue)}))
         where (cond
                 mot-en? (into where {:orgid {:$exists true}}) ; 已经选择了考评机构的企业
-                org-en? (into where {:orgid {:$in [uid]}}) ; org只能查看由它进行考评的en 
+                org-en? (into where {:orgid1 uid}) ; org只能查看由它进行考评的en 
                 :else where) 
         form (cond 
                (= id "pn") "mot-pn-apply"
@@ -458,6 +468,64 @@
                      :readonly? (user-readonly? request)})
       (when (> count1 100) (eui-tip "有多页，请点击下拉框翻页。")))))
 
+(defn all-admin-list
+  "ajax：得到所有mot的代码名称列表
+  @id 当前选中的代码
+  @checked 'true'/'false' "
+  [id checked]
+  (let [rs (with-esp- (fetch :mot :only ["code" "name"] :where {:code {:$ne nil}} :sort {:code 1}))
+        m (if (not= checked "true") dd-admin
+            (try (gen-array-map (for [{c :code n :name} rs] [c n]))
+              (catch Exception e dd-admin)))]
+    (html (for [[k v] m] [:option {:value k :selected (when (= (subs id 0 2) k) true)} 
+                          (if (= 2 (count k)) v (str (space 4) v))]))))
+
+(defn rsql
+  "mot查询更改记录字段"
+  []
+  (let [css {:style "font-weight:bold"}]
+    (html-body 
+      [:form#fm1 {:name "fm1" :method "POST" :action "/c/esp/rsql-query-result" :target "_blank"}
+       [:label css "tb: "] [:input {:name "tb" :value "pn-apply" :style "width:150px"}] [:br]
+       [:label css "oid: "] [:input {:name "oid" :style "width:300px"} ""] [:br]
+       [:label css "where: "] [:input {:name "where" :style "width:500px"} ""] [:br]
+       [:input {:type "submit"}]])))
+
+(defn rsql-query-result
+  [tb oid where]
+  (let [tb (or tb "mot")
+        where (or where "{}")
+        where (if (not-nullity? oid) {:_id (object-id oid)} (read-string where))]
+    (html-body
+      [:h1 tb]
+      [:h2 (str where)]
+      [:table.wr3table
+       (for [r (with-esp- (fetch (keyword tb) :limit 100 :where where))
+             :let [id (str (:_id r))]]
+         [:tr [:td [:a {:href (format "/c/esp/rsql-edit/%s/%s" tb id) :target "_blank"} "查看"]] 
+          [:td (str (update-in r [:_id] str) "<br/>")]])])))
+
+(defn rsql-edit
+  [ids]
+  (let [[tb oid] ids
+        css {:style "font-weight:bold"}
+        r (with-mdb2 "esp" (fetch-one (keyword tb) :where {:_id (object-id oid)}))]
+    (html-body
+      (str (update-in r [:_id] str)) [:hr]
+      [:form#fm1 {:name "fm1" :method "POST" :action (format "/c/esp/rsql-edit-result/%s/%s" tb oid) :target "_blank"}
+       [:label css "field："] [:input {:name "field" :style "width:150px"} ] [:br]
+       [:label css "value："] [:input {:name "value" :style "width:500px"} ] [:br]
+       [:input {:type "submit"}]])))
+
+(defn rsql-edit-result
+  [ids field value]
+  (let [[tb oid] ids
+        v (if (= value "nil") nil value)]
+    [:pre (str tb oid field value)]
+    (with-mdb2 "esp" 
+      (update! (keyword tb) {:_id (object-id oid)} {:$set {(keyword field) v}})) 
+    "完成更新"))
+  
 ;;------ 导入福建数据（文件）
 (def espfj-files
   {:photo "照片"
@@ -531,7 +599,7 @@
 ;(use 'wr3.clj.datagen)
 ;--- 注：文件大小不能大于64k（65536）字节，否则报错
 ;(with-esp- (fetch :user :where {:pid (re-pattern (str "(?i)" "52251616-X"))}))
-;(with-mdb2 "esp" (destroy! :pn-apply {:pid "532525197003260011"}))
+;(with-mdb2 "esp" (destroy! :mot {:code "28xx"}))
 ;(update- :portal {} (fn [r] (map-key-rename r [:title :type] [:ptitle :ptype])) :replace)
 ;(insert- :user  {:name "交通运输企业测试001", :pid "12345678-0", :role "en", :uid "en-12345678-0", :admin "01" :contact "岳传志"})
 ;(with-esp- (fetch :en-apply :where {:orgid ["4f8aebd175e0ae92833680f4" "4f8aebd175e0ae92833680ff"]}))

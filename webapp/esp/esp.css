@@ -124,7 +124,7 @@ img {
 	float: left;
 }
 
-.news_top span {
+.news_top span, .right_top span {
 	width: 60px;
 	height: 30px;
 	line-height: 30px;
@@ -133,7 +133,7 @@ img {
 	display: block;
 }
 
-.news_top span a,.news_top span a:hover {
+.news_top span a, .news_top span a:hover, .right_top span a, .right_top span a:hover {
 	color: #fff;
 }
 
@@ -176,7 +176,7 @@ img {
 }
 
 .right_top h3 {
-	width: 230px;
+	width: 160px;
 	height: 30px;
 	line-height: 30px;
 	margin: 0;

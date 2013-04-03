@@ -28,9 +28,10 @@
         :else false)
       ; 其他页面注册用户都能访问
       (cond 
-        (= fname "pview") true ; pview在主页，不用登录就可以访问
+        (in? fname ["pview" "plist"]) true ; pview在主页，不用登录就可以访问
         (= fname "mot-user-check-save") true ; ajax调用
         (in? fname ["verify" "verify-input" "verify-search"]) true ; 公众查验en/pn/org
+        (.startsWith fname "rsql") (wr3role? request "mot") ; 只有mot用户能后台更改字段
         (= fname "clean") (wr3role? request "root")
         uid true
         ; (.startsWith fname "hot") true ; 实名举报不登录可访问   
@@ -72,14 +73,14 @@
   "为pn-list en-list org-list 生成用户限制相关的where条件 "
   [request]
   (let [admin (user-admin request)]
-    (where-admin {:cid {:$exists true} :del {:$ne "1"} } admin)))
+    (where-admin (where-cid {:resp "yes"}) admin)))
 
 (defn pn-list
   "service: 考评员列表
   @id name的pattern如'张' "
   [id skip request]
   (let [where (where- request)]
-    (list- id :pn [] [:admin :name :org :type :cid :_id] {:skip (to-int skip 0) :where where})))
+    (list- id :pn [] [:admin :name :org :type :cid :cdate :_id] {:skip (to-int skip 0) :where where})))
 
 (defn pn-learn
   "service: 考评员培训、考试查询
@@ -144,7 +145,7 @@
   "service: 考评机构列表
   @id name的pattern如'学校' "
   [id skip request]
-  (list- id :org [] [:admin :name :type :grade :cid :_id] 
+  (list- id :org [] [:admin :name :type :grade :cid :cdate :_id] 
          {:skip (to-int skip 0) :where (where- request)})) 
 
 (defn org-pn-archive
@@ -263,7 +264,7 @@
   "service: 考评机构目前证书"
   [request]
   (let [uid (wr3user request)
-        rs (with-esp- (fetch :org-apply :where {:uid uid :cid {:$exists true}}))]
+        rs (with-esp- (fetch :org-apply :where (where-cid {:uid uid})))]
     (html
       [:h1 "考评机构资质证书"]
       (if (empty? rs)
@@ -383,7 +384,7 @@
   "service: 企业列表
   @id name的pattern如'安徽' "
   [id skip request]
-  (list- id :en [] [:admin :name :type2 :grade :cid :_id] 
+  (list- id :en [] [:admin :name :type2 :grade :cid :cdate :_id] 
          {:skip (to-int skip 0) :where (where- request)}))
 
 (defn en-stand
@@ -417,13 +418,15 @@
   [request]
   (let [uid (wr3user request)
         admin (or (user-admin request) "01")
-        rs (with-esp- (fetch :user :where {:role "org" :usable {:$ne "0"} :del {:$ne "0"} :admin admin})) ; 共同主管机关的所有考评机构
+        ;rs (with-esp- (fetch :user :where {:role "org" :admin admin :usable {:$ne "0"} :del {:$ne "0"} :pid {:$exists true}})) ; 共同主管机关的所有考评机构
+        rs (with-esp- (fetch :org-apply :where (where-cid {:uid {:$exists true} :resp "yes"}) 
+                             :sort {:grade 1 :cid 1}))
         r (first (with-esp- (fetch :en-apply :where {:uid uid} :sort {:date -1}))) ; 最近一次申请记录
         ] 
     (html
       [:h1 (format "%s主管的考评机构（%s 名）" (dd+ dd-admin admin) (count rs))]
       (eui-tip "请在如下的考评机构列表中自行选择两个。")
-      (result-html- rs [] [:admin :name :contact :_select] {}) [:br]
+      (result-html- rs [] [:admin :name :type :grade :cid :contact :tel :_select] {}) [:br]
       (eui-button {:onclick "esp_en_select_org()"} "提 交")
       [:script (format "esp_mark_selected('%s')" (join (:orgid r) ","))] )))
            
@@ -497,30 +500,37 @@
   "service: mot对pn、org、en的复杂条件搜索
   @id 'pn' 'org' 'en' "
   [id request]
-  (let [tb (keyword id) ; :pn :org :en
+  (let [tb (apply-tb id) ; :pn :org :en 
         vars (query-vars2 request)
-        filters (case tb :pn [:admin :type] (:org :en) [:admin :type :grade])
-        col-ids (case tb :pn [:name :type :cid :admin :_id] (:org :en) [:name :type :grade :cid :admin :_id])
+        filters (case tb :pn-apply [:admin :type] (:org-apply :en-apply) [:admin :type :grade])
+        col-ids (case tb :pn-apply [:name :type :cid :admin :_id] (:org-apply :en-apply) [:name :type :grade :cid :admin :_id])
         s (:s vars)
         where (into {(if (wr3.util.Charsetx/hasChinese s) :name :cid) (re-pattern (:s vars))} 
                     (map #(if (= "0" (% vars)) nil [% (% vars)]) filters))
+        where (where-cid where)
         rt (with-esp- (fetch tb :limit 100 :where where))
         count (count rt)]
     (html
       (eui-tip (if (= 100 count) "提示：结果太多（≥100），请适当增加搜索条件。" 
                  (format "搜索到 %s 条符合条件的结果。" count)))
-      (result-html- rt [] col-ids {:form (str "docv/" id)}))))
+      (result-html- rt [] col-ids {:form (str "docv/" id "-apply")}))))
+
+(defn- mot-dim-group-
+  [tb dim]
+  (let [where (where-cid {})
+        rs (with-esp- (distinct-values tb (name dim) :where where))]
+    (for [e (sort rs)] {dim e :count (tb-count tb {:where (into {dim e} where)})})))
 
 (defn mot-dim
   "service: mot对pn、en、org的维度统计图表
   @id 'pn' 'org' 'en' 
   @dim 维度如'admin' 'grade' 'type' 'edu' "
   [id dim request]
-  (let [tb (keyword id)
+  (let [tb (apply-tb id)
         nam (dd-form tb)
         dim (keyword dim)
         dim-nam (dd-meta dim)
-        rt (with-esp- (mdb-group tb [dim]))
+        rt (mot-dim-group- tb dim);(with-esp- (mdb-group tb [dim]))
         dd (case dim :admin dd-admin :grade dd-grade :type dd-type :edu str)
         m (for [r rt] (let [v0 (dim r)
                             v (case dim (:admin :edu) v0 (:grade :type) (to-int v0))] 
@@ -558,10 +568,10 @@
            (fn [rt]
              (html
                (case typ
-                 :pn (let [uid (:uid rt) t (:type rt)
-                           rs (with-esp- (fetch :pn-train :where {:uid uid :type t}))]
+                 :pn (let [pid (:pid rt) t (:type rt)
+                           rs (with-esp- (fetch :pn-train :where {:pid pid :type t}))]
                        (html [:h2 "该考评员“" (dd-type (to-int t 0)) "”类型的培训、考试记录："]
-                             (result-html- rs [] [:name :type :train-id :exam-date :exam-score]) [:br][:br]
+                             (result-html- rs [] [:name :type :train-id :train-hour :exam-date :exam-score]) [:br][:br]
                              [:div {:style "border:1px solid lightgray; padding: 10px"}
                               (eui-tip "直接从事交通运输安全生产行政管理工作10年以上，熟悉掌握交通运输安全生产相关法规和企业安全生产标准化规定者：") [:br]
                               (eui-button {:href "/c/esp/mot-pn-direct" :target "_blank"} "直接颁发操作") [:br][:br]
@@ -637,7 +647,7 @@
 (defn mot-en-passed
   "已达标企业列表（全国或本月）"
   []
-  (let [rs (with-esp- (fetch :en-apply :where {:cid {:$exists true}}))]
+  (let [rs (with-esp- (fetch :en-apply :where (where-cid {})))]
     (html
       [:h2 "已达标企业："] 
       (eui-button {:href "/c/esp/mot-en-export/exp-达标企业列表.csv?content-type=text/csv&charset=GBK" 
@@ -652,7 +662,7 @@
 (defn mot-en-export
   "导出列表"
   []
-  (let [rs (with-esp- (fetch :en-apply :where {:cid {:$exists true}}))
+  (let [rs (with-esp- (fetch :en-apply :where (where-cid {})))
         frow (fn [r] (join (map #(wr3.util.Csv/toCsv %)
                                 [(:name r)
                                  (dd-type2 (to-int (:type2 r)))
@@ -729,10 +739,11 @@
 (defn mot-pn-train-list
   "service: 列出考评员培训考试列表"
   [skip request]
-  (let [count1 (tb-count :pn-train)
-        admin (user-admin request)
+  (let [admin (user-admin request)
         skip (to-int skip 0)
-        rt2 (with-esp- (fetch :pn-train :skip skip :limit 100 :sort {:train-start 1} :where (where-admin {} admin)))] 
+        where (where-admin {:pid {:$exists true}} admin)
+        count1 (tb-count :pn-train {:where where})
+        rt2 (with-esp- (fetch :pn-train :skip skip :limit 100 :sort {:train-start 1} :where where))]
     (html
       [:div#pn_train_list
        [:h2 (format "已录入的考评员培训、考试记录（%s 条）：" count1)]
@@ -757,9 +768,9 @@
         (barf yyyymm {:title "各月份培训的考评员数量" :x "月份" :y "考评员人数"})) 
       [:h2 "尚无培训、考试记录的考评员："]
       (eui-tip "请点击查看考评员详情并录入培训、考试资料。") ; todo: 增加excel导入功能
-      (result-html- (data- :pn-apply {:where (where-admin {} admin)}) [] 
+      (result-html- (data- :pn-apply {:where (where-apply (where-admin {} admin))}) [] 
                     [:admin :name :type :mobile :_id] {:form "mot-pn-train-doc"})[:br]
-      (mot-pn-train-list 100 request) )))
+      (mot-pn-train-list 0 request) )))
 
 (defn mot-pn-train-doc
   "mot录入考评员培训及考试结果"
@@ -767,33 +778,36 @@
   (doc- :pn-apply id
         {:after 
          (let [fields [:name :type :admin :train-start :train-end :train-hour :train-id :exam-date :exam-score]
-               r (with-oid- :pn-apply id)
-               uid (:uid r)]
+               r0 (with-oid- :pn-apply id)
+               {pid :pid typ :type} r0
+               r (with-mdb2 "esp" (fetch-one :pn-train :where {:pid pid :type (or typ "1")}))]
            (html [:h2 "录入考评员培训及考试结果："]
                  [:form#fm1 {} 
                   [:table 
                    (for [f fields]
-                     (let [attr {:name (name f) :value (get r f)}]
+                     (let [attr {:name (name f) :value (get (case f (:name :type :admin) r0 r) f)}
+                           f-number (fn [n0] (eui-numberspin 
+                                               (merge attr {:min 0 :max 100 :increment 1 :value (or (:value attr) n0)})))]
                        [:tr 
                         [:td [:label (dd-meta f) "："]] 
                         [:td (case f
                                :type (eui-combo attr dd-type)
                                :admin (eui-combo attr dd-admin)
                                (:train-start :train-end :exam-date) (eui-datebox attr)
-                               :train-hour (eui-numberspin (merge attr {:min 0 :max 100 :value 24}) )
-                               :exam-score (eui-numberspin (merge attr {:min 0 :max 100 :value 85}) )
+                               :train-hour (f-number 24)
+                               :exam-score (f-number 85)
                                (eui-text attr))]]))]]
-                 (eui-button {:onclick (format "esp_pn_train_save('%s')" uid)} "保存") ))}))
+                 (eui-button {:onclick (format "esp_pn_train_save('%s')" pid)} "保存") ))}))
 
 (defn pn-train-save
   "考评员培训、考试信息表单保存
   @id 考评员uid "
   [id request]
-  (let [pn-uid id
+  (let [pid id
         vars (query-vars2 request)
-        vars2 (for [[k v] vars] [k (case k (:type :train-hour :exam-score) (to-int v) v)])]
-    (insert- :pn-train (into {:uid pn-uid} vars2))
-    "已保存"))
+        vars2 (for [[k v] vars] [k (case k (:train-hour :exam-score) (to-int v) v)])]
+    (insert- :pn-train (into {:pid pid} vars2))
+    "已保存，请关闭"))
 
 (defn mot-pn-exam
   "省级主管机关管理的考评员考试"
